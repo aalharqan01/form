@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { EMPTY } from '../lib/fitness.ts';
-const base = 'http://localhost:3002';
+const base = process.env.FORM_TEST_ORIGIN || 'http://localhost:3002';
 assert.equal(
   (await fetch(base + '/api/data')).status,
   401,
@@ -42,7 +42,17 @@ try {
         id: 'test-exercise',
         name: 'Bench press',
         muscle: 'Chest',
-        sets: [{ id: 'test-set', kg: '40', reps: '10', done: true }],
+        unit: 'lb',
+        sets: [
+          {
+            id: 'test-set',
+            kg: '40',
+            load: '88.18490487395103',
+            kind: 'working',
+            reps: '10',
+            done: true,
+          },
+        ],
       },
     ],
   };

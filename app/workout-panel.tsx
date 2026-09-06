@@ -27,6 +27,9 @@ import {
   id,
   volume,
   completedSets,
+  lastPerformance,
+  displayWeight,
+  toKg,
 } from '@/lib/fitness';
 type Props = {
   data: FitnessData;
@@ -48,7 +51,7 @@ export function RestTimer({ end, onEnd }: { end: number; onEnd: () => void }) {
         <strong>
           {remaining
             ? `${Math.floor(remaining / 60)}:${String(remaining % 60).padStart(2, '0')}`
-            : 'Let’s go.'}
+            : 'Rest complete'}
         </strong>
       </div>
       <Button
@@ -86,7 +89,7 @@ export function ExercisePicker({
       }}
     >
       <DialogContent className="form-dialog picker-dialog">
-        <DialogTitle>Find your next exercise.</DialogTitle>
+        <DialogTitle>Add exercise</DialogTitle>
         <DialogDescription>
           Choose an exercise or add your own.
         </DialogDescription>
@@ -187,11 +190,9 @@ export function RoutineEditor({
       >
         <DialogContent className="form-dialog routine-dialog">
           <DialogTitle>
-            {routine ? 'Edit routine' : 'Make it your routine.'}
+            {routine ? 'Edit routine' : 'Create routine'}
           </DialogTitle>
-          <DialogDescription>
-            A little structure for your next session.
-          </DialogDescription>
+          <DialogDescription>Set exercises and targets.</DialogDescription>
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -245,6 +246,25 @@ export function RoutineEditor({
                     </Button>
                   </div>
                   <div className="routine-targets">
+                    <label>
+                      Unit
+                      <select
+                        aria-label={`Unit for ${x.name}`}
+                        value={x.unit ?? 'kg'}
+                        onChange={(e) =>
+                          setExercises(
+                            exercises.map((v, j) =>
+                              j === i
+                                ? { ...v, unit: e.target.value as 'kg' | 'lb' }
+                                : v,
+                            ),
+                          )
+                        }
+                      >
+                        <option value="kg">kg</option>
+                        <option value="lb">lb</option>
+                      </select>
+                    </label>
                     <label>
                       Sets
                       <Input
@@ -331,7 +351,9 @@ export default function WorkoutPanel({ data, update, onFinish }: Props) {
     [discard, setDiscard] = useState(false),
     [error, setError] = useState(''),
     [restEnd, setRestEnd] = useState<number | null>(null),
-    [saveRoutine, setSaveRoutine] = useState(false);
+    [saveRoutine, setSaveRoutine] = useState(false),
+    [focus, setFocus] = useState(true),
+    [focusIndex, setFocusIndex] = useState(0);
   useEffect(() => {
     const t = setTimeout(() => {
       const end = Number(sessionStorage.getItem('form-rest'));
@@ -346,38 +368,43 @@ export default function WorkoutPanel({ data, update, onFinish }: Props) {
   };
   const change = (fn: (w: Workout) => Workout) =>
     update((d) => ({ ...d, active: d.active ? fn(d.active) : null }));
-  function addExercise(n: string, m: string) {
-    const previous = [...data.workouts]
-      .reverse()
+  function addExercise(name: string, muscle: string) {
+    const previous = lastPerformance(data.workouts, name);
+    const previousExercise = [...data.workouts]
+      .sort((a, b) => b.startedAt.localeCompare(a.startedAt))
       .flatMap((w) => w.exercises)
-      .find((e) => e.name === n);
-    const sets =
-      previous?.sets
-        .filter((s) => s.done)
-        .map((s) => ({ id: id(), kg: s.kg, reps: s.reps, done: false })) ??
-      Array.from({ length: 3 }, () => ({
-        id: id(),
-        kg: '',
-        reps: '10',
-        done: false,
-      }));
+      .find((e) => e.name === name);
     change((w) => ({
       ...w,
       exercises: [
         ...w.exercises,
         {
           id: id(),
-          name: n,
-          muscle: m,
-          sets: sets.length
-            ? sets
-            : [{ id: id(), kg: '', reps: '10', done: false }],
+          name,
+          muscle,
+          unit: previousExercise?.unit ?? 'kg',
+          sets: previous?.length
+            ? previous.map((s) => ({
+                id: id(),
+                kg: s.kg,
+                reps: s.reps,
+                kind: 'working',
+                done: false,
+              }))
+            : Array.from({ length: 3 }, () => ({
+                id: id(),
+                kg: '',
+                reps: '10',
+                kind: 'working',
+                done: false,
+              })),
         },
       ],
     }));
+    setFocusIndex(workout.exercises.length);
     setPick(false);
   }
-  function updateSet(eid: string, sid: string, patch: Partial<LiftSet>) {
+  function changeSet(eid: string, sid: string, patch: Partial<LiftSet>) {
     change((w) => ({
       ...w,
       exercises: w.exercises.map((e) =>
@@ -390,7 +417,41 @@ export default function WorkoutPanel({ data, update, onFinish }: Props) {
       ),
     }));
   }
-  function toggle(e: Exercise, s: LiftSet) {
+  const loadValue = (s: LiftSet, unit: 'kg' | 'lb') =>
+    s.load ??
+    (s.kg === ''
+      ? ''
+      : String(Number(displayWeight(Number(s.kg), unit).toFixed(2))));
+  function setLoad(e: Exercise, s: LiftSet, raw: string) {
+    changeSet(e.id, s.id, {
+      load: raw,
+      kg: raw === '' ? '' : String(toKg(Number(raw), e.unit ?? 'kg')),
+      done: false,
+    });
+  }
+  function setUnit(e: Exercise, unit: 'kg' | 'lb') {
+    change((w) => ({
+      ...w,
+      exercises: w.exercises.map((x) =>
+        x.id === e.id
+          ? {
+              ...x,
+              unit,
+              sets: x.sets.map((s) => ({
+                ...s,
+                load:
+                  s.kg === ''
+                    ? ''
+                    : String(
+                        Number(displayWeight(Number(s.kg), unit).toFixed(2)),
+                      ),
+              })),
+            }
+          : x,
+      ),
+    }));
+  }
+  function complete(e: Exercise, s: LiftSet) {
     if (
       !s.done &&
       (s.kg === '' ||
@@ -401,18 +462,40 @@ export default function WorkoutPanel({ data, update, onFinish }: Props) {
         Number(s.reps) < 1 ||
         Number(s.reps) > 1000)
     ) {
-      setError(
-        'Add a valid weight (0 for bodyweight) and whole reps before completing a set.',
-      );
+      setError('Enter a weight (0 for bodyweight) and whole reps.');
       return;
     }
     setError('');
-    updateSet(e.id, s.id, { done: !s.done });
+    changeSet(e.id, s.id, { done: !s.done });
     if (!s.done && data.restSeconds)
       setRest(Date.now() + data.restSeconds * 1000);
   }
+  function addSet(e: Exercise, kind: 'working' | 'warmup') {
+    const last = e.sets.filter((s) => s.kind !== 'warmup').at(-1);
+    change((w) => ({
+      ...w,
+      exercises: w.exercises.map((x) =>
+        x.id === e.id
+          ? {
+              ...x,
+              sets: [
+                ...x.sets,
+                {
+                  id: id(),
+                  kg: kind === 'warmup' ? '' : (last?.kg ?? ''),
+                  reps: last?.reps ?? '10',
+                  kind,
+                  done: false,
+                },
+              ],
+            }
+          : x,
+      ),
+    }));
+  }
   const done = completedSets(workout),
-    total = workout.exercises.reduce((a, e) => a + e.sets.length, 0);
+    total = workout.exercises.reduce((n, e) => n + e.sets.length, 0),
+    index = Math.min(focusIndex, Math.max(0, workout.exercises.length - 1));
   const routine: Routine = useMemo(
     () => ({
       id: id(),
@@ -420,17 +503,18 @@ export default function WorkoutPanel({ data, update, onFinish }: Props) {
       exercises: workout.exercises.map((e) => ({
         name: e.name,
         muscle: e.muscle,
-        sets: e.sets.length || 1,
-        reps: Number(e.sets[0]?.reps) || 10,
+        unit: e.unit,
+        sets: e.sets.filter((s) => s.kind !== 'warmup').length || 1,
+        reps: Number(e.sets.find((s) => s.kind !== 'warmup')?.reps) || 10,
       })),
     }),
-    [workout.name, workout.exercises],
+    [workout],
   );
   return (
-    <>
+    <div className={focus ? 'focus-session' : ''}>
       <div className="session-heading">
         <div>
-          <p className="eyebrow">SESSION IN PROGRESS</p>
+          <p className="eyebrow">ACTIVE WORKOUT</p>
           <Input
             className="workout-name"
             aria-label="Workout name"
@@ -443,37 +527,31 @@ export default function WorkoutPanel({ data, update, onFinish }: Props) {
           className="primary finish-button"
           onClick={() => {
             if (!done) {
-              setError('Complete at least one set before finishing.');
+              setError('Complete at least one set first.');
               return;
             }
             setFinish(true);
           }}
         >
-          Finish{' '}
+          Finish
           <span className="button-orb">
             <Check size={19} />
           </span>
         </Button>
       </div>
-      <div className="session-metrics">
-        <div>
-          <span>COMPLETED</span>
-          <strong>
-            {done}
-            <small> / {total} sets</small>
-          </strong>
+      <div className="session-mode">
+        <div className="range-switch">
+          <button aria-pressed={focus} onClick={() => setFocus(true)}>
+            Focus
+          </button>
+          <button aria-pressed={!focus} onClick={() => setFocus(false)}>
+            All exercises
+          </button>
         </div>
-        <div>
-          <span>VOLUME</span>
-          <strong>
-            {volume(workout).toLocaleString()}
-            <small> kg</small>
-          </strong>
-        </div>
-        <div>
-          <label htmlFor="rest-select">REST TIMER</label>
+        <label>
+          Rest
           <select
-            id="rest-select"
+            aria-label="Rest duration"
             value={data.restSeconds}
             onChange={(e) =>
               update((d) => ({ ...d, restSeconds: Number(e.target.value) }))
@@ -481,45 +559,73 @@ export default function WorkoutPanel({ data, update, onFinish }: Props) {
           >
             {[
               [0, 'Off'],
-              [30, '30 seconds'],
-              [60, '1 minute'],
-              [90, '1 min 30 sec'],
-              [120, '2 minutes'],
-              [180, '3 minutes'],
+              [30, '30s'],
+              [60, '60s'],
+              [90, '90s'],
+              [120, '2 min'],
+              [180, '3 min'],
             ].map(([v, l]) => (
               <option key={v} value={v}>
                 {l}
               </option>
             ))}
           </select>
-        </div>
+        </label>
+        <span>
+          {done}/{total} sets
+        </span>
       </div>
       {error && (
         <div className="error-banner" role="alert">
           {error}
-          <button onClick={() => setError('')} aria-label="Dismiss">
+          <button aria-label="Dismiss" onClick={() => setError('')}>
             <X size={17} />
           </button>
         </div>
       )}
+      {focus && workout.exercises.length > 0 && (
+        <div className="exercise-pager">
+          <Button
+            className="text-button"
+            disabled={index === 0}
+            onClick={() => setFocusIndex(index - 1)}
+          >
+            Previous
+          </Button>
+          <span>
+            Exercise {index + 1} of {workout.exercises.length}
+          </span>
+          <Button
+            className="text-button"
+            disabled={index === workout.exercises.length - 1}
+            onClick={() => setFocusIndex(index + 1)}
+          >
+            Next
+          </Button>
+        </div>
+      )}
       <div className="workout-exercises">
         {workout.exercises.map((e, ei) => {
-          const previous = [...data.workouts]
-            .reverse()
-            .flatMap((w) => w.exercises)
-            .find((x) => x.name === e.name)
-            ?.sets.filter((s) => s.done);
+          if (focus && ei !== index) return null;
+          const unit = e.unit ?? 'kg',
+            previous = lastPerformance(data.workouts, e.name);
           return (
             <section className="bezel exercise-bezel" key={e.id}>
               <div className="card">
                 <div className="exercise-header">
-                  <span className="exercise-number">
-                    {String(ei + 1).padStart(2, '0')}
-                  </span>
                   <div>
                     <h2>{e.name}</h2>
                     <p>{e.muscle}</p>
                   </div>
+                  <select
+                    className="exercise-unit"
+                    aria-label={`Weight unit for ${e.name}`}
+                    value={unit}
+                    onChange={(v) => setUnit(e, v.target.value as 'kg' | 'lb')}
+                  >
+                    <option value="kg">kg</option>
+                    <option value="lb">lb</option>
+                  </select>
                   <Button
                     variant="ghost"
                     className="icon-button"
@@ -528,130 +634,224 @@ export default function WorkoutPanel({ data, update, onFinish }: Props) {
                       if (
                         e.sets.some((s) => s.done) &&
                         !window.confirm(
-                          `Remove ${e.name} and its completed sets from this session?`,
+                          'Remove this exercise and its completed sets?',
                         )
                       )
                         return;
                       change((w) => ({
                         ...w,
-                        exercises: w.exercises.filter((x) => x.id !== e.id),
+                        exercises: w.exercises.filter((v) => v.id !== e.id),
                       }));
                     }}
                   >
-                    <X size={19} />
+                    <X size={18} />
                   </Button>
                 </div>
-                <div className="set-grid set-labels">
+                {previous?.length ? (
+                  <div className="previous-performance">
+                    <span>
+                      Last time:{' '}
+                      {previous
+                        .map(
+                          (s) =>
+                            `${displayWeight(Number(s.kg), unit).toLocaleString(undefined, { maximumFractionDigits: 2 })} × ${s.reps}`,
+                        )
+                        .join(' · ')}{' '}
+                      {unit}
+                    </span>
+                    <Button
+                      className="text-button"
+                      disabled={e.sets.some((s) => s.done)}
+                      onClick={() =>
+                        change((w) => ({
+                          ...w,
+                          exercises: w.exercises.map((v) =>
+                            v.id === e.id
+                              ? {
+                                  ...v,
+                                  sets: previous.map((s) => ({
+                                    id: id(),
+                                    kg: s.kg,
+                                    reps: s.reps,
+                                    kind: 'working',
+                                    done: false,
+                                  })),
+                                }
+                              : v,
+                          ),
+                        }))
+                      }
+                    >
+                      Copy last
+                    </Button>
+                  </div>
+                ) : null}
+                <div className="fast-set-labels">
                   <span>SET</span>
-                  <span>PREVIOUS</span>
-                  <span>KG</span>
+                  <span>{unit.toUpperCase()}</span>
                   <span>REPS</span>
                   <span>DONE</span>
                 </div>
                 {e.sets.map((s, si) => (
                   <div
-                    className={`set-grid ${s.done ? 'set-done' : ''}`}
+                    className={`fast-set ${s.done ? 'set-done' : ''} ${s.kind === 'warmup' ? 'warmup-set' : ''}`}
                     key={s.id}
                   >
-                    <button
-                      className="set-number"
-                      aria-label={`Remove set ${si + 1} from ${e.name}`}
-                      title="Remove set"
-                      onClick={() => {
-                        if (
-                          s.done &&
-                          !window.confirm('Remove this completed set?')
-                        )
-                          return;
-                        change((w) => ({
-                          ...w,
-                          exercises: w.exercises.map((x) =>
-                            x.id === e.id
-                              ? {
-                                  ...x,
-                                  sets: x.sets.filter((v) => v.id !== s.id),
-                                }
-                              : x,
-                          ),
-                        }));
-                      }}
-                    >
-                      {si + 1}
-                    </button>
-                    <span className="previous-set">
-                      {previous?.[si]
-                        ? `${previous[si].kg} × ${previous[si].reps}`
-                        : '—'}
-                    </span>
-                    <Input
-                      aria-label={`${e.name} set ${si + 1} weight in kilograms`}
-                      inputMode="decimal"
-                      type="number"
-                      min="0"
-                      max="1500"
-                      step="0.25"
-                      placeholder="0"
-                      value={s.kg}
-                      onChange={(v) =>
-                        updateSet(e.id, s.id, {
-                          kg: v.target.value,
-                          done: false,
-                        })
-                      }
-                    />
-                    <Input
-                      aria-label={`${e.name} set ${si + 1} reps`}
-                      inputMode="numeric"
-                      type="number"
-                      min="1"
-                      max="1000"
-                      placeholder="10"
-                      value={s.reps}
-                      onChange={(v) =>
-                        updateSet(e.id, s.id, {
-                          reps: v.target.value,
-                          done: false,
-                        })
-                      }
-                    />
+                    <div className="set-type">
+                      <select
+                        aria-label={`Set ${si + 1} type`}
+                        value={s.kind ?? 'working'}
+                        onChange={(v) =>
+                          changeSet(e.id, s.id, {
+                            kind: v.target.value as 'working' | 'warmup',
+                          })
+                        }
+                      >
+                        <option value="working">{si + 1}</option>
+                        <option value="warmup">W</option>
+                      </select>
+                      <button
+                        className="remove-set"
+                        aria-label={`Remove set ${si + 1}`}
+                        onClick={() => {
+                          if (
+                            s.done &&
+                            !window.confirm('Remove this completed set?')
+                          )
+                            return;
+                          change((w) => ({
+                            ...w,
+                            exercises: w.exercises.map((v) =>
+                              v.id === e.id
+                                ? {
+                                    ...v,
+                                    sets: v.sets.filter((x) => x.id !== s.id),
+                                  }
+                                : v,
+                            ),
+                          }));
+                        }}
+                      >
+                        ×
+                      </button>
+                    </div>
+                    <div className="number-stepper">
+                      <Input
+                        aria-label={`${e.name} set ${si + 1} weight in ${unit}`}
+                        inputMode="decimal"
+                        type="number"
+                        min="0"
+                        step="any"
+                        value={loadValue(s, unit)}
+                        placeholder="0"
+                        onChange={(v) => setLoad(e, s, v.target.value)}
+                      />
+                      <div>
+                        <button
+                          aria-label={`Decrease set ${si + 1} weight`}
+                          onClick={() =>
+                            setLoad(
+                              e,
+                              s,
+                              String(
+                                Math.max(
+                                  0,
+                                  Number(loadValue(s, unit)) -
+                                    (unit === 'kg' ? 2.5 : 5),
+                                ),
+                              ),
+                            )
+                          }
+                        >
+                          −
+                        </button>
+                        <span>{unit === 'kg' ? '2.5' : '5'}</span>
+                        <button
+                          aria-label={`Increase set ${si + 1} weight`}
+                          onClick={() =>
+                            setLoad(
+                              e,
+                              s,
+                              String(
+                                Number(loadValue(s, unit)) +
+                                  (unit === 'kg' ? 2.5 : 5),
+                              ),
+                            )
+                          }
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+                    <div className="number-stepper">
+                      <Input
+                        aria-label={`${e.name} set ${si + 1} reps`}
+                        inputMode="numeric"
+                        type="number"
+                        min="1"
+                        step="1"
+                        value={s.reps}
+                        onChange={(v) =>
+                          changeSet(e.id, s.id, {
+                            reps: v.target.value,
+                            done: false,
+                          })
+                        }
+                      />
+                      <div>
+                        <button
+                          aria-label={`Decrease set ${si + 1} reps`}
+                          onClick={() =>
+                            changeSet(e.id, s.id, {
+                              reps: String(Math.max(1, Number(s.reps) - 1)),
+                              done: false,
+                            })
+                          }
+                        >
+                          −
+                        </button>
+                        <span>1</span>
+                        <button
+                          aria-label={`Increase set ${si + 1} reps`}
+                          onClick={() =>
+                            changeSet(e.id, s.id, {
+                              reps: String(Math.min(1000, Number(s.reps) + 1)),
+                              done: false,
+                            })
+                          }
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
                     <button
                       className="check-set"
                       aria-pressed={s.done}
                       aria-label={`Complete ${e.name} set ${si + 1}`}
-                      onClick={() => toggle(e, s)}
+                      onClick={() => complete(e, s)}
                     >
-                      <Check size={20} />
+                      <Check size={22} />
                     </button>
                   </div>
                 ))}
-                <Button
-                  className="add-set"
-                  disabled={e.sets.length >= 50}
-                  onClick={() =>
-                    change((w) => ({
-                      ...w,
-                      exercises: w.exercises.map((x) =>
-                        x.id === e.id
-                          ? {
-                              ...x,
-                              sets: [
-                                ...x.sets,
-                                {
-                                  id: id(),
-                                  kg: x.sets.at(-1)?.kg ?? '',
-                                  reps: x.sets.at(-1)?.reps ?? '10',
-                                  done: false,
-                                },
-                              ],
-                            }
-                          : x,
-                      ),
-                    }))
-                  }
-                >
-                  <Plus size={16} />
-                  Add set
-                </Button>
+                <div className="add-set-actions">
+                  <Button
+                    className="add-set"
+                    disabled={e.sets.length >= 50}
+                    onClick={() => addSet(e, 'working')}
+                  >
+                    <Plus size={16} />
+                    Working set
+                  </Button>
+                  <Button
+                    className="add-set"
+                    disabled={e.sets.length >= 50}
+                    onClick={() => addSet(e, 'warmup')}
+                  >
+                    <Plus size={16} />
+                    Warm-up
+                  </Button>
+                </div>
               </div>
             </section>
           );
@@ -659,9 +859,8 @@ export default function WorkoutPanel({ data, update, onFinish }: Props) {
       </div>
       {!workout.exercises.length && (
         <section className="session-empty">
-          <Dumbbell size={42} strokeWidth={1.2} />
-          <h2>Your session starts here.</h2>
-          <p>Add your first exercise. We’ll take care of the log.</p>
+          <Dumbbell size={36} strokeWidth={1.4} />
+          <h2>No exercises yet</h2>
         </section>
       )}
       <Button
@@ -672,32 +871,34 @@ export default function WorkoutPanel({ data, update, onFinish }: Props) {
         <Plus size={19} />
         Add exercise
       </Button>
-      <label className="field-label session-notes">
-        Session notes <span>optional</span>
-        <textarea
-          value={workout.notes}
-          onChange={(e) => change((w) => ({ ...w, notes: e.target.value }))}
-          maxLength={2000}
-          placeholder="How did it feel? Anything to remember next time?"
-          rows={3}
-        />
-      </label>
-      <div className="session-actions">
-        <Button
-          className="text-button"
-          disabled={!workout.exercises.length || data.routines.length >= 100}
-          onClick={() => setSaveRoutine(true)}
-        >
-          <Bookmark size={17} />
-          Save as routine
-        </Button>
-        <Button
-          className="text-button muted-danger"
-          onClick={() => setDiscard(true)}
-        >
-          Discard session
-        </Button>
-      </div>
+      <details className="session-extra">
+        <summary>Notes and session options</summary>
+        <label className="field-label session-notes">
+          Notes
+          <textarea
+            rows={3}
+            maxLength={2000}
+            value={workout.notes}
+            onChange={(e) => change((w) => ({ ...w, notes: e.target.value }))}
+          />
+        </label>
+        <div className="session-actions">
+          <Button
+            className="text-button"
+            disabled={!workout.exercises.length || data.routines.length >= 100}
+            onClick={() => setSaveRoutine(true)}
+          >
+            <Bookmark size={16} />
+            Save routine
+          </Button>
+          <Button
+            className="text-button muted-danger"
+            onClick={() => setDiscard(true)}
+          >
+            Discard workout
+          </Button>
+        </div>
+      </details>
       <ExercisePicker
         open={pick}
         onClose={() => setPick(false)}
@@ -705,13 +906,13 @@ export default function WorkoutPanel({ data, update, onFinish }: Props) {
       />
       <Dialog open={finish} onOpenChange={setFinish}>
         <DialogContent className="form-dialog">
-          <div className="success-mark">
-            <Check size={30} />
-          </div>
-          <DialogTitle>Another session, in the books.</DialogTitle>
+          <DialogTitle>Finish workout?</DialogTitle>
           <DialogDescription>
-            {done} completed sets · {volume(workout).toLocaleString()} kg total
-            volume. Unchecked sets won’t be included in your history.
+            {done} completed sets ·{' '}
+            {volume(workout).toLocaleString(undefined, {
+              maximumFractionDigits: 1,
+            })}{' '}
+            kg total volume. Only completed sets are saved.
           </DialogDescription>
           <Button
             className="primary full"
@@ -733,19 +934,16 @@ export default function WorkoutPanel({ data, update, onFinish }: Props) {
               onFinish();
             }}
           >
-            Save workout{' '}
-            <span className="button-orb">
-              <Check size={19} />
-            </span>
+            Save workout
+            <Check size={19} />
           </Button>
         </DialogContent>
       </Dialog>
       <Dialog open={discard} onOpenChange={setDiscard}>
         <DialogContent className="form-dialog">
-          <DialogTitle>Discard this session?</DialogTitle>
+          <DialogTitle>Discard workout?</DialogTitle>
           <DialogDescription>
-            This removes the current session and its sets. Your finished
-            workouts stay in your history.
+            This removes the active workout and its sets.
           </DialogDescription>
           <Button
             className="danger-button"
@@ -754,14 +952,14 @@ export default function WorkoutPanel({ data, update, onFinish }: Props) {
               setRest(null);
             }}
           >
-            Discard session
+            Discard
           </Button>
         </DialogContent>
       </Dialog>
       {saveRoutine && (
         <RoutineEditor
+          routine={routine}
           open={saveRoutine}
-          routine={saveRoutine ? routine : null}
           onClose={() => setSaveRoutine(false)}
           onSave={(r) =>
             update((d) => ({
@@ -772,6 +970,6 @@ export default function WorkoutPanel({ data, update, onFinish }: Props) {
         />
       )}
       {restEnd && <RestTimer end={restEnd} onEnd={() => setRest(null)} />}
-    </>
+    </div>
   );
 }

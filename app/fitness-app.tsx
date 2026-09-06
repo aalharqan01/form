@@ -43,8 +43,11 @@ import {
   trendStats,
   displayWeight,
   validateData,
+  lastPerformance,
 } from '@/lib/fitness';
 import WeightPanel from './weight-panel';
+import ProgressPanel from './progress-panel';
+import ThemeControl from './theme-control';
 import WorkoutPanel, { RoutineEditor } from './workout-panel';
 function demoData(): FitnessData {
   const dates = Array.from({ length: 30 }, (_, i) => {
@@ -199,19 +202,17 @@ export default function FitnessApp() {
         notes: '',
         exercises:
           r?.exercises.map((e) => {
-            const previous = [...d.workouts]
-              .reverse()
-              .flatMap((w) => w.exercises)
-              .find((x) => x.name === e.name)
-              ?.sets.filter((s) => s.done);
+            const previous = lastPerformance(d.workouts, e.name);
             return {
               id: id(),
               name: e.name,
               muscle: e.muscle,
+              unit: e.unit ?? 'kg',
               sets: Array.from({ length: e.sets }, (_, i) => ({
                 id: id(),
                 kg: previous?.[i]?.kg ?? '',
-                reps: String(e.reps),
+                reps: previous?.[i]?.reps ?? String(e.reps),
+                kind: 'working',
                 done: false,
               })),
             };
@@ -266,8 +267,7 @@ export default function FitnessApp() {
     ['weight', 'Weight', ChartNoAxesCombined],
     ['history', 'History', History],
   ] as const;
-  const heading =
-    tab === 'history' ? 'Your effort,\ncollected.' : 'Show up.\nGet stronger.';
+  const heading = tab === 'history' ? 'Workout\nhistory.' : 'Your\ntraining.';
   return (
     <div className="app-shell">
       <aside className="sidebar">
@@ -280,7 +280,7 @@ export default function FitnessApp() {
             form<span>®</span>
           </div>
         </button>
-        <p className="brand-sub">A little stronger, every day.</p>
+        <p className="brand-sub">Training & weight</p>
         <nav>
           {nav.map(([key, label, Icon]) => (
             <button
@@ -297,15 +297,14 @@ export default function FitnessApp() {
         </nav>
         <div className="sidebar-bottom">
           <div className="sidebar-statement">
-            Small steps.
+            Your log.
             <br />
-            Lasting change.
           </div>
           <button onClick={() => setSettings(true)}>
             <Settings2 size={19} strokeWidth={1.5} />
             Preferences
           </button>
-          <span>YOUR SPACE TO GROW</span>
+          <span></span>
         </div>
       </aside>
       <main className="main">
@@ -374,6 +373,36 @@ export default function FitnessApp() {
             <Button className="secondary" onClick={store.retry}>
               Retry
             </Button>
+            {store.conflict && (
+              <>
+                <Button
+                  className="secondary"
+                  onClick={() => {
+                    if (
+                      window.confirm(
+                        'Keep this phone’s version? Export a backup first if you need both copies.',
+                      )
+                    )
+                      void store.resolve('phone');
+                  }}
+                >
+                  Keep phone version
+                </Button>
+                <Button
+                  className="secondary"
+                  onClick={() => {
+                    if (
+                      window.confirm(
+                        'Use the cloud version and discard conflicting phone edits? Export a backup first.',
+                      )
+                    )
+                      void store.resolve('cloud');
+                  }}
+                >
+                  Use cloud version
+                </Button>
+              </>
+            )}
             {store.loaded && (
               <Button className="text-button" onClick={() => download()}>
                 Export backup
@@ -390,13 +419,9 @@ export default function FitnessApp() {
             <h2>
               {store.error
                 ? 'Your log is safe. Let’s reconnect.'
-                : 'Opening your training space…'}
+                : 'Loading your log…'}
             </h2>
-            <p>
-              {store.error
-                ? 'Retry above to continue.'
-                : 'A moment for your progress.'}
-            </p>
+            <p>{store.error ? 'Retry above to continue.' : ''}</p>
             <Button className="secondary" onClick={() => setDemo(demoData())}>
               Explore with sample data
             </Button>
@@ -414,9 +439,7 @@ export default function FitnessApp() {
             <div className="page-heading">
               <div>
                 <p className="eyebrow">
-                  {tab === 'history'
-                    ? 'EVERY SESSION COUNTS'
-                    : 'MAKE ROOM FOR PROGRESS'}
+                  {tab === 'history' ? 'HISTORY' : 'TRAINING'}
                 </p>
                 <h1>
                   {heading.split('\n')[0]}
@@ -424,11 +447,7 @@ export default function FitnessApp() {
                   <span>{heading.split('\n')[1]}</span>
                 </h1>
               </div>
-              <p>
-                {tab === 'history'
-                  ? 'A record of the work you put in.'
-                  : 'One workout. One rep. One day at a time.'}
-              </p>
+              <p>{tab === 'history' ? '' : ''}</p>
             </div>
             {tab === 'train' ? (
               <>
@@ -444,8 +463,9 @@ export default function FitnessApp() {
                             data.routines[0].name
                           ) : (
                             <>
-                              Make it
-                              <br />a good session.
+                              Start a
+                              <br />
+                              workout.
                             </>
                           )}
                         </h2>
@@ -468,8 +488,8 @@ export default function FitnessApp() {
                         </span>
                       </Button>
                       <div className="feature-footer">
-                        <span>YOUR PACE. YOUR PROGRESS.</span>
-                        <span>01 / TRAIN</span>
+                        <span></span>
+                        <span></span>
                       </div>
                     </div>
                   </section>
@@ -521,14 +541,13 @@ export default function FitnessApp() {
                       ) : (
                         <>
                           <h2 className="metric">
-                            Your next
+                            Weight
                             <br />
-                            chapter.
+                            tracker
                           </h2>
                           <p>
-                            Start with one weigh-in.
+                            Log your body weight.
                             <br />
-                            Your trend grows from here.
                           </p>
                         </>
                       )}
@@ -638,7 +657,7 @@ export default function FitnessApp() {
                         <Bookmark size={25} strokeWidth={1.3} />
                       </div>
                       <div>
-                        <h3>A routine, made for you.</h3>
+                        <h3>No routines yet</h3>
                         <p>
                           Add your exercises, set targets, and make it
                           repeatable.
@@ -675,7 +694,7 @@ export default function FitnessApp() {
                 {lastWorkout && (
                   <div className="last-session">
                     <div>
-                      <span className="eyebrow">LAST TIME YOU SHOWED UP</span>
+                      <span className="eyebrow">LAST SESSION</span>
                       <h3>{lastWorkout.name}</h3>
                       <p>
                         {dateLabel(lastWorkout.startedAt, true)} ·{' '}
@@ -716,6 +735,7 @@ export default function FitnessApp() {
                     </strong>
                   </div>
                 </div>
+                <ProgressPanel data={data} />
                 <div className="section-title">
                   <h2>Session journal</h2>
                   <Button className="text-button" onClick={() => start()}>
@@ -726,7 +746,7 @@ export default function FitnessApp() {
                 {!data.workouts.length ? (
                   <section className="history-empty">
                     <History size={38} strokeWidth={1.2} />
-                    <h2>The work will add up.</h2>
+                    <h2>No workouts yet</h2>
                     <p>Finish your first workout to start your journal.</p>
                     <Button className="primary" onClick={() => start()}>
                       Start workout
@@ -876,7 +896,12 @@ export default function FitnessApp() {
                 {e.sets.map((s, i) => (
                   <span key={s.id}>
                     <small>{i + 1}</small>
-                    {s.kg} kg × {s.reps}
+                    {displayWeight(Number(s.kg), e.unit ?? 'kg').toLocaleString(
+                      undefined,
+                      { maximumFractionDigits: 2 },
+                    )}{' '}
+                    {e.unit ?? 'kg'} × {s.reps}
+                    {s.kind === 'warmup' ? ' · Warm-up' : ''}
                     <Check size={14} />
                   </span>
                 ))}
@@ -894,8 +919,14 @@ export default function FitnessApp() {
                   exercises: detail.exercises.map((e) => ({
                     name: e.name,
                     muscle: e.muscle,
-                    sets: e.sets.length,
-                    reps: Number(e.sets[0].reps),
+                    unit: e.unit,
+                    sets: Math.max(
+                      1,
+                      e.sets.filter((s) => s.kind !== 'warmup').length,
+                    ),
+                    reps: Number(
+                      e.sets.find((s) => s.kind !== 'warmup')?.reps || '8',
+                    ),
                   })),
                 };
                 setDetail(null);
@@ -918,11 +949,12 @@ export default function FitnessApp() {
       </Dialog>
       <Dialog open={settings} onOpenChange={setSettings}>
         <DialogContent className="form-dialog">
-          <DialogTitle>Your space. Your settings.</DialogTitle>
+          <DialogTitle>Preferences</DialogTitle>
           <DialogDescription>
-            Your workout weights are recorded in kg. Body weight can be
-            displayed in kg or lb.
+            Choose kg or lb for each exercise. Body weight has its own unit
+            setting.
           </DialogDescription>
+          <ThemeControl />
           <div className="settings-list">
             <button
               onClick={async () => {
@@ -985,12 +1017,15 @@ export default function FitnessApp() {
             </p>
           )}
           <p className="privacy-note">
-            Your log saves to your signed-in account. An internet connection is
-            needed to load and save changes. Keep this page open if a save is
-            still pending.
+            Changes save on this phone and sync automatically when Form is open
+            and connected. Open Form online once before using it offline.
+            Signing out removes this phone’s saved copy after syncing.
           </p>
           <a
             className="signout-link"
+            onClick={(e) => {
+              if (!store.signOut()) e.preventDefault();
+            }}
             href="/signout-with-chatgpt?return_to=%2F"
             target="_top"
           >

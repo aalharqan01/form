@@ -27,6 +27,7 @@ import {
   dateLabel,
   dayDiff,
   today,
+  weightInsights,
 } from '@/lib/fitness';
 // SVG charts expose their purpose through the image role.
 /* oxlint-disable jsx-a11y/prefer-tag-over-role */
@@ -46,6 +47,7 @@ export default function WeightPanel({ data, update }: Props) {
     [hover, setHover] = useState<number | null>(null);
   const stats = trendStats(data.weights, data.goal),
     unit = data.unit;
+  const insights = weightInsights(data.weights, data.goal);
   const format = (n: number) => displayWeight(n, unit).toFixed(1);
   const points = stats.points.filter(
       (p) => range === 0 || dayDiff(today(), p.date) < range,
@@ -102,11 +104,11 @@ export default function WeightPanel({ data, update }: Props) {
     <>
       <div className="page-heading weight-heading">
         <div>
-          <p className="eyebrow">THE BIGGER PICTURE</p>
+          <p className="eyebrow">BODY WEIGHT</p>
           <h1>
-            Less noise.
+            Weight
             <br />
-            <span>More perspective.</span>
+            <span>trends.</span>
           </h1>
         </div>
         <Button className="primary" onClick={() => openWeight()}>
@@ -155,7 +157,7 @@ export default function WeightPanel({ data, update }: Props) {
                 </div>
               ) : (
                 <span className="small-muted">
-                  {latest ? 'Building your trend' : 'A fresh start'}
+                  {latest ? 'Building your trend' : 'No entries'}
                 </span>
               )}
             </div>
@@ -302,7 +304,7 @@ export default function WeightPanel({ data, update }: Props) {
                 <h3>
                   {data.weights.length
                     ? 'No entries in this period'
-                    : 'Every trend starts somewhere.'}
+                    : 'No weigh-ins yet'}
                 </h3>
                 <p>
                   {data.weights.length
@@ -339,7 +341,7 @@ export default function WeightPanel({ data, update }: Props) {
                     {format(data.goal)} <small>{unit}</small>
                   </>
                 ) : (
-                  'A goal of your own.'
+                  'Set a goal'
                 )}
               </h2>
               <p>
@@ -388,6 +390,40 @@ export default function WeightPanel({ data, update }: Props) {
           </section>
         </div>
       </div>
+      <section className="weight-insights">
+        <div>
+          <span>7-day average</span>
+          <strong>
+            {insights.average === null
+              ? '—'
+              : `${format(insights.average)} ${unit}`}
+          </strong>
+          <small>{insights.count} weigh-ins in the last 7 days</small>
+        </div>
+        <div>
+          <span>Estimated goal date</span>
+          <strong>
+            {insights.estimate ? dateLabel(insights.estimate, true) : '—'}
+          </strong>
+          <small>{insights.reason}</small>
+        </div>
+      </section>
+      {insights.milestones.length > 0 && (
+        <section className="milestones">
+          <h3>Goal milestones</h3>
+          <div>
+            {insights.milestones.map((m) => (
+              <div key={m.fraction} className={m.reached ? 'reached' : ''}>
+                <span>{Math.round(m.fraction * 100)}%</span>
+                <strong>
+                  {format(m.kg)} {unit}
+                </strong>
+                <small>{m.reached ? 'Reached' : 'Upcoming'}</small>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
       <div className="section-title">
         <h2>
           Weigh-in history <span className="count">{data.weights.length}</span>
@@ -451,14 +487,14 @@ export default function WeightPanel({ data, update }: Props) {
         <DialogContent className="form-dialog">
           <DialogTitle>
             {modal === 'goal'
-              ? 'Set your direction'
+              ? 'Set goal'
               : editing
                 ? 'Edit weigh-in'
-                : 'A moment to check in.'}
+                : 'Log weight'}
           </DialogTitle>
           <DialogDescription>
             {modal === 'goal'
-              ? 'Your goal can change with you.'
+              ? 'Enter a goal weight.'
               : 'Daily fluctuations are normal. The trend tells the story.'}
           </DialogDescription>
           <form
