@@ -20,6 +20,7 @@ import {
   CircleAlert,
   FlaskConical,
   Bookmark,
+  Users,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -46,6 +47,7 @@ import {
   lastPerformance,
 } from '@/lib/fitness';
 import WeightPanel from './weight-panel';
+import { MyCoach } from './coaching/coaching-ui';
 import ProgressPanel from './progress-panel';
 import ThemeControl from './theme-control';
 import WorkoutPanel, { RoutineEditor } from './workout-panel';
@@ -135,6 +137,10 @@ export default function FitnessApp() {
     dataRef.current = data;
   }, [data]);
   useEffect(() => {
+    const openCoach = setTimeout(() => {
+      if (new URL(location.href).searchParams.get('view') === 'coach')
+        setTab('coach');
+    }, 0);
     if ('serviceWorker' in navigator)
       navigator.serviceWorker.register('/sw.js').catch(() => {});
     const capture = (e: Event) => {
@@ -142,7 +148,10 @@ export default function FitnessApp() {
       setInstallPrompt(e as InstallEvent);
     };
     window.addEventListener('beforeinstallprompt', capture);
-    return () => window.removeEventListener('beforeinstallprompt', capture);
+    return () => {
+      clearTimeout(openCoach);
+      window.removeEventListener('beforeinstallprompt', capture);
+    };
   }, []);
   useEffect(() => {
     const context = (document as Document & { modelContext?: ModelContext })
@@ -187,7 +196,7 @@ export default function FitnessApp() {
     } catch {}
     return () => lifecycle.abort();
   }, []);
-  function start(r?: Routine) {
+  function start(r?: Routine, membershipId?: string) {
     if (!ready) return;
     if (data.active) {
       setTab('train');
@@ -198,6 +207,7 @@ export default function FitnessApp() {
       active: {
         id: id(),
         name: r?.name ?? 'New workout',
+        ...(membershipId ? { membershipId, programSessionId: r?.id } : {}),
         startedAt: new Date().toISOString(),
         notes: '',
         exercises:
@@ -207,11 +217,15 @@ export default function FitnessApp() {
               id: id(),
               name: e.name,
               muscle: e.muscle,
+              instructions: e.instructions,
+              videoUrl: e.videoUrl,
               unit: e.unit ?? 'kg',
               sets: Array.from({ length: e.sets }, (_, i) => ({
                 id: id(),
                 kg: previous?.[i]?.kg ?? '',
-                reps: previous?.[i]?.reps ?? String(e.reps),
+                reps: membershipId
+                  ? String(e.reps)
+                  : (previous?.[i]?.reps ?? String(e.reps)),
                 kind: 'working',
                 done: false,
               })),
@@ -266,6 +280,7 @@ export default function FitnessApp() {
     ['train', 'Train', Dumbbell],
     ['weight', 'Weight', ChartNoAxesCombined],
     ['history', 'History', History],
+    ['coach', 'My coach', Users],
   ] as const;
   const heading = tab === 'history' ? 'Workout\nhistory.' : 'Your\ntraining.';
   return (
@@ -304,7 +319,9 @@ export default function FitnessApp() {
             <Settings2 size={19} strokeWidth={1.5} />
             Preferences
           </button>
-          <span></span>
+          <a href="/coaching" className="co-workspace-link">
+            Coach workspace <ArrowUpRight size={16} />
+          </a>
         </div>
       </aside>
       <main className="main">
@@ -426,6 +443,14 @@ export default function FitnessApp() {
               Explore with sample data
             </Button>
           </div>
+        ) : tab === 'coach' ? (
+          demo ? (
+            <p className="empty-line">
+              Exit sample mode to connect with a coach.
+            </p>
+          ) : (
+            <MyCoach onStart={(r, m) => start(r, m)} />
+          )
         ) : tab === 'weight' ? (
           <WeightPanel data={data} update={update} />
         ) : tab === 'train' && data.active ? (
@@ -488,8 +513,12 @@ export default function FitnessApp() {
                         </span>
                       </Button>
                       <div className="feature-footer">
-                        <span></span>
-                        <span></span>
+                        <a href="/coaching" className="co-workspace-link">
+                          Coach workspace <ArrowUpRight size={16} />
+                        </a>
+                        <a href="/coaching" className="co-workspace-link">
+                          Coach workspace <ArrowUpRight size={16} />
+                        </a>
                       </div>
                     </div>
                   </section>

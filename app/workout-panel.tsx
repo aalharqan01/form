@@ -647,6 +647,19 @@ export default function WorkoutPanel({ data, update, onFinish }: Props) {
                     <X size={18} />
                   </Button>
                 </div>
+                {e.instructions && (
+                  <p className="co-program-note">{e.instructions}</p>
+                )}
+                {e.videoUrl?.startsWith('https://') && (
+                  <a
+                    className="co-workspace-link"
+                    href={e.videoUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Watch demonstration
+                  </a>
+                )}
                 {previous?.length ? (
                   <div className="previous-performance">
                     <span>

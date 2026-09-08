@@ -59,7 +59,8 @@
     "jsx-a11y": {
       "components": {
         "Input": "input",
-        "Button": "button"
+        "Button": "button",
+        "Textarea": "textarea"
       }
     }
   }

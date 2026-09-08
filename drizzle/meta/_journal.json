@@ -8,6 +8,13 @@
       "when": 1788681071631,
       "tag": "0000_illegal_bug",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1788854131621,
+      "tag": "0001_dapper_magma",
+      "breakpoints": true
     }
   ]
 }

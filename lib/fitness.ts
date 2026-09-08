@@ -7,6 +7,8 @@ export type LiftSet = {
   load?: string;
 };
 export type Exercise = {
+  instructions?: string;
+  videoUrl?: string;
   id: string;
   name: string;
   muscle: string;
@@ -14,6 +16,8 @@ export type Exercise = {
   sets: LiftSet[];
 };
 export type Workout = {
+  membershipId?: string;
+  programSessionId?: string;
   id: string;
   name: string;
   startedAt: string;
@@ -27,6 +31,8 @@ export type Routine = {
   exercises: {
     name: string;
     muscle: string;
+    instructions?: string;
+    videoUrl?: string;
     sets: number;
     reps: number;
     unit?: 'kg' | 'lb';
@@ -204,6 +210,8 @@ export function validateData(d: unknown): d is FitnessData {
   const validWorkout = (w: Workout) =>
     w &&
     str(w.id, 100) &&
+    (w.membershipId === undefined || str(w.membershipId, 100)) &&
+    (w.programSessionId === undefined || str(w.programSessionId, 100)) &&
     str(w.name, 100) &&
     str(w.startedAt, 40) &&
     Number.isFinite(Date.parse(w.startedAt)) &&
@@ -219,6 +227,8 @@ export function validateData(d: unknown): d is FitnessData {
         str(e.name, 100) &&
         e.name.trim().length > 0 &&
         str(e.muscle, 50) &&
+        (e.instructions === undefined || str(e.instructions, 1000)) &&
+        (e.videoUrl === undefined || str(e.videoUrl, 1000)) &&
         (e.unit === undefined || e.unit === 'kg' || e.unit === 'lb') &&
         Array.isArray(e.sets) &&
         e.sets.length <= 50 &&
@@ -272,6 +282,8 @@ export function validateData(d: unknown): d is FitnessData {
             str(e.name, 100) &&
             e.name.trim().length > 0 &&
             str(e.muscle, 50) &&
+            (e.instructions === undefined || str(e.instructions, 1000)) &&
+            (e.videoUrl === undefined || str(e.videoUrl, 1000)) &&
             (e.unit === undefined || e.unit === 'kg' || e.unit === 'lb') &&
             number(e.sets, 1, 50) &&
             Number.isInteger(e.sets) &&
