@@ -40,3 +40,49 @@
   font-size: 12px;
   margin: 0;
 }
+.video-upload {
+  margin-top: 16px;
+}
+.video-upload-choice {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px;
+  border: 1px dashed var(--line);
+  border-radius: 14px;
+  cursor: pointer;
+  background: var(--surface);
+}
+.video-upload-choice input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+.video-upload-choice:focus-within {
+  outline: 2px solid var(--green);
+  outline-offset: 3px;
+}
+.video-upload-choice small {
+  display: block;
+  color: var(--muted);
+  margin-top: 4px;
+  font-size: 12px;
+}
+.video-upload details {
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 14px;
+}
+.video-upload details input {
+  margin-top: 10px;
+}
+.program-fields {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}

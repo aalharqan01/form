@@ -1,0 +1,1 @@
+ALTER TABLE `coaching_memberships` ADD `nutrition` text DEFAULT 'null' NOT NULL;

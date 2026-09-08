@@ -1,5 +1,11 @@
 'use client';
-import { useCallback, useState, useSyncExternalStore } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from 'react';
 import {
   ArrowLeft,
   FlaskConical,
@@ -18,15 +24,17 @@ import {
 } from '@/components/ui/dialog';
 import CoachingWorkspace, {
   Marketplace,
+  AssignedWorkouts,
   MyCoach,
 } from '../coaching/coaching-ui';
 import {
   CoachingTransportContext,
   type CoachingTransport,
 } from '../coaching/transport';
+import { VideoUploadContext, VideoSourcesContext } from '../video-transport';
 import WorkoutPanel from '../workout-panel';
 import WeightPanel from '../weight-panel';
-import { type FitnessData, type Routine, completedSets } from '@/lib/fitness';
+import { type FitnessData, type Routine } from '@/lib/fitness';
 import {
   createSimulationStore,
   type Simulation,
@@ -52,6 +60,21 @@ export default function SimulationApp() {
     [epoch, setEpoch] = useState(0),
     [error, setError] = useState(''),
     [reset, setReset] = useState(false);
+  const [videoSources, setVideoSources] = useState<Record<string, string>>({});
+  const localVideos = useRef<string[]>([]);
+  useEffect(
+    () => () => {
+      localVideos.current.forEach((url) => URL.revokeObjectURL(url));
+    },
+    [],
+  );
+  const uploadDemo = useCallback(async (file: File) => {
+    const path = '/api/videos?id=' + crypto.randomUUID();
+    const source = URL.createObjectURL(file);
+    localVideos.current.push(source);
+    setVideoSources((v) => ({ ...v, [path]: source }));
+    return path;
+  }, []);
   const m = s.member;
   const transport: CoachingTransport = useCallback(
     async <T,>(q = '', body?: unknown) => {
@@ -110,7 +133,7 @@ export default function SimulationApp() {
     'Switch to Coach, open Alex’s request, and accept it. The coach sees the intake but cannot access workout or weight history yet.',
     'Switch to Trainee. The request is accepted, but coaching is still locked. The simulation button below represents a verified payment; it never charges money.',
     'Switch to Coach, open Alex, and choose Assign program. You can build it yourself or assign the example below.',
-    'Switch to Trainee → My coach → Sam → Program. Start a session, enter weights and reps, mark sets done, and finish. The saved workout is immediately visible to the simulated coach.',
+    'Switch to Trainee → Workouts. Start a session, enter weights and reps, mark sets done, and finish. The saved workout is immediately visible to the simulated coach.',
     'Open Daily weight to record a weigh-in. Then add four weeks of sample progress and switch to Coach to review the results.',
     'Switch to Coach, open Alex, and use Overview → Shared progress. Open an exercise to compare weekly load, reps and volume. Weight history shows every daily entry. Try Check-ins and Messages too.',
   ];
@@ -259,66 +282,54 @@ export default function SimulationApp() {
           </p>
         )}
       </section>
-      <CoachingTransportContext.Provider value={transport}>
-        <div
-          className="sim-surface"
-          key={`${role}-${panel}-${epoch}`}
-          onClickCapture={(e) => {
-            const a = (e.target as HTMLElement).closest('a');
-            if (!a) return;
-            const href = a.getAttribute('href');
-            if (href?.startsWith('/') && !href.startsWith('//')) {
-              e.preventDefault();
-              if (href.startsWith('/coaching')) setRole('coach');
-              else {
-                setRole('trainee');
-                setPanel(
-                  href.includes('marketplace') ? 'marketplace' : 'coach',
-                );
-              }
-            }
-          }}
-        >
-          {role === 'coach' ? (
-            <CoachingWorkspace />
-          ) : (
-            <main className="sim-trainee">
-              {panel === 'marketplace' ? (
-                <Marketplace onRequests={() => setPanel('coach')} />
-              ) : panel === 'coach' ? (
-                <MyCoach onStart={start} />
-              ) : panel === 'weight' ? (
-                <WeightPanel data={s.fitness} update={update} />
-              ) : s.fitness.active ? (
-                <WorkoutPanel
-                  restStorageKey="form-simulation-rest"
-                  data={s.fitness}
-                  update={update}
-                  onFinish={() => setPanel('coach')}
-                />
+      <VideoUploadContext.Provider value={uploadDemo}>
+        <VideoSourcesContext.Provider value={videoSources}>
+          <CoachingTransportContext.Provider value={transport}>
+            <div
+              className="sim-surface"
+              key={`${role}-${panel}-${epoch}`}
+              onClickCapture={(e) => {
+                const a = (e.target as HTMLElement).closest('a');
+                if (!a) return;
+                const href = a.getAttribute('href');
+                if (href?.startsWith('/') && !href.startsWith('//')) {
+                  e.preventDefault();
+                  if (href.startsWith('/coaching')) setRole('coach');
+                  else {
+                    setRole('trainee');
+                    setPanel(
+                      href.includes('marketplace') ? 'marketplace' : 'coach',
+                    );
+                  }
+                }
+              }}
+            >
+              {role === 'coach' ? (
+                <CoachingWorkspace />
               ) : (
-                <section className="co-empty">
-                  <Dumbbell size={32} />
-                  <h2>
-                    {s.fitness.workouts.length
-                      ? 'Workout saved'
-                      : 'Your assigned workouts'}
-                  </h2>
-                  <p>
-                    {s.fitness.workouts.length
-                      ? `${s.fitness.workouts.length} sessions · ${s.fitness.workouts.reduce((n, w) => n + completedSets(w), 0)} completed sets. Switch to Coach to see the same progress.`
-                      : 'Open My coach, select Sam, then use the Program tab to start an assigned session.'}
-                  </p>
-                  <Button className="primary" onClick={() => setPanel('coach')}>
-                    Open My coach
-                    <ArrowRight size={17} />
-                  </Button>
-                </section>
+                <main className="sim-trainee">
+                  {panel === 'marketplace' ? (
+                    <Marketplace onRequests={() => setPanel('coach')} />
+                  ) : panel === 'coach' ? (
+                    <MyCoach onStart={start} />
+                  ) : panel === 'weight' ? (
+                    <WeightPanel data={s.fitness} update={update} />
+                  ) : s.fitness.active ? (
+                    <WorkoutPanel
+                      restStorageKey="form-simulation-rest"
+                      data={s.fitness}
+                      update={update}
+                      onFinish={() => setPanel('workout')}
+                    />
+                  ) : (
+                    <AssignedWorkouts fitness={s.fitness} onStart={start} />
+                  )}
+                </main>
               )}
-            </main>
-          )}
-        </div>
-      </CoachingTransportContext.Provider>
+            </div>
+          </CoachingTransportContext.Provider>
+        </VideoSourcesContext.Provider>
+      </VideoUploadContext.Provider>
       <Dialog open={reset} onOpenChange={setReset}>
         <DialogContent className="form-dialog">
           <DialogTitle>Restart the simulation?</DialogTitle>
@@ -330,6 +341,9 @@ export default function SimulationApp() {
             className="primary full"
             onClick={() => {
               store.reset();
+              localVideos.current.forEach((url) => URL.revokeObjectURL(url));
+              localVideos.current = [];
+              setVideoSources({});
               sessionStorage.removeItem('form-simulation-rest');
               setRole('trainee');
               setPanel('marketplace');

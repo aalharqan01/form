@@ -2,6 +2,8 @@
 export function exerciseVideo(
   value: string,
 ): { kind: 'embed' | 'file'; src: string } | null {
+  if (/^\/api\/videos\?id=[a-f0-9-]{36}$/.test(value))
+    return { kind: 'file', src: value };
   try {
     const u = new URL(value);
     if (u.protocol !== 'https:' || u.username || u.password || u.port)

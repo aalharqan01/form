@@ -15,6 +15,7 @@ for (const name of [
   'coaching-server',
   'simulation',
   'video',
+  'video-server',
 ]) {
   const source = await readFile(`lib/${name}.ts`, 'utf8');
   const code = ts
@@ -133,6 +134,7 @@ test('coach-client lifecycle enforces identity, consent, ownership, persistence 
     '0000_illegal_bug.sql',
     '0001_dapper_magma.sql',
     '0002_perpetual_bloodaxe.sql',
+    '0003_normal_thunderbird.sql',
   ])
     db.sql.exec(await readFile('drizzle/' + name, 'utf8'));
   async function call(who, body, query = '', origin) {
@@ -338,6 +340,61 @@ test('coach-client lifecycle enforces identity, consent, ownership, persistence 
     (await call(trainee, null, '?member=' + memberId)).body.member.program,
     program,
   );
+  const nutrition = {
+    calories: 2200,
+    protein: 160,
+    carbs: 250,
+    fat: 62,
+    notes: 'Training days',
+  };
+  assert.equal(
+    (
+      await call(trainee, {
+        action: 'nutrition',
+        memberId,
+        nutrition,
+        revision: 2,
+      })
+    ).status,
+    403,
+  );
+  assert.equal(
+    (
+      await call(coach, {
+        action: 'nutrition',
+        memberId,
+        nutrition: { ...nutrition, protein: -1 },
+        revision: 2,
+      })
+    ).status,
+    400,
+  );
+  assert.equal(
+    (
+      await call(coach, {
+        action: 'nutrition',
+        memberId,
+        nutrition,
+        revision: 2,
+      })
+    ).status,
+    200,
+  );
+  assert.equal(
+    (
+      await call(coach, {
+        action: 'nutrition',
+        memberId,
+        nutrition,
+        revision: 2,
+      })
+    ).status,
+    409,
+  );
+  assert.deepEqual(
+    (await call(trainee, null, '?member=' + memberId)).body.member.nutrition,
+    nutrition,
+  );
   const fitness = {
     ...EMPTY,
     weights: [{ date: '2026-09-08', kg: 80, note: '' }],
@@ -429,6 +486,7 @@ test('coach-client lifecycle enforces identity, consent, ownership, persistence 
   detail = (await call(coach, null, '?member=' + memberId)).body;
   assert.equal(detail.fitness, null);
   assert.deepEqual(detail.member.intake, {});
+  assert.equal(detail.member.nutrition, null);
   assert.equal(detail.messages.length, 0);
   assert.equal(detail.member.program, null);
   assert.equal((await call(coach, { ...message, id: 'message2' })).status, 403);
@@ -559,6 +617,18 @@ test('simulation completes the coach-trainee workflow in isolated memory', async
       .exercises[0].sets[0].kg,
     '45',
   );
+  store.request('coach', '', {
+    action: 'nutrition',
+    nutrition: { calories: 2200, protein: 160, carbs: 250, fat: 62, notes: '' },
+  });
+  assert.equal(
+    store.request('trainee', '?member=demo-membership').member.nutrition
+      .protein,
+    160,
+  );
+  assert.throws(() =>
+    store.request('trainee', '', { action: 'nutrition', nutrition: null }),
+  );
   store.change(addSimulationHistory);
   const result = store.request('coach', '?member=demo-membership');
   assert.equal(result.fitness.weights.length, 28);
@@ -616,6 +686,8 @@ test('weekly weight average uses only recorded days in the current UTC week', ()
   assert.equal(stats.averageKg, 81);
   assert.equal(stats.weightCount, 2);
   assert.equal(stats.weightWeek, '2026-09-07');
+  assert.equal(stats.previousAverageKg, 100);
+  assert.equal(stats.averageChangeKg, -19);
   assert.equal(
     memberStats(fitness, member, new Date('2026-09-14T00:00:00Z')).averageKg,
     null,
@@ -662,4 +734,126 @@ test('embedded videos use approved players and preserve direct files and Vimeo p
     '<iframe src="https://example.com"/>',
   ])
     assert.equal(exerciseVideo(invalid), null);
+});
+
+test('video access is scoped to the active client, coach ownership, and valid byte ranges', async () => {
+  const { handleVideo, videoRange } = await import(
+    pathToFileURL(`${temp}/video-server.mjs`).href
+  );
+  const membership = {
+    id: 'm',
+    coach_id: 'coach',
+    trainee_id: 'trainee',
+    status: 'active',
+  };
+  const db = {
+    prepare: () => ({ bind: () => ({ first: async () => membership }) }),
+  };
+  const meta = {
+    size: 100,
+    customMetadata: { membershipId: 'm' },
+    writeHttpMetadata: (h) => h.set('Content-Type', 'video/mp4'),
+  };
+  let reads = 0;
+  const bucket = {
+    head: async () => meta,
+    get: async (key, opts) => {
+      reads++;
+      return { body: new Uint8Array(opts?.range?.length ?? 100) };
+    },
+  };
+  const url =
+    'https://form.test/api/videos?id=12345678-1234-1234-1234-123456789abc';
+  assert.equal(
+    (await handleVideo(db, bucket, null, new Request(url))).status,
+    401,
+  );
+  assert.equal(
+    (await handleVideo(db, bucket, stranger, new Request(url))).status,
+    403,
+  );
+  assert.equal(reads, 0);
+  const r = await handleVideo(
+    db,
+    bucket,
+    trainee,
+    new Request(url, { headers: { Range: 'bytes=10-19' } }),
+  );
+  assert.equal(r.status, 206);
+  assert.equal(r.headers.get('content-range'), 'bytes 10-19/100');
+  assert.equal((await r.arrayBuffer()).byteLength, 10);
+  membership.status = 'ended';
+  assert.equal(
+    (await handleVideo(db, bucket, trainee, new Request(url))).status,
+    403,
+  );
+  assert.equal(
+    (await handleVideo(db, bucket, coach, new Request(url))).status,
+    200,
+  );
+  assert.equal(
+    (
+      await handleVideo(
+        db,
+        bucket,
+        coach,
+        new Request(url, { headers: { Range: 'bytes=100-' } }),
+      )
+    ).status,
+    416,
+  );
+  assert.deepEqual(videoRange('bytes=-10', 100), { offset: 90, length: 10 });
+  assert.deepEqual(videoRange('bytes=0-999', 100), { offset: 0, length: 100 });
+  assert.throws(() => videoRange('bytes=10-1', 100));
+  assert.throws(() => videoRange('bytes=0-1,4-5', 100));
+  assert.equal(
+    (
+      await handleVideo(
+        db,
+        bucket,
+        coach,
+        new Request('https://form.test/api/videos?member=m', {
+          method: 'POST',
+          headers: { 'Content-Type': 'video/mp4', 'X-Video-Size': '20' },
+          body: new Uint8Array(20),
+        }),
+      )
+    ).status,
+    403,
+  );
+  membership.status = 'active';
+  const upload = (headers = {}) =>
+    new Request('https://form.test/api/videos?member=m', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'video/mp4',
+        'X-Video-Size': '20',
+        ...headers,
+      },
+      body: new Uint8Array(20),
+    });
+  assert.equal((await handleVideo(db, bucket, trainee, upload())).status, 403);
+  assert.equal(
+    (
+      await handleVideo(
+        db,
+        bucket,
+        coach,
+        upload({ Origin: 'https://evil.test' }),
+      )
+    ).status,
+    403,
+  );
+  assert.equal(
+    (
+      await handleVideo(
+        db,
+        bucket,
+        coach,
+        upload({ 'X-Video-Size': '999999999' }),
+      )
+    ).status,
+    413,
+  );
+  assert.equal((await handleVideo(db, bucket, coach, upload())).status, 415);
 });

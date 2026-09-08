@@ -2,6 +2,7 @@ import type { ChatGPTUser } from '../app/chatgpt-auth';
 import type { Member, CoachProfile, Offer, Program, Intake } from './coaching';
 import {
   isProfile,
+  isNutrition,
   isProgram,
   isIntake,
   text,
@@ -22,6 +23,7 @@ type Row = {
   offer: string;
   intake: string;
   program: string;
+  nutrition: string;
   revision: number;
   coach_read_at: string;
   trainee_read_at: string;
@@ -66,6 +68,7 @@ function publicMember(r: Row, coachName = ''): Member {
     offer: JSON.parse(r.offer) as Offer,
     intake: JSON.parse(r.intake) as Intake,
     program: JSON.parse(r.program) as Program | null,
+    nutrition: JSON.parse(r.nutrition ?? 'null'),
     revision: r.revision,
     created_at: r.created_at,
     accepted_at: r.accepted_at,
@@ -146,6 +149,7 @@ export async function handleCoaching(
       if (!['requested', 'awaiting_payment'].includes(r.status))
         m.intake = {} as Intake;
       m.program = null;
+      m.nutrition = null;
       return { m, fitness: null };
     };
     if (request.method === 'GET') {
@@ -417,6 +421,26 @@ export async function handleCoaching(
       'This coaching relationship is no longer active.',
       403,
     );
+    if (b.action === 'nutrition') {
+      ensure(isCoach, 'Only the coach can set nutrition targets.', 403);
+      ensure(
+        b.nutrition === null || isNutrition(b.nutrition),
+        'Check the calorie and macro targets.',
+      );
+      ensure(Number.isInteger(b.revision), 'Reload this client.', 409);
+      const result = await db
+        .prepare(
+          "UPDATE coaching_memberships SET nutrition=?,revision=revision+1 WHERE id=? AND status='active' AND revision=?",
+        )
+        .bind(JSON.stringify(b.nutrition), r.id, b.revision)
+        .run();
+      ensure(
+        result.meta.changes,
+        'Targets changed elsewhere. Reload before saving.',
+        409,
+      );
+      return json({ ok: true });
+    }
     if (b.action === 'program') {
       ensure(isCoach, 'Only your coach can assign a program.', 403);
       ensure(

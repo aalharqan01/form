@@ -1,4 +1,4 @@
-import type { Routine, FitnessData } from './fitness';
+import type { Routine, FitnessData, WeighIn } from './fitness';
 export type Offer = {
   id: string;
   name: string;
@@ -29,7 +29,28 @@ export type Program = {
   startDate: string;
   sessions: (Routine & { day: number })[];
 };
+export type NutritionTargets = {
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  notes: string;
+};
+export function isNutrition(v: unknown): v is NutritionTargets {
+  const n = v as NutritionTargets;
+  return (
+    !!n &&
+    Number.isInteger(n.calories) &&
+    n.calories >= 1 &&
+    n.calories <= 10000 &&
+    [n.protein, n.carbs, n.fat].every(
+      (x) => Number.isFinite(x) && x >= 0 && x <= 1500,
+    ) &&
+    text(n.notes, 2000, false)
+  );
+}
 export type Member = {
+  nutrition?: NutritionTargets | null;
   id: string;
   coach_id: string;
   trainee_id: string | null;
@@ -62,6 +83,8 @@ export type Member = {
     averageKg: number | null;
     weightCount: number;
     weightWeek: string;
+    previousAverageKg: number | null;
+    averageChangeKg: number | null;
     due: number;
     completed: number;
   };
@@ -157,6 +180,7 @@ export function isIntake(v: unknown): v is Intake {
 export function videoURL(v: unknown) {
   if (v === '' || v === undefined) return true;
   if (typeof v !== 'string' || v.length > 1000) return false;
+  if (/^\/api\/videos\?id=[a-f0-9-]{36}$/.test(v)) return true;
   try {
     const u = new URL(v);
     return u.protocol === 'https:' && !u.username && !u.password;
@@ -217,9 +241,8 @@ export function memberStats(
     a.date.localeCompare(b.date),
   );
   const weightWeek = weekOf(now);
-  const weekReadings = readings.filter(
-    (w) => w.date >= weightWeek && w.date <= now.toISOString().slice(0, 10),
-  );
+  const weeks = weeklyWeights(readings, now);
+  const current = weeks.find((w) => w.week === weightWeek);
   let due = 0,
     completed = 0;
   for (let i = 0; i < 7; i++) {
@@ -249,11 +272,11 @@ export function memberStats(
         .map((w) => w.startedAt)
         .sort()
         .at(-1) ?? null,
-    averageKg: weekReadings.length
-      ? weekReadings.reduce((sum, w) => sum + w.kg, 0) / weekReadings.length
-      : null,
-    weightCount: weekReadings.length,
+    averageKg: current?.averageKg ?? null,
+    weightCount: current?.count ?? 0,
     weightWeek,
+    previousAverageKg: current?.previousAverageKg ?? null,
+    averageChangeKg: current?.changeKg ?? null,
     due,
     completed,
   };
@@ -289,3 +312,37 @@ export const memberStatus = (s: Member['status']) =>
     active: 'Active',
     ended: 'Ended',
   })[s];
+
+export function weeklyWeights(readings: WeighIn[], now = new Date()) {
+  const groups = new Map<string, WeighIn[]>();
+  for (const w of [...readings].sort((a, b) => a.date.localeCompare(b.date))) {
+    if (w.date > now.toISOString().slice(0, 10)) continue;
+    const week = weekOf(new Date(w.date + 'T00:00:00Z'));
+    groups.set(week, [...(groups.get(week) ?? []), w]);
+  }
+  const means = new Map(
+    [...groups].map(([week, entries]) => [
+      week,
+      entries.reduce((sum, w) => sum + w.kg, 0) / entries.length,
+    ]),
+  );
+  return [...groups]
+    .map(([week, entries]) => {
+      const previous = new Date(week + 'T00:00:00Z');
+      previous.setUTCDate(previous.getUTCDate() - 7);
+      const previousAverageKg =
+        means.get(previous.toISOString().slice(0, 10)) ?? null;
+      const averageKg = means.get(week)!;
+      return {
+        week,
+        count: entries.length,
+        averageKg,
+        previousAverageKg,
+        changeKg:
+          previousAverageKg === null ? null : averageKg - previousAverageKg,
+        withinWeekKg:
+          entries.length > 1 ? entries.at(-1)!.kg - entries[0].kg : null,
+      };
+    })
+    .reverse();
+}

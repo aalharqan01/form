@@ -48,7 +48,12 @@ import {
   lastPerformance,
 } from '@/lib/fitness';
 import WeightPanel from './weight-panel';
-import { MyCoach, Marketplace, CoachingNotice } from './coaching/coaching-ui';
+import {
+  AssignedWorkouts,
+  MyCoach,
+  Marketplace,
+  CoachingNotice,
+} from './coaching/coaching-ui';
 import ProgressPanel from './progress-panel';
 import ThemeControl from './theme-control';
 import WorkoutPanel, { RoutineEditor } from './workout-panel';
@@ -220,7 +225,7 @@ export default function FitnessApp() {
               muscle: e.muscle,
               instructions: e.instructions,
               videoUrl: e.videoUrl,
-              unit: e.unit ?? 'kg',
+              unit: 'kg',
               sets: Array.from({ length: e.sets }, (_, i) => ({
                 id: id(),
                 kg: previous?.[i]?.kg ?? '',
@@ -462,7 +467,7 @@ export default function FitnessApp() {
           <WorkoutPanel
             data={data}
             update={update}
-            onFinish={() => setTab('history')}
+            onFinish={() => setTab('train')}
           />
         ) : (
           <>
@@ -481,6 +486,7 @@ export default function FitnessApp() {
             </div>
             {tab === 'train' ? (
               <>
+                {!demo && <AssignedWorkouts fitness={data} onStart={start} />}
                 <div className="dashboard-grid">
                   <section className="bezel feature">
                     <div className="card">
@@ -518,9 +524,6 @@ export default function FitnessApp() {
                         </span>
                       </Button>
                       <div className="feature-footer">
-                        <a href="/coaching" className="co-workspace-link">
-                          Coach workspace <ArrowUpRight size={16} />
-                        </a>
                         <a href="/coaching" className="co-workspace-link">
                           Coach workspace <ArrowUpRight size={16} />
                         </a>

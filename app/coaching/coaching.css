@@ -1183,3 +1183,86 @@ html[data-theme='dark'] .co-card {
   min-width: 0;
   flex: 1;
 }
+
+.nutrition-card {
+  margin-bottom: 24px;
+}
+.nutrition-values {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-top: 20px;
+}
+.nutrition-values span,
+.nutrition-values strong {
+  display: block;
+}
+.nutrition-values span {
+  font-size: 14px;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.nutrition-values strong {
+  font-size: 26px;
+  font-weight: 500;
+}
+.nutrition-values small {
+  font-size: 14px;
+  color: var(--muted);
+}
+.co-table-scroll {
+  overflow-x: auto;
+  margin: 16px 0 24px;
+}
+.weight-comparison table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  white-space: nowrap;
+}
+.weight-comparison th,
+.weight-comparison td {
+  padding: 12px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+}
+.weight-comparison th {
+  font-weight: 500;
+  color: var(--muted);
+}
+.assigned-workouts {
+  margin-bottom: 32px;
+}
+.assigned-session {
+  margin: 16px 0;
+}
+.assigned-exercise-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 18px;
+}
+.assigned-exercise-list > div {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.assigned-exercise-list strong,
+.assigned-exercise-list small {
+  display: block;
+}
+.assigned-exercise-list small {
+  color: var(--muted);
+  margin-top: 4px;
+}
+@media (max-width: 600px) {
+  .nutrition-values {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .assigned-exercise-list {
+    grid-template-columns: 1fr;
+  }
+  .assigned-session > .co-section-line {
+    flex-wrap: wrap;
+  }
+}

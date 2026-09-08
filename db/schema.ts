@@ -25,6 +25,7 @@ export const coachingMemberships = sqliteTable('coaching_memberships', {
   offer: text('offer').notNull(),
   intake: text('intake').notNull().default('{}'),
   program: text('program').notNull().default('null'),
+  nutrition: text('nutrition').notNull().default('null'),
   revision: integer('revision').notNull().default(0),
   coachReadAt: text('coach_read_at').notNull().default(''),
   traineeReadAt: text('trainee_read_at').notNull().default(''),

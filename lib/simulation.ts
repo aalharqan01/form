@@ -15,6 +15,7 @@ import {
   type Intake,
   isIntake,
   isProgram,
+  isNutrition,
   isProfile,
   memberStats,
   weekOf,
@@ -154,7 +155,7 @@ export function startSimulationWorkout(s: Simulation, r: Routine) {
       id: uid(),
       name: e.name,
       muscle: e.muscle,
-      unit: e.unit,
+      unit: 'kg',
       instructions: e.instructions,
       videoUrl: e.videoUrl,
       sets: Array.from({ length: e.sets }, (_, i) => ({
@@ -207,7 +208,7 @@ export function addSimulationHistory(s: Simulation) {
           id: uid(),
           name: e.name,
           muscle: e.muscle,
-          unit: e.unit,
+          unit: 'kg',
           sets: Array.from({ length: e.sets }, () => ({
             id: uid(),
             kg: String(
@@ -245,7 +246,10 @@ export function simulationRequest(
     copy.pending = s.checkins.filter((c) => !c.reviewed_at).length;
     copy.unread = s.messages.filter((v) => v.sender_id !== viewer).length;
     if (m.status === 'active') copy.stats = memberStats(s.fitness, m);
-    else copy.program = null;
+    else {
+      copy.program = null;
+      copy.nutrition = null;
+    }
     return {
       member: copy,
       fitness: m.status === 'active' ? structuredClone(s.fitness) : null,
@@ -335,6 +339,13 @@ export function simulationRequest(
   }
   if (m.status !== 'active')
     throw new Error('Complete the simulated payment first.');
+  if (b.action === 'nutrition') {
+    if (role !== 'coach' || (b.nutrition !== null && !isNutrition(b.nutrition)))
+      throw new Error('Check nutrition targets.');
+    m.nutrition = structuredClone(b.nutrition);
+    m.revision++;
+    return { ok: true };
+  }
   if (b.action === 'program') {
     if (role !== 'coach' || !isProgram(b.program))
       throw new Error('Check the program.');

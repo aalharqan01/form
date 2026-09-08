@@ -48,6 +48,10 @@ import {
   completedSets,
   smoothWeights,
 } from '@/lib/fitness';
+import ExerciseThumbnail, { ExerciseCredits } from '../exercise-thumbnail';
+import Nutrition from './nutrition';
+import WeightComparison, { weightChange } from './weight-comparison';
+import VideoUpload from '../video-upload';
 import { ExercisePicker } from '../workout-panel';
 import ExerciseVideo from '../exercise-video';
 import { exerciseVideo } from '@/lib/video';
@@ -730,6 +734,113 @@ function ProfileEditor({
     </form>
   );
 }
+export function AssignedWorkouts({
+  fitness,
+  onStart,
+}: {
+  fitness: FitnessData;
+  onStart: (r: Routine, memberId: string) => void;
+}) {
+  const c = useCoaching();
+  const members =
+    c.state?.memberships.filter((m) => m.status === 'active') ?? [];
+  if (!c.state)
+    return (
+      <section className="co-card">
+        <p>{c.error || 'Loading assigned workouts…'}</p>
+        {c.error && <Button onClick={() => void c.reload()}>Retry</Button>}
+      </section>
+    );
+  if (!members.length)
+    return (
+      <section className="co-card">
+        <h2>Assigned workouts</h2>
+        <p className="co-muted">
+          Your coach’s sessions will appear here when your membership starts.
+          You can track your own workouts below.
+        </p>
+      </section>
+    );
+  return (
+    <div className="assigned-workouts">
+      <ExerciseCredits />
+      <div className="co-section-line">
+        <h2>Your assigned workouts</h2>
+        <span className="co-muted">This week</span>
+      </div>
+      {members.map((m) => (
+        <section key={m.id}>
+          <p className="co-overline">{m.coachName}</p>
+          <Nutrition targets={m.nutrition} />
+          {!m.program ? (
+            <p className="co-muted">Your coach is preparing your program.</p>
+          ) : (
+            <>
+              <h3>{m.program.title}</h3>
+              {m.program.notes && (
+                <p className="co-program-note">{m.program.notes}</p>
+              )}
+              {m.program.sessions.map((session) => {
+                const completed = fitness.workouts.filter(
+                  (w) =>
+                    w.membershipId === m.id &&
+                    w.programSessionId === session.id &&
+                    w.startedAt.slice(0, 10) >= weekOf() &&
+                    w.startedAt.slice(0, 10) <=
+                      new Date().toISOString().slice(0, 10),
+                ).length;
+                const upcoming =
+                  m.program!.startDate > new Date().toISOString().slice(0, 10);
+                return (
+                  <div className="co-card assigned-session" key={session.id}>
+                    <div className="co-section-line">
+                      <div>
+                        <p className="co-overline">
+                          {DAYS[session.day]}
+                          {completed ? ' · COMPLETED THIS WEEK' : ''}
+                        </p>
+                        <h3>{session.name}</h3>
+                        <p className="co-muted">
+                          {session.exercises.length} exercises ·{' '}
+                          {session.exercises.reduce((n, e) => n + e.sets, 0)}{' '}
+                          sets
+                        </p>
+                      </div>
+                      <Button
+                        className="primary"
+                        disabled={upcoming}
+                        onClick={() => onStart(session, m.id)}
+                      >
+                        {upcoming
+                          ? 'Starts ' + dateLabel(m.program!.startDate)
+                          : completed
+                            ? 'Train again'
+                            : 'Start workout'}
+                      </Button>
+                    </div>
+                    <div className="assigned-exercise-list">
+                      {session.exercises.map((e, i) => (
+                        <div key={i}>
+                          <ExerciseThumbnail name={e.name} />
+                          <span>
+                            <strong>{e.name}</strong>
+                            <small>
+                              {e.sets} × {e.reps} reps
+                            </small>
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </>
+          )}
+        </section>
+      ))}
+    </div>
+  );
+}
 export function MyCoach({
   onStart,
 }: {
@@ -974,11 +1085,26 @@ function ClientDetail({
                     {m.stats?.weightCount ?? 0} weigh-ins · this week, Mon–Sun
                     (UTC)
                   </small>
+                  <small>{weightChange(m.stats?.averageChangeKg)}</small>
                   <small className="co-weight-action">
                     View all entries <ChevronRight size={14} />
                   </small>
                 </button>
               </div>
+              <Nutrition
+                targets={m.nutrition}
+                busy={busy}
+                onSave={
+                  isCoach
+                    ? (nutrition) =>
+                        act({
+                          action: 'nutrition',
+                          nutrition,
+                          revision: m.revision,
+                        })
+                    : undefined
+                }
+              />
               <div className="co-detail-grid">
                 <section className="co-card">
                   <div className="co-section-line">
@@ -1088,6 +1214,7 @@ function ClientDetail({
       )}
       {editing && (
         <ProgramEditor
+          memberId={m.id}
           program={m.program}
           busy={busy}
           error={error}
@@ -1116,6 +1243,7 @@ function ClientDetail({
             All shared daily weigh-ins, newest first. The overview averages
             entries from this Monday through today (UTC).
           </DialogDescription>
+          <WeightComparison weights={detail.fitness?.weights ?? []} />
           <div className="co-history co-weight-history">
             {[...(detail.fitness?.weights ?? [])]
               .sort((a, b) => b.date.localeCompare(a.date))
@@ -1228,6 +1356,7 @@ function SharedProgress({ fitness }: { fitness: FitnessData }) {
           </p>
         </div>
       )}
+      <WeightComparison weights={fitness.weights} />
       <ProgressPanel data={fitness} />
       <details>
         <summary>Weight history · {readings.length} entries</summary>
@@ -1289,6 +1418,7 @@ function ProgramView({
     </Empty>
   ) : (
     <div className="co-program">
+      <ExerciseCredits />
       <div className="co-section-line">
         <div>
           <h2>{program.title}</h2>
@@ -1317,9 +1447,7 @@ function ProgramView({
           </div>
           {s.exercises.map((e, j) => (
             <div className="co-prescription" key={j}>
-              <span className="co-prescription-index">
-                {String(j + 1).padStart(2, '0')}
-              </span>
+              <ExerciseThumbnail name={e.name} />
               <div>
                 <strong>{e.name}</strong>
                 <span>
@@ -1336,6 +1464,7 @@ function ProgramView({
   );
 }
 function ProgramEditor({
+  memberId,
   program,
   busy,
   error,
@@ -1347,7 +1476,9 @@ function ProgramEditor({
   error: string;
   onClose: () => void;
   onSave: (p: Program) => Promise<void>;
+  memberId: string;
 }) {
+  const [uploading, setUploading] = useState(false);
   const [picker, setPicker] = useState<{
     sessionId: string;
     index?: number;
@@ -1388,7 +1519,7 @@ function ProgramEditor({
     <Dialog
       open
       onOpenChange={(v) => {
-        if (!v) onClose();
+        if (!v && !uploading) onClose();
       }}
     >
       <DialogContent className="form-dialog co-dialog co-program-dialog">
@@ -1402,242 +1533,235 @@ function ProgramEditor({
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            void onSave(p);
+            if (!uploading) void onSave(p);
           }}
         >
-          <div className="co-form-grid">
+          <fieldset disabled={uploading || busy} className="program-fields">
+            <div className="co-form-grid">
+              <label>
+                Program title
+                <Input
+                  required
+                  maxLength={100}
+                  value={p.title}
+                  onChange={(e) => setP({ ...p, title: e.target.value })}
+                />
+              </label>
+              <label>
+                Start date
+                <Input
+                  type="date"
+                  required
+                  value={p.startDate}
+                  onChange={(e) => setP({ ...p, startDate: e.target.value })}
+                />
+              </label>
+            </div>
             <label>
-              Program title
-              <Input
-                required
-                maxLength={100}
-                value={p.title}
-                onChange={(e) => setP({ ...p, title: e.target.value })}
+              Program notes
+              <Textarea
+                maxLength={2000}
+                value={p.notes}
+                onChange={(e) => setP({ ...p, notes: e.target.value })}
               />
             </label>
-            <label>
-              Start date
-              <Input
-                type="date"
-                required
-                value={p.startDate}
-                onChange={(e) => setP({ ...p, startDate: e.target.value })}
-              />
-            </label>
-          </div>
-          <label>
-            Program notes
-            <Textarea
-              maxLength={2000}
-              value={p.notes}
-              onChange={(e) => setP({ ...p, notes: e.target.value })}
-            />
-          </label>
-          {p.sessions.map((s, i) => (
-            <div key={s.id} className="co-session-editor">
-              <div className="co-section-line">
-                <h3>Session {i + 1}</h3>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  aria-label={`Remove session ${i + 1}`}
-                  onClick={() =>
-                    setP({
-                      ...p,
-                      sessions: p.sessions.filter((v) => v.id !== s.id),
-                    })
-                  }
-                >
-                  <X size={18} />
-                </Button>
-              </div>
-              <div className="co-form-grid">
-                <label>
-                  Name
-                  <Input
-                    required
-                    maxLength={100}
-                    value={s.name}
-                    onChange={(e) => session(i, { name: e.target.value })}
-                  />
-                </label>
-                <label>
-                  Training day
-                  <select
-                    value={s.day}
-                    onChange={(e) =>
-                      session(i, { day: Number(e.target.value) })
+            {p.sessions.map((s, i) => (
+              <div key={s.id} className="co-session-editor">
+                <div className="co-section-line">
+                  <h3>Session {i + 1}</h3>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    aria-label={`Remove session ${i + 1}`}
+                    onClick={() =>
+                      setP({
+                        ...p,
+                        sessions: p.sessions.filter((v) => v.id !== s.id),
+                      })
                     }
                   >
-                    {DAYS.map((d, k) => (
-                      <option key={d} value={k}>
-                        {d}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-              {s.exercises.map((e, j) => (
-                <div className="co-exercise-editor" key={j}>
-                  <div className="co-section-line">
-                    <strong>Exercise {j + 1}</strong>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      aria-label={`Remove exercise ${j + 1}`}
-                      onClick={() =>
-                        session(i, {
-                          exercises: s.exercises.filter((_, k) => k !== j),
-                        })
+                    <X size={18} />
+                  </Button>
+                </div>
+                <div className="co-form-grid">
+                  <label>
+                    Name
+                    <Input
+                      required
+                      maxLength={100}
+                      value={s.name}
+                      onChange={(e) => session(i, { name: e.target.value })}
+                    />
+                  </label>
+                  <label>
+                    Training day
+                    <select
+                      value={s.day}
+                      onChange={(e) =>
+                        session(i, { day: Number(e.target.value) })
                       }
                     >
-                      <X size={16} />
-                    </Button>
-                  </div>
-                  <button
-                    type="button"
-                    className="co-exercise-choice"
-                    onClick={() => setPicker({ sessionId: s.id, index: j })}
-                  >
-                    <Dumbbell size={20} />
-                    <span>
-                      <strong>{e.name || 'Choose exercise'}</strong>
-                      <small>
-                        {e.muscle || 'Exercise library'} · Change exercise
-                      </small>
-                    </span>
-                    <ChevronRight size={18} />
-                  </button>
-                  <div className="co-form-grid three">
-                    <label>
-                      Sets
-                      <Input
-                        required
-                        type="number"
-                        min={1}
-                        max={20}
-                        value={e.sets}
-                        onChange={(v) =>
-                          exercise(i, j, { sets: Number(v.target.value) })
-                        }
-                      />
-                    </label>
-                    <label>
-                      Reps
-                      <Input
-                        required
-                        type="number"
-                        min={1}
-                        max={100}
-                        value={e.reps}
-                        onChange={(v) =>
-                          exercise(i, j, { reps: Number(v.target.value) })
-                        }
-                      />
-                    </label>
-                    <label>
-                      Load unit
-                      <select
-                        value={e.unit ?? 'kg'}
-                        onChange={(v) =>
-                          exercise(i, j, {
-                            unit: v.target.value as 'kg' | 'lb',
+                      {DAYS.map((d, k) => (
+                        <option key={d} value={k}>
+                          {d}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+                {s.exercises.map((e, j) => (
+                  <div className="co-exercise-editor" key={j}>
+                    <div className="co-section-line">
+                      <strong>Exercise {j + 1}</strong>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        aria-label={`Remove exercise ${j + 1}`}
+                        onClick={() =>
+                          session(i, {
+                            exercises: s.exercises.filter((_, k) => k !== j),
                           })
                         }
                       >
-                        <option>kg</option>
-                        <option>lb</option>
-                      </select>
+                        <X size={16} />
+                      </Button>
+                    </div>
+                    <button
+                      type="button"
+                      className="co-exercise-choice"
+                      onClick={() => setPicker({ sessionId: s.id, index: j })}
+                    >
+                      <ExerciseThumbnail name={e.name} />
+                      <span>
+                        <strong>{e.name || 'Choose exercise'}</strong>
+                        <small>
+                          {e.muscle || 'Exercise library'} · Change exercise
+                        </small>
+                      </span>
+                      <ChevronRight size={18} />
+                    </button>
+                    <div className="co-form-grid three">
+                      <label>
+                        Sets
+                        <Input
+                          required
+                          type="number"
+                          min={1}
+                          max={20}
+                          value={e.sets}
+                          onChange={(v) =>
+                            exercise(i, j, { sets: Number(v.target.value) })
+                          }
+                        />
+                      </label>
+                      <label>
+                        Reps
+                        <Input
+                          required
+                          type="number"
+                          min={1}
+                          max={100}
+                          value={e.reps}
+                          onChange={(v) =>
+                            exercise(i, j, { reps: Number(v.target.value) })
+                          }
+                        />
+                      </label>
+                      <label>
+                        Load unit
+                        <select
+                          value={e.unit ?? 'kg'}
+                          onChange={(v) =>
+                            exercise(i, j, {
+                              unit: v.target.value as 'kg' | 'lb',
+                            })
+                          }
+                        >
+                          <option>kg</option>
+                          <option>lb</option>
+                        </select>
+                      </label>
+                    </div>
+                    <label>
+                      Coaching instructions
+                      <Input
+                        maxLength={1000}
+                        value={e.instructions ?? ''}
+                        onChange={(v) =>
+                          exercise(i, j, { instructions: v.target.value })
+                        }
+                        placeholder="Tempo, effort, rest or target load"
+                      />
                     </label>
-                  </div>
-                  <label>
-                    Coaching instructions
-                    <Input
-                      maxLength={1000}
-                      value={e.instructions ?? ''}
-                      onChange={(v) =>
-                        exercise(i, j, { instructions: v.target.value })
-                      }
-                      placeholder="Tempo, effort, rest or target load"
-                    />
-                  </label>
-                  <label>
-                    Demonstration video (optional)
-                    <Input
-                      type="url"
-                      pattern="https://.*"
-                      maxLength={1000}
+                    <VideoUpload
+                      onBusy={setUploading}
+                      memberId={memberId}
+                      name={e.name}
                       value={e.videoUrl ?? ''}
-                      onChange={(v) =>
-                        exercise(i, j, { videoUrl: v.target.value })
-                      }
-                      placeholder="YouTube, Vimeo or direct video URL"
+                      onChange={(videoUrl) => exercise(i, j, { videoUrl })}
                     />
-                  </label>
-                  {e.videoUrl && (
-                    <ExerciseVideo url={e.videoUrl} name={e.name} />
-                  )}
-                </div>
-              ))}
-              {!s.exercises.length && (
-                <p className="co-muted">
-                  Choose exercises from the library to build this session.
-                </p>
-              )}
-              <Button
-                type="button"
-                className="secondary"
-                disabled={s.exercises.length >= 30}
-                onClick={() => setPicker({ sessionId: s.id })}
-              >
-                <Plus size={17} />
-                Add exercise
-              </Button>
-            </div>
-          ))}
-          <Button
-            type="button"
-            className="secondary full"
-            disabled={p.sessions.length >= 14}
-            onClick={() =>
-              setP({
-                ...p,
-                sessions: [
-                  ...p.sessions,
-                  {
-                    id: id(),
-                    name: `Session ${p.sessions.length + 1}`,
-                    day: 3,
-                    exercises: [],
-                  },
-                ],
-              })
-            }
-          >
-            <Plus size={17} />
-            Add session
-          </Button>
-          <ErrorNote text={error} />
-          <Button
-            className="primary full"
-            type="submit"
-            disabled={
-              busy ||
-              !p.sessions.length ||
-              p.sessions.some(
-                (s) =>
-                  !s.exercises.length ||
-                  s.exercises.some(
-                    (e) =>
-                      !e.name.trim() ||
-                      (!!e.videoUrl && !exerciseVideo(e.videoUrl)),
-                  ),
-              )
-            }
-          >
-            {busy ? 'Saving…' : 'Assign program'}
-            <Check size={18} />
-          </Button>
+                  </div>
+                ))}
+                {!s.exercises.length && (
+                  <p className="co-muted">
+                    Choose exercises from the library to build this session.
+                  </p>
+                )}
+                <Button
+                  type="button"
+                  className="secondary"
+                  disabled={s.exercises.length >= 30}
+                  onClick={() => setPicker({ sessionId: s.id })}
+                >
+                  <Plus size={17} />
+                  Add exercise
+                </Button>
+              </div>
+            ))}
+            <Button
+              type="button"
+              className="secondary full"
+              disabled={p.sessions.length >= 14}
+              onClick={() =>
+                setP({
+                  ...p,
+                  sessions: [
+                    ...p.sessions,
+                    {
+                      id: id(),
+                      name: `Session ${p.sessions.length + 1}`,
+                      day: 3,
+                      exercises: [],
+                    },
+                  ],
+                })
+              }
+            >
+              <Plus size={17} />
+              Add session
+            </Button>
+            <ErrorNote text={error} />
+            <Button
+              className="primary full"
+              type="submit"
+              disabled={
+                busy ||
+                !p.sessions.length ||
+                p.sessions.some(
+                  (s) =>
+                    !s.exercises.length ||
+                    s.exercises.some(
+                      (e) =>
+                        !e.name.trim() ||
+                        (!!e.videoUrl && !exerciseVideo(e.videoUrl)),
+                    ),
+                )
+              }
+            >
+              {busy ? 'Saving…' : 'Assign program'}
+              <Check size={18} />
+            </Button>
+          </fieldset>
         </form>
         <ExercisePicker
           open={!!picker}

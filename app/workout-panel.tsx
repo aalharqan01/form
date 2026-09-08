@@ -9,6 +9,7 @@ import {
   Timer,
   Bookmark,
 } from 'lucide-react';
+import ExerciseThumbnail, { ExerciseCredits } from './exercise-thumbnail';
 import ExerciseVideo from './exercise-video';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -38,7 +39,15 @@ type Props = {
   update: (fn: (d: FitnessData) => FitnessData) => void;
   onFinish: () => void;
 };
-export function RestTimer({ end, onEnd }: { end: number; onEnd: () => void }) {
+export function RestTimer({
+  end,
+  onEnd,
+  onAdjust,
+}: {
+  end: number;
+  onEnd: () => void;
+  onAdjust: (seconds: number) => void;
+}) {
   const [now, setNow] = useState(Date.now);
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 1000);
@@ -56,10 +65,24 @@ export function RestTimer({ end, onEnd }: { end: number; onEnd: () => void }) {
             : 'Rest complete'}
         </strong>
       </div>
+      <div className="rest-adjust">
+        <button
+          aria-label="Reduce rest by 15 seconds"
+          onClick={() => onAdjust(-15)}
+        >
+          −15s
+        </button>
+        <button
+          aria-label="Increase rest by 15 seconds"
+          onClick={() => onAdjust(15)}
+        >
+          +15s
+        </button>
+      </div>
       <Button
         variant="ghost"
         className="icon-button"
-        aria-label="Dismiss rest timer"
+        aria-label="Skip rest timer"
         onClick={onEnd}
       >
         <X size={18} />
@@ -142,6 +165,7 @@ export function ExercisePicker({
             ))}
           </select>
         </label>
+        <ExerciseCredits />
         <p className="exercise-results" aria-live="polite">
           {list.length} exercises found
         </p>
@@ -160,9 +184,7 @@ export function ExercisePicker({
                 setQuery('');
               }}
             >
-              <span className="exercise-icon">
-                <Dumbbell size={21} strokeWidth={1.4} />
-              </span>
+              <ExerciseThumbnail name={n} />
               <span>
                 <strong>{n}</strong>
                 <small>
@@ -267,6 +289,7 @@ export function RoutineEditor({
               {exercises.map((x, i) => (
                 <div className="routine-edit-item" key={`${x.name}-${i}`}>
                   <div>
+                    <ExerciseThumbnail name={x.name} />
                     <strong>{x.name}</strong>
                     <Button
                       type="button"
@@ -392,7 +415,7 @@ export default function WorkoutPanel({
     [error, setError] = useState(''),
     [restEnd, setRestEnd] = useState<number | null>(null),
     [saveRoutine, setSaveRoutine] = useState(false),
-    [focus, setFocus] = useState(true),
+    [focus, setFocus] = useState(false),
     [focusIndex, setFocusIndex] = useState(0);
   useEffect(() => {
     const t = setTimeout(() => {
@@ -410,10 +433,6 @@ export default function WorkoutPanel({
     update((d) => ({ ...d, active: d.active ? fn(d.active) : null }));
   function addExercise(name: string, muscle: string) {
     const previous = lastPerformance(data.workouts, name);
-    const previousExercise = [...data.workouts]
-      .sort((a, b) => b.startedAt.localeCompare(a.startedAt))
-      .flatMap((w) => w.exercises)
-      .find((e) => e.name === name);
     change((w) => ({
       ...w,
       exercises: [
@@ -422,7 +441,7 @@ export default function WorkoutPanel({
           id: id(),
           name,
           muscle,
-          unit: previousExercise?.unit ?? 'kg',
+          unit: 'kg',
           sets: previous?.length
             ? previous.map((s) => ({
                 id: id(),
@@ -551,7 +570,7 @@ export default function WorkoutPanel({
     [workout],
   );
   return (
-    <div className={focus ? 'focus-session' : ''}>
+    <div className={`active-workout ${focus ? 'focus-session' : ''}`}>
       <div className="session-heading">
         <div>
           <p className="eyebrow">ACTIVE WORKOUT</p>
@@ -604,6 +623,8 @@ export default function WorkoutPanel({
               [90, '90s'],
               [120, '2 min'],
               [180, '3 min'],
+              [240, '4 min'],
+              [300, '5 min'],
             ].map(([v, l]) => (
               <option key={v} value={v}>
                 {l}
@@ -653,6 +674,7 @@ export default function WorkoutPanel({
             <section className="bezel exercise-bezel" key={e.id}>
               <div className="card">
                 <div className="exercise-header">
+                  <ExerciseThumbnail name={e.name} />
                   <div>
                     <h2>{e.name}</h2>
                     <p>{e.muscle}</p>
@@ -915,6 +937,7 @@ export default function WorkoutPanel({
         <Plus size={19} />
         Add exercise
       </Button>
+      <ExerciseCredits />
       <details className="session-extra">
         <summary>Notes and session options</summary>
         <label className="field-label session-notes">
@@ -1013,7 +1036,15 @@ export default function WorkoutPanel({
           }
         />
       )}
-      {restEnd && <RestTimer end={restEnd} onEnd={() => setRest(null)} />}
+      {restEnd && (
+        <RestTimer
+          end={restEnd}
+          onEnd={() => setRest(null)}
+          onAdjust={(seconds) =>
+            setRest(Math.max(Date.now(), restEnd) + seconds * 1000)
+          }
+        />
+      )}
     </div>
   );
 }
