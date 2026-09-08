@@ -32,6 +32,7 @@ import {
   toKg,
 } from '@/lib/fitness';
 type Props = {
+  restStorageKey?: string;
   data: FitnessData;
   update: (fn: (d: FitnessData) => FitnessData) => void;
   onFinish: () => void;
@@ -344,7 +345,12 @@ export function RoutineEditor({
     </>
   );
 }
-export default function WorkoutPanel({ data, update, onFinish }: Props) {
+export default function WorkoutPanel({
+  data,
+  update,
+  onFinish,
+  restStorageKey = 'form-rest',
+}: Props) {
   const workout = data.active!;
   const [pick, setPick] = useState(false),
     [finish, setFinish] = useState(false),
@@ -356,15 +362,15 @@ export default function WorkoutPanel({ data, update, onFinish }: Props) {
     [focusIndex, setFocusIndex] = useState(0);
   useEffect(() => {
     const t = setTimeout(() => {
-      const end = Number(sessionStorage.getItem('form-rest'));
+      const end = Number(sessionStorage.getItem(restStorageKey));
       if (end > Date.now()) setRestEnd(end);
     }, 0);
     return () => clearTimeout(t);
-  }, []);
+  }, [restStorageKey]);
   const setRest = (end: number | null) => {
     setRestEnd(end);
-    if (end) sessionStorage.setItem('form-rest', String(end));
-    else sessionStorage.removeItem('form-rest');
+    if (end) sessionStorage.setItem(restStorageKey, String(end));
+    else sessionStorage.removeItem(restStorageKey);
   };
   const change = (fn: (w: Workout) => Workout) =>
     update((d) => ({ ...d, active: d.active ? fn(d.active) : null }));

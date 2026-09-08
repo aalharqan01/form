@@ -50,6 +50,7 @@ import {
 } from '@/lib/fitness';
 import ProgressPanel from '../progress-panel';
 import ThemeControl from '../theme-control';
+import { useCoachingTransport } from './transport';
 import './coaching.css';
 /* oxlint-disable nextjs/no-html-link-for-pages, jsx-a11y/prefer-tag-over-role */
 const money = (price: number, currency: string) =>
@@ -58,22 +59,8 @@ const money = (price: number, currency: string) =>
     currency,
     maximumFractionDigits: 0,
   }).format(price);
-async function api<T>(query = '', body?: unknown): Promise<T> {
-  const r = await fetch('/api/coaching' + query, {
-    cache: 'no-store',
-    ...(body
-      ? {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-        }
-      : {}),
-  });
-  const data = (await r.json()) as T & { error?: string };
-  if (!r.ok) throw new Error(data.error || 'Please retry.');
-  return data;
-}
 function useCoaching() {
+  const api = useCoachingTransport();
   const [state, setState] = useState<CoachingState | null>(null),
     [error, setError] = useState(''),
     [busy, setBusy] = useState(false);
@@ -90,7 +77,7 @@ function useCoaching() {
     } catch (e) {
       if (n === request.current) setError((e as Error).message);
     }
-  }, []);
+  }, [api]);
   useEffect(() => {
     const boot = setTimeout(() => void reload(), 0);
     const refresh = () => {
@@ -194,6 +181,10 @@ export default function CoachingWorkspace() {
             <Wallet size={20} strokeWidth={1.5} />
             Profile & packages
           </button>
+          <a href="/simulate">
+            <ClipboardList size={20} strokeWidth={1.5} />
+            Try a simulation
+          </a>
           <a href="/">
             <Dumbbell size={20} strokeWidth={1.5} />
             My training
@@ -825,6 +816,7 @@ function ClientDetail({
   onBack: () => void;
   onStart?: (r: Routine, membershipId: string) => void;
 }) {
+  const api = useCoachingTransport();
   const [detail, setDetail] = useState<MemberDetail | null>(null),
     [error, setError] = useState(''),
     [busy, setBusy] = useState(false),
@@ -844,7 +836,7 @@ function ClientDetail({
     } catch (e) {
       if (n === serial.current) setError((e as Error).message);
     }
-  }, [memberId]);
+  }, [memberId, api]);
   useEffect(() => {
     const boot = setTimeout(() => void load(), 0);
     const timer = setInterval(() => {
@@ -861,7 +853,7 @@ function ClientDetail({
     const through = detail?.messages.at(-1)?.created_at;
     if (tab === 'messages' && through)
       void api('', { action: 'read', memberId, through }).catch(() => {});
-  }, [tab, memberId, detail?.messages]);
+  }, [tab, memberId, detail?.messages, api]);
   async function act(body: Record<string, unknown>) {
     if (lock.current) return false;
     lock.current = true;
@@ -2036,6 +2028,7 @@ function RequestStatus({
   );
 }
 export function Marketplace({ onRequests }: { onRequests: () => void }) {
+  const api = useCoachingTransport();
   const [coaches, setCoaches] = useState<MarketplaceCoach[] | null>(null),
     [error, setError] = useState(''),
     [search, setSearch] = useState(''),
@@ -2053,7 +2046,7 @@ export function Marketplace({ onRequests }: { onRequests: () => void }) {
     } catch (e) {
       setError((e as Error).message);
     }
-  }, []);
+  }, [api]);
   useEffect(() => {
     const boot = setTimeout(() => void reload(), 0);
     const timer = setInterval(() => {
@@ -2217,6 +2210,7 @@ function PackageRequest({
   onClose: () => void;
   onSent: () => void;
 }) {
+  const api = useCoachingTransport();
   const [name, setName] = useState(''),
     [intake, setIntake] = useState<Intake>({
       goals: '',
@@ -2384,6 +2378,7 @@ function PackageRequest({
 }
 
 export function CoachingNotice({ onOpen }: { onOpen: () => void }) {
+  const api = useCoachingTransport();
   const [counts, setCounts] = useState({ reviews: 0, payments: 0 });
   useEffect(() => {
     let alive = true;
@@ -2403,7 +2398,7 @@ export function CoachingNotice({ onOpen }: { onOpen: () => void }) {
       alive = false;
       clearInterval(timer);
     };
-  }, []);
+  }, [api]);
   return (
     <>
       {counts.reviews > 0 && (
