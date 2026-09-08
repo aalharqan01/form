@@ -9,6 +9,7 @@ import {
   Timer,
   Bookmark,
 } from 'lucide-react';
+import ExerciseVideo from './exercise-video';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -76,11 +77,13 @@ export function ExercisePicker({
   onPick: (name: string, muscle: string) => void;
 }) {
   const [query, setQuery] = useState(''),
-    [muscle, setMuscle] = useState('All');
+    [muscle, setMuscle] = useState('All'),
+    [equipment, setEquipment] = useState('All');
   const list = EXERCISES.filter(
-    ([n, m]) =>
-      n.toLowerCase().includes(query.toLowerCase()) &&
-      (muscle === 'All' || m === muscle),
+    ([n, m, eq]) =>
+      `${n} ${m} ${eq}`.toLowerCase().includes(query.trim().toLowerCase()) &&
+      (muscle === 'All' || m === muscle) &&
+      (equipment === 'All' || eq === equipment),
   );
   return (
     <Dialog
@@ -92,7 +95,8 @@ export function ExercisePicker({
       <DialogContent className="form-dialog picker-dialog">
         <DialogTitle>Add exercise</DialogTitle>
         <DialogDescription>
-          Choose an exercise or add your own.
+          {EXERCISES.length} exercises. Filter by muscle and equipment, or add
+          your own.
         </DialogDescription>
         <div className="search-input">
           <Search size={18} />
@@ -105,21 +109,51 @@ export function ExercisePicker({
           />
         </div>
         <div className="muscle-filter">
-          {['All', 'Chest', 'Back', 'Legs', 'Shoulders', 'Arms', 'Core'].map(
-            (m) => (
-              <button
-                key={m}
-                aria-pressed={muscle === m}
-                onClick={() => setMuscle(m)}
-              >
-                {m}
-              </button>
-            ),
-          )}
-        </div>
-        <div className="exercise-options">
-          {list.map(([n, m]) => (
+          {[
+            'All',
+            'Chest',
+            'Back',
+            'Legs',
+            'Shoulders',
+            'Arms',
+            'Core',
+            'Full body',
+          ].map((m) => (
             <button
+              type="button"
+              key={m}
+              aria-pressed={muscle === m}
+              onClick={() => setMuscle(m)}
+            >
+              {m}
+            </button>
+          ))}
+        </div>
+        <label className="exercise-equipment">
+          Equipment
+          <select
+            value={equipment}
+            onChange={(e) => setEquipment(e.target.value)}
+          >
+            {['All', ...new Set(EXERCISES.map((e) => e[2]))].map((e) => (
+              <option key={e} value={e}>
+                {e === 'All' ? 'All equipment' : e}
+              </option>
+            ))}
+          </select>
+        </label>
+        <p className="exercise-results" aria-live="polite">
+          {list.length} exercises found
+        </p>
+        <div className="exercise-options">
+          {!list.length && (
+            <p className="co-muted">
+              No matches. Try another search or change the filters.
+            </p>
+          )}
+          {list.map(([n, m, eq]) => (
+            <button
+              type="button"
               key={n}
               onClick={() => {
                 onPick(n, m);
@@ -131,7 +165,9 @@ export function ExercisePicker({
               </span>
               <span>
                 <strong>{n}</strong>
-                <small>{m}</small>
+                <small>
+                  {m} · {eq}
+                </small>
               </span>
               <Plus size={19} />
             </button>
@@ -141,6 +177,7 @@ export function ExercisePicker({
               ([n]) => n.toLowerCase() === query.trim().toLowerCase(),
             ) && (
               <button
+                type="button"
                 onClick={() => {
                   onPick(query.trim(), muscle === 'All' ? 'Custom' : muscle);
                   setQuery('');
@@ -155,9 +192,6 @@ export function ExercisePicker({
                 </span>
               </button>
             )}
-          {!list.length && !query.trim() && (
-            <p>No exercises in this category.</p>
-          )}
         </div>
       </DialogContent>
     </Dialog>
@@ -656,16 +690,7 @@ export default function WorkoutPanel({
                 {e.instructions && (
                   <p className="co-program-note">{e.instructions}</p>
                 )}
-                {e.videoUrl?.startsWith('https://') && (
-                  <a
-                    className="co-workspace-link"
-                    href={e.videoUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    Watch demonstration
-                  </a>
-                )}
+                {e.videoUrl && <ExerciseVideo url={e.videoUrl} name={e.name} />}
                 {previous?.length ? (
                   <div className="previous-performance">
                     <span>

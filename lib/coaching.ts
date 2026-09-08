@@ -59,7 +59,9 @@ export type Member = {
   stats?: {
     workouts: number;
     lastWorkout: string | null;
-    latestKg: number | null;
+    averageKg: number | null;
+    weightCount: number;
+    weightWeek: string;
     due: number;
     completed: number;
   };
@@ -214,6 +216,10 @@ export function memberStats(
   const readings = [...(fitness?.weights ?? [])].sort((a, b) =>
     a.date.localeCompare(b.date),
   );
+  const weightWeek = weekOf(now);
+  const weekReadings = readings.filter(
+    (w) => w.date >= weightWeek && w.date <= now.toISOString().slice(0, 10),
+  );
   let due = 0,
     completed = 0;
   for (let i = 0; i < 7; i++) {
@@ -243,7 +249,11 @@ export function memberStats(
         .map((w) => w.startedAt)
         .sort()
         .at(-1) ?? null,
-    latestKg: readings.at(-1)?.kg ?? null,
+    averageKg: weekReadings.length
+      ? weekReadings.reduce((sum, w) => sum + w.kg, 0) / weekReadings.length
+      : null,
+    weightCount: weekReadings.length,
+    weightWeek,
     due,
     completed,
   };

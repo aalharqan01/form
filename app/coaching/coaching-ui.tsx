@@ -48,6 +48,9 @@ import {
   completedSets,
   smoothWeights,
 } from '@/lib/fitness';
+import { ExercisePicker } from '../workout-panel';
+import ExerciseVideo from '../exercise-video';
+import { exerciseVideo } from '@/lib/video';
 import ProgressPanel from '../progress-panel';
 import ThemeControl from '../theme-control';
 import { useCoachingTransport } from './transport';
@@ -822,7 +825,8 @@ function ClientDetail({
     [busy, setBusy] = useState(false),
     [tab, setTab] = useState('overview'),
     [editing, setEditing] = useState(false),
-    [ending, setEnding] = useState(false);
+    [ending, setEnding] = useState(false),
+    [weightHistory, setWeightHistory] = useState(false);
   const editingRevision = useRef(0);
   const serial = useRef(0),
     lock = useRef(false);
@@ -956,14 +960,24 @@ function ClientDetail({
                   </strong>
                   <small>Completed · last 7 calendar days (UTC)</small>
                 </div>
-                <div>
-                  <span>Latest weigh-in</span>
+                <button
+                  type="button"
+                  className="co-weight-metric"
+                  onClick={() => setWeightHistory(true)}
+                >
+                  <span>Weekly average weight</span>
                   <strong>
-                    {m.stats?.latestKg?.toFixed(1) ?? '—'}
+                    {m.stats?.averageKg?.toFixed(1) ?? '—'}
                     <em> kg</em>
                   </strong>
-                  <small>From the client’s shared log</small>
-                </div>
+                  <small>
+                    {m.stats?.weightCount ?? 0} weigh-ins · this week, Mon–Sun
+                    (UTC)
+                  </small>
+                  <small className="co-weight-action">
+                    View all entries <ChevronRight size={14} />
+                  </small>
+                </button>
               </div>
               <div className="co-detail-grid">
                 <section className="co-card">
@@ -1092,6 +1106,32 @@ function ClientDetail({
           }}
         />
       )}
+      <Dialog
+        open={weightHistory && m.status === 'active'}
+        onOpenChange={setWeightHistory}
+      >
+        <DialogContent className="form-dialog co-dialog">
+          <DialogTitle>{m.name} · Weight history</DialogTitle>
+          <DialogDescription>
+            All shared daily weigh-ins, newest first. The overview averages
+            entries from this Monday through today (UTC).
+          </DialogDescription>
+          <div className="co-history co-weight-history">
+            {[...(detail.fitness?.weights ?? [])]
+              .sort((a, b) => b.date.localeCompare(a.date))
+              .map((w) => (
+                <div key={w.date}>
+                  <span>{dateLabel(w.date, true)}</span>
+                  <strong>{w.kg.toFixed(1)} kg</strong>
+                  <span>{w.note}</span>
+                </div>
+              ))}
+            {!detail.fitness?.weights.length && (
+              <p className="co-muted">No weigh-ins shared yet.</p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
       <Dialog open={ending} onOpenChange={setEnding}>
         <DialogContent className="form-dialog co-dialog">
           <DialogTitle>
@@ -1192,16 +1232,13 @@ function SharedProgress({ fitness }: { fitness: FitnessData }) {
       <details>
         <summary>Weight history · {readings.length} entries</summary>
         <div className="co-history">
-          {[...readings]
-            .reverse()
-            .slice(0, 90)
-            .map((w) => (
-              <div key={w.date}>
-                <span>{dateLabel(w.date, true)}</span>
-                <strong>{w.kg.toFixed(1)} kg</strong>
-                <span>{w.note}</span>
-              </div>
-            ))}
+          {[...readings].reverse().map((w) => (
+            <div key={w.date}>
+              <span>{dateLabel(w.date, true)}</span>
+              <strong>{w.kg.toFixed(1)} kg</strong>
+              <span>{w.note}</span>
+            </div>
+          ))}
         </div>
       </details>
       <h3>Recent workouts</h3>
@@ -1289,15 +1326,7 @@ function ProgramView({
                   {e.sets} sets × {e.reps} reps · {e.unit ?? 'kg'}
                 </span>
                 {e.instructions && <p>{e.instructions}</p>}
-                {e.videoUrl && e.videoUrl.startsWith('https://') && (
-                  <a
-                    href={e.videoUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    Watch demonstration <ArrowUpRight size={14} />
-                  </a>
-                )}
+                {e.videoUrl && <ExerciseVideo url={e.videoUrl} name={e.name} />}
               </div>
             </div>
           ))}
@@ -1319,6 +1348,10 @@ function ProgramEditor({
   onClose: () => void;
   onSave: (p: Program) => Promise<void>;
 }) {
+  const [picker, setPicker] = useState<{
+    sessionId: string;
+    index?: number;
+  } | null>(null);
   const newExercise = () => ({
     name: '',
     muscle: '',
@@ -1333,9 +1366,7 @@ function ProgramEditor({
       title: 'Training program',
       notes: '',
       startDate: today(),
-      sessions: [
-        { id: id(), name: 'Session 1', day: 1, exercises: [newExercise()] },
-      ],
+      sessions: [{ id: id(), name: 'Session 1', day: 1, exercises: [] }],
     },
   );
   const session = (i: number, patch: Partial<Program['sessions'][number]>) =>
@@ -1463,16 +1494,20 @@ function ProgramEditor({
                       <X size={16} />
                     </Button>
                   </div>
-                  <label>
-                    Exercise name
-                    <Input
-                      required
-                      maxLength={100}
-                      value={e.name}
-                      onChange={(v) => exercise(i, j, { name: v.target.value })}
-                      placeholder="e.g. Seated cable row"
-                    />
-                  </label>
+                  <button
+                    type="button"
+                    className="co-exercise-choice"
+                    onClick={() => setPicker({ sessionId: s.id, index: j })}
+                  >
+                    <Dumbbell size={20} />
+                    <span>
+                      <strong>{e.name || 'Choose exercise'}</strong>
+                      <small>
+                        {e.muscle || 'Exercise library'} · Change exercise
+                      </small>
+                    </span>
+                    <ChevronRight size={18} />
+                  </button>
                   <div className="co-form-grid three">
                     <label>
                       Sets
@@ -1536,18 +1571,24 @@ function ProgramEditor({
                       onChange={(v) =>
                         exercise(i, j, { videoUrl: v.target.value })
                       }
-                      placeholder="https://…"
+                      placeholder="YouTube, Vimeo or direct video URL"
                     />
                   </label>
+                  {e.videoUrl && (
+                    <ExerciseVideo url={e.videoUrl} name={e.name} />
+                  )}
                 </div>
               ))}
+              {!s.exercises.length && (
+                <p className="co-muted">
+                  Choose exercises from the library to build this session.
+                </p>
+              )}
               <Button
                 type="button"
                 className="secondary"
                 disabled={s.exercises.length >= 30}
-                onClick={() =>
-                  session(i, { exercises: [...s.exercises, newExercise()] })
-                }
+                onClick={() => setPicker({ sessionId: s.id })}
               >
                 <Plus size={17} />
                 Add exercise
@@ -1567,7 +1608,7 @@ function ProgramEditor({
                     id: id(),
                     name: `Session ${p.sessions.length + 1}`,
                     day: 3,
-                    exercises: [newExercise()],
+                    exercises: [],
                   },
                 ],
               })
@@ -1580,12 +1621,56 @@ function ProgramEditor({
           <Button
             className="primary full"
             type="submit"
-            disabled={busy || !p.sessions.length}
+            disabled={
+              busy ||
+              !p.sessions.length ||
+              p.sessions.some(
+                (s) =>
+                  !s.exercises.length ||
+                  s.exercises.some(
+                    (e) =>
+                      !e.name.trim() ||
+                      (!!e.videoUrl && !exerciseVideo(e.videoUrl)),
+                  ),
+              )
+            }
           >
             {busy ? 'Saving…' : 'Assign program'}
             <Check size={18} />
           </Button>
         </form>
+        <ExercisePicker
+          open={!!picker}
+          onClose={() => setPicker(null)}
+          onPick={(name, muscle) => {
+            if (!picker) return;
+            setP((v) => ({
+              ...v,
+              sessions: v.sessions.map((s) =>
+                s.id !== picker.sessionId
+                  ? s
+                  : {
+                      ...s,
+                      exercises:
+                        picker.index === undefined
+                          ? [...s.exercises, { ...newExercise(), name, muscle }]
+                          : s.exercises.map((e, j) =>
+                              j === picker.index
+                                ? {
+                                    ...e,
+                                    name,
+                                    muscle,
+                                    instructions: '',
+                                    videoUrl: '',
+                                  }
+                                : e,
+                            ),
+                    },
+              ),
+            }));
+            setPicker(null);
+          }}
+        />
       </DialogContent>
     </Dialog>
   );

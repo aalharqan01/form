@@ -9,7 +9,13 @@ const temp = await mkdtemp(tmpdir() + '/form-coaching-test-');
 after(async () => {
   await rm(temp, { recursive: true, force: true });
 });
-for (const name of ['fitness', 'coaching', 'coaching-server', 'simulation']) {
+for (const name of [
+  'fitness',
+  'coaching',
+  'coaching-server',
+  'simulation',
+  'video',
+]) {
   const source = await readFile(`lib/${name}.ts`, 'utf8');
   const code = ts
     .transpileModule(source, {
@@ -593,4 +599,67 @@ test('simulation completes the coach-trainee workflow in isolated memory', async
   store.reset();
   assert.equal(store.getSnapshot().member, null);
   assert.equal(store.getSnapshot().fitness.weights.length, 0);
+});
+
+test('weekly weight average uses only recorded days in the current UTC week', () => {
+  const fitness = {
+    ...structuredClone(EMPTY),
+    weights: [
+      { date: '2026-09-06', kg: 100, note: 'Previous Sunday' },
+      { date: '2026-09-07', kg: 82, note: '' },
+      { date: '2026-09-09', kg: 80, note: '' },
+      { date: '2026-09-11', kg: 70, note: 'Future' },
+    ],
+  };
+  const member = { id: 'client-a', program: null };
+  const stats = memberStats(fitness, member, new Date('2026-09-10T23:00:00Z'));
+  assert.equal(stats.averageKg, 81);
+  assert.equal(stats.weightCount, 2);
+  assert.equal(stats.weightWeek, '2026-09-07');
+  assert.equal(
+    memberStats(fitness, member, new Date('2026-09-14T00:00:00Z')).averageKg,
+    null,
+  );
+  assert.equal(memberStats(null, member).weightCount, 0);
+  assert.equal(
+    fitness.weights.length,
+    4,
+    'summary does not remove historical entries',
+  );
+});
+
+test('embedded videos use approved players and preserve direct files and Vimeo privacy hashes', async () => {
+  const { exerciseVideo } = await import(
+    pathToFileURL(`${temp}/video.mjs`).href
+  );
+  assert.equal(
+    exerciseVideo('https://youtu.be/M7lc1UVf-VE?t=30').src,
+    'https://www.youtube-nocookie.com/embed/M7lc1UVf-VE?playsinline=1&rel=0',
+  );
+  assert.equal(
+    exerciseVideo('https://www.youtube.com/watch?v=M7lc1UVf-VE').kind,
+    'embed',
+  );
+  assert.equal(
+    exerciseVideo('https://www.youtube.com/shorts/M7lc1UVf-VE').kind,
+    'embed',
+  );
+  assert.equal(
+    exerciseVideo('https://vimeo.com/123456789/abc123').src,
+    'https://player.vimeo.com/video/123456789?h=abc123&dnt=1',
+  );
+  assert.equal(
+    exerciseVideo('https://cdn.example.com/demo.mp4?token=abc').src,
+    'https://cdn.example.com/demo.mp4?token=abc',
+  );
+  for (const invalid of [
+    'javascript:alert(1)',
+    'http://youtu.be/M7lc1UVf-VE',
+    'https://youtube.com.evil.test/watch?v=M7lc1UVf-VE',
+    'https://user:password@example.com/video.mp4',
+    'https://example.com/page',
+    'https://youtu.be/invalid',
+    '<iframe src="https://example.com"/>',
+  ])
+    assert.equal(exerciseVideo(invalid), null);
 });

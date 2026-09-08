@@ -1125,3 +1125,61 @@ html[data-theme='dark'] .co-card {
   text-decoration: none;
   font-size: 12px;
 }
+
+.co-weight-metric {
+  cursor: pointer;
+  text-align: left;
+  color: inherit;
+}
+.co-weight-metric:hover {
+  border-color: var(--green);
+}
+.co-weight-metric:focus-visible,
+.co-exercise-choice:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 3px;
+}
+.co-weight-action {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--green);
+}
+.co-weight-history {
+  overflow-y: auto;
+  max-height: 60dvh;
+}
+.co-weight-history > div > span:last-child {
+  overflow-wrap: anywhere;
+}
+.co-exercise-choice {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--foreground);
+  background: var(--surface);
+  text-align: left;
+  width: 100%;
+  cursor: pointer;
+  margin-bottom: 16px;
+}
+.co-exercise-choice > span {
+  flex: 1;
+  min-width: 0;
+}
+.co-exercise-choice strong,
+.co-exercise-choice small {
+  display: block;
+}
+.co-exercise-choice small {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+.co-prescription > div {
+  min-width: 0;
+  flex: 1;
+}
