@@ -9,11 +9,11 @@ import {
   MessageCircle,
   ClipboardList,
   ChevronRight,
-  Copy,
   X,
   Dumbbell,
   Wallet,
   Search,
+  Bell,
   CalendarDays,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -27,6 +27,8 @@ import {
 } from '@/components/ui/dialog';
 import {
   type CoachingState,
+  type MarketplaceCoach,
+  memberStatus,
   type Member,
   type MemberDetail,
   type CoachProfile,
@@ -149,13 +151,13 @@ export default function CoachingWorkspace() {
   const c = useCoaching();
   const [section, setSection] = useState<'clients' | 'offering'>('clients'),
     [selected, setSelected] = useState<string | null>(null),
-    [invite, setInvite] = useState(false),
     [filter, setFilter] = useState(''),
     [attention, setAttention] = useState(false);
   const state = c.state,
     clients = state?.clients ?? [],
     active = clients.filter((m) => m.status === 'active'),
     needs = (m: Member) =>
+      m.status === 'requested' ||
       m.unread > 0 ||
       m.pending > 0 ||
       (m.stats?.due ?? 0) > (m.stats?.completed ?? 0);
@@ -180,7 +182,7 @@ export default function CoachingWorkspace() {
             }}
           >
             <Users size={20} strokeWidth={1.5} />
-            Clients
+            Clients & requests
           </button>
           <button
             aria-current={section === 'offering' ? 'page' : undefined}
@@ -233,7 +235,10 @@ export default function CoachingWorkspace() {
                   <br />
                   for your clients.
                 </h1>
-                <p>Set up your profile, then invite your first client.</p>
+                <p>
+                  Set up your profile and packages, then list your services in
+                  the Marketplace.
+                </p>
               </div>
               <div className="co-heading-mark">
                 <Users size={54} strokeWidth={1} />
@@ -267,7 +272,10 @@ export default function CoachingWorkspace() {
               <div>
                 <p className="co-overline">YOUR OFFERING</p>
                 <h1>Profile & packages</h1>
-                <p>Define what clients receive before inviting them.</p>
+                <p>
+                  Define your packages and choose when to appear in the
+                  Marketplace.
+                </p>
               </div>
             </div>
             <ProfileEditor
@@ -294,21 +302,44 @@ export default function CoachingWorkspace() {
                 <h1>Your clients.</h1>
                 <p>
                   {active.length
-                    ? `${active.length} active client${active.length === 1 ? '' : 's'}. ${active.filter(needs).length} need attention.`
+                    ? `${active.length} active client${active.length === 1 ? '' : 's'}. ${clients.filter(needs).length} need attention.`
                     : 'Your next coaching relationship starts here.'}
                 </p>
               </div>
               <Button
                 className="primary"
-                onClick={() => setInvite(true)}
+                onClick={() => setSection('offering')}
                 disabled={!state.profile.offers.length}
               >
-                Invite client{' '}
+                Manage listing{' '}
                 <span className="button-orb">
                   <Plus size={18} />
                 </span>
               </Button>
             </div>
+            {clients.some((m) => m.status === 'requested') && (
+              <div className="co-notification" role="status">
+                <ClipboardList size={22} />
+                <div>
+                  <strong>
+                    {clients.filter((m) => m.status === 'requested').length} new
+                    coaching request(s)
+                  </strong>
+                  <p>
+                    Review the trainee’s intake, then accept or decline.
+                    Membership starts after payment.
+                  </p>
+                </div>
+                <Button
+                  className="secondary"
+                  onClick={() => {
+                    setAttention(true);
+                  }}
+                >
+                  Review requests
+                </Button>
+              </div>
+            )}
             <div className="co-metrics">
               <button onClick={() => setAttention(false)}>
                 <span>Active clients</span>
@@ -321,23 +352,19 @@ export default function CoachingWorkspace() {
               >
                 <span>Needs attention</span>
                 <strong>
-                  {active.filter(needs).length.toString().padStart(2, '0')}
+                  {clients.filter(needs).length.toString().padStart(2, '0')}
                 </strong>
                 <small>Check-ins, messages & missed sessions</small>
               </button>
               <button onClick={() => setAttention(false)}>
-                <span>Pending invitations</span>
+                <span>New requests</span>
                 <strong>
                   {clients
-                    .filter(
-                      (m) =>
-                        m.status === 'invited' &&
-                        m.expires_at > new Date().toISOString(),
-                    )
+                    .filter((m) => m.status === 'requested')
                     .length.toString()
                     .padStart(2, '0')}
                 </strong>
-                <small>Waiting for clients to join</small>
+                <small>Awaiting your decision</small>
               </button>
             </div>
             <div className="co-list-toolbar">
@@ -370,21 +397,21 @@ export default function CoachingWorkspace() {
                 title={
                   clients.length
                     ? 'No matching clients'
-                    : 'Invite your first client'
+                    : 'Your first request starts in the Marketplace'
                 }
               >
                 <p>
                   {clients.length
                     ? 'Try another name or view all clients.'
-                    : 'Send a personal invitation link. Your client completes their intake and chooses to share their progress.'}
+                    : 'List your packages so trainees can find you. New requests appear here for you to accept or decline.'}
                 </p>
                 {!clients.length && (
                   <Button
                     className="secondary"
-                    onClick={() => setInvite(true)}
+                    onClick={() => setSection('offering')}
                     disabled={!state.profile.offers.length}
                   >
-                    Create invitation <Plus size={17} />
+                    Manage listing <Plus size={17} />
                   </Button>
                 )}
               </Empty>
@@ -424,12 +451,7 @@ export default function CoachingWorkspace() {
                         </span>
                       ) : (
                         <span className="co-badge">
-                          {m.status === 'invited' &&
-                          m.expires_at < new Date().toISOString()
-                            ? 'Expired'
-                            : m.status === 'active'
-                              ? 'Pilot active'
-                              : m.status}
+                          {memberStatus(m.status)}
                         </span>
                       )}
                     </span>
@@ -441,15 +463,6 @@ export default function CoachingWorkspace() {
             <BillingNote />
           </>
         )}
-        {invite && state?.profile && (
-          <InviteDialog
-            profile={state.profile}
-            busy={c.busy}
-            error={c.error}
-            onClose={() => setInvite(false)}
-            onInvite={(b) => c.mutate(b)}
-          />
-        )}
       </main>
     </div>
   );
@@ -459,10 +472,11 @@ function BillingNote() {
     <div className="co-billing-note">
       <Wallet size={20} strokeWidth={1.5} />
       <div>
-        <strong>Unpaid pilot</strong>
+        <strong>Payment setup pending</strong>
         <p>
-          Package prices are for planning. No client is charged, subscriptions
-          do not renew, and coach payouts are not enabled.
+          Trainees can request packages and coaches can review them. Accepted
+          requests remain pending payment. Checkout and payouts are not
+          connected yet.
         </p>
       </div>
     </div>
@@ -518,6 +532,17 @@ function ProfileEditor({
       <section className="co-card">
         <p className="co-overline">01 / ABOUT YOU</p>
         <h2>Coach profile</h2>
+        <label className="co-consent">
+          <input
+            type="checkbox"
+            checked={p.listed ?? false}
+            onChange={(e) => field('listed', e.target.checked)}
+          />
+          <span>
+            List my profile and packages in the Marketplace. Packages must have
+            a price greater than zero.
+          </span>
+        </label>
         <label>
           Name
           <Input
@@ -559,7 +584,8 @@ function ProfileEditor({
           />
         </label>
         <p className="co-muted">
-          Clients see this profile when they open your invitation.
+          Clients see this profile in the Marketplace when you list your
+          services.
         </p>
       </section>
       <section className="co-card">
@@ -601,7 +627,7 @@ function ProfileEditor({
             </label>
             <div className="co-form-grid">
               <label>
-                Planned monthly price
+                Monthly package price
                 <Input
                   type="number"
                   required
@@ -699,8 +725,8 @@ function ProfileEditor({
           Add package
         </Button>
         <p className="co-muted">
-          Changes apply to new invitations. Existing clients keep their agreed
-          package.
+          Changes apply to new requests. Existing requests keep their agreed
+          package and price.
         </p>
         <Button disabled={busy} className="primary full" type="submit">
           {busy ? 'Saving…' : saved ? 'Saved' : 'Save profile & packages'}
@@ -708,129 +734,6 @@ function ProfileEditor({
         </Button>
       </section>
     </form>
-  );
-}
-function InviteDialog({
-  profile,
-  busy,
-  error,
-  onClose,
-  onInvite,
-}: {
-  profile: CoachProfile;
-  busy: boolean;
-  error: string;
-  onClose: () => void;
-  onInvite: (b: unknown) => Promise<{ invitePath: string } | null>;
-}) {
-  const [name, setName] = useState(''),
-    [email, setEmail] = useState(''),
-    [offerId, setOffer] = useState(profile.offers[0]?.id ?? ''),
-    [link, setLink] = useState(''),
-    [copied, setCopied] = useState(false);
-  return (
-    <Dialog
-      open
-      onOpenChange={(v) => {
-        if (!v) onClose();
-      }}
-    >
-      <DialogContent className="form-dialog co-dialog">
-        <DialogTitle>
-          {link ? 'Invitation ready' : 'Invite a client'}
-        </DialogTitle>
-        <DialogDescription>
-          {link
-            ? 'Share this link directly with your client. It expires in 14 days.'
-            : 'The client must sign in with the email address below.'}
-        </DialogDescription>
-        {link ? (
-          <>
-            <label>
-              Personal invitation link
-              <Input readOnly value={link} onFocus={(e) => e.target.select()} />
-            </label>
-            <Button
-              className="primary full"
-              onClick={async () => {
-                try {
-                  await navigator.clipboard.writeText(link);
-                  setCopied(true);
-                } catch {
-                  setCopied(false);
-                }
-              }}
-            >
-              <Copy size={17} />
-              {copied ? 'Copied' : 'Copy invitation'}
-            </Button>
-            <p className="co-muted">
-              Save the link now. For privacy, it won’t be shown again. No email
-              has been sent.
-            </p>
-          </>
-        ) : (
-          <form
-            onSubmit={async (e) => {
-              e.preventDefault();
-              const r = await onInvite({
-                action: 'invite',
-                name,
-                email,
-                offerId,
-              });
-              if (r) setLink(location.origin + r.invitePath);
-            }}
-          >
-            <label>
-              Client name
-              <Input
-                required
-                maxLength={100}
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-              />
-            </label>
-            <label>
-              Client email
-              <Input
-                type="email"
-                required
-                maxLength={254}
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </label>
-            <label>
-              Package
-              <select
-                value={offerId}
-                onChange={(e) => setOffer(e.target.value)}
-              >
-                {profile.offers.map((o) => (
-                  <option key={o.id} value={o.id}>
-                    {o.name} · {money(o.price, o.currency)}/month
-                  </option>
-                ))}
-              </select>
-            </label>
-            <p className="co-muted">
-              This invitation grants unpaid pilot access. No payment details are
-              collected.
-            </p>
-            <ErrorNote text={error} />
-            <Button
-              type="submit"
-              className="primary full"
-              disabled={busy || !offerId}
-            >
-              {busy ? 'Creating…' : 'Create invitation'}
-              <ArrowUpRight size={18} />
-            </Button>
-          </form>
-        )}
-      </DialogContent>
-    </Dialog>
   );
 }
 export function MyCoach({
@@ -858,19 +761,28 @@ export function MyCoach({
         <div>
           <p className="co-overline">YOUR COACHING</p>
           <h1>My coach.</h1>
-          <p>Your program, check-ins and conversations.</p>
+          <p>Your requests, memberships and conversations.</p>
         </div>
       </div>
       <ErrorNote text={c.error} />
+      {c.state?.memberships.some((m) => m.status === 'awaiting_payment') && (
+        <div className="co-notification" role="status">
+          <Check size={22} />
+          <div>
+            <strong>Your coaching request has been accepted</strong>
+            <p>Open the request to review your package and payment status.</p>
+          </div>
+        </div>
+      )}
       {!c.state ? (
         <Empty title="Loading coaching">
           <Button onClick={() => void c.reload()}>Retry</Button>
         </Empty>
       ) : !c.state.memberships.length ? (
-        <Empty icon={ClipboardList} title="Connect with your coach">
+        <Empty icon={ClipboardList} title="Find your coach">
           <p>
-            Open your coach’s invitation link to choose your package and
-            complete your intake. Your personal tracker remains available.
+            Browse the Marketplace, choose a coach and request a package. Once
+            accepted, payment starts your membership.
           </p>
         </Empty>
       ) : (
@@ -882,9 +794,7 @@ export function MyCoach({
               onClick={() => setSelected(m.id)}
             >
               <div className="co-section-line">
-                <span className="co-badge">
-                  {m.status === 'active' ? 'Pilot active' : 'Ended'}
-                </span>
+                <span className="co-badge">{memberStatus(m.status)}</span>
                 <ChevronRight size={19} />
               </div>
               <h2>{m.coachName}</h2>
@@ -996,9 +906,7 @@ function ClientDetail({
           <h1>{isCoach ? m.name : m.coachName}</h1>
           <p>
             {m.offer.name}{' '}
-            <span className="co-badge">
-              {m.status === 'active' ? 'Unpaid pilot' : m.status}
-            </span>
+            <span className="co-badge">{memberStatus(m.status)}</span>
           </p>
         </div>
         {isCoach && m.status === 'active' && (
@@ -1016,22 +924,7 @@ function ClientDetail({
       </div>
       <ErrorNote text={error} />
       {m.status !== 'active' ? (
-        <Empty
-          title={
-            m.status === 'invited' ? 'Invitation pending' : 'Coaching ended'
-          }
-        >
-          <p>
-            {m.status === 'invited'
-              ? `Waiting for ${m.email} to join. Expires ${dateLabel(m.expires_at, true)}.`
-              : 'Shared progress, check-ins and messages are no longer accessible. Personal workout and weight records stay with the trainee.'}
-          </p>
-          {m.status === 'invited' && (
-            <Button className="secondary" onClick={() => setEnding(true)}>
-              Revoke invitation
-            </Button>
-          )}
-        </Empty>
+        <RequestStatus member={m} isCoach={!!isCoach} busy={busy} act={act} />
       ) : (
         <>
           <div className="co-detail-tabs range-switch">
@@ -1948,205 +1841,593 @@ function Messages({
     </section>
   );
 }
-export function JoinCoaching() {
-  const [token, setToken] = useState(''),
-    [offer, setOffer] = useState<{
-      coach: CoachProfile;
-      offer: Member['offer'];
-      name: string;
-    } | null>(null),
-    [error, setError] = useState(''),
-    [busy, setBusy] = useState(false),
-    [joined, setJoined] = useState(false),
-    [consent, setConsent] = useState(false);
-  const [intake, setIntake] = useState<Intake>({
-    goals: '',
-    experience: '',
-    equipment: '',
-    limitations: '',
-    days: 3,
-    country: 'QA',
-  });
-  useEffect(() => {
-    const boot = setTimeout(() => {
-      const t =
-        new URL(location.href).searchParams.get('invite') ??
-        location.hash.slice(1);
-      setToken(t);
-      if (!t) {
-        setError('Open the full invitation link provided by your coach.');
-        return;
-      }
-      void api<typeof offer>('?invite=' + encodeURIComponent(t))
-        .then(setOffer)
-        .catch((e) => setError(e.message));
-    }, 0);
-    return () => clearTimeout(boot);
-  }, []);
+function RequestStatus({
+  member: m,
+  isCoach,
+  busy,
+  act,
+}: {
+  member: Member;
+  isCoach: boolean;
+  busy: boolean;
+  act: (b: Record<string, unknown>) => Promise<boolean>;
+}) {
+  const [note, setNote] = useState(''),
+    [decision, setDecision] = useState<'accept' | 'reject' | null>(null),
+    [withdraw, setWithdraw] = useState(false);
+  const open = m.status === 'requested' || m.status === 'awaiting_payment';
   return (
-    <main className="co-join">
-      <a href="/" className="co-logo">
-        form<span>®</span>
-      </a>
-      {joined ? (
-        <Empty icon={Check} title="You’re connected">
-          <p>Your coach can now review your intake and assign a program.</p>
-          <a className="co-anchor-button" href="/?view=coach">
-            Open My coach <ArrowUpRight size={18} />
+    <section className="co-card">
+      <span className="co-badge">{memberStatus(m.status)}</span>
+      <h2 style={{ marginTop: 20 }}>{m.offer.name}</h2>
+      <p className="co-price">
+        {money(m.offer.price, m.offer.currency)}
+        <small> / month</small>
+      </p>
+      <p className="co-preserve">{m.offer.description}</p>
+      <div className="co-request-steps">
+        <span className="done">1 · Request sent</span>
+        <span className={m.status === 'awaiting_payment' ? 'done' : ''}>
+          2 · Coach review
+        </span>
+        <span>3 · Payment</span>
+        <span>4 · Membership starts</span>
+      </div>
+      {open && (
+        <>
+          <h3>Training goals</h3>
+          <p className="co-preserve">{m.intake.goals}</p>
+          <dl className="co-intake">
+            <dt>Experience & equipment</dt>
+            <dd>
+              {m.intake.experience} · {m.intake.equipment}
+            </dd>
+            <dt>Availability</dt>
+            <dd>
+              {m.intake.days} days/week ·{' '}
+              {m.intake.country === 'QA' ? 'Qatar' : 'Saudi Arabia'}
+            </dd>
+            <dt>Considerations</dt>
+            <dd>{m.intake.limitations || 'None shared'}</dd>
+          </dl>
+          <p className="co-muted">
+            Workout and weight history are not shared until membership starts
+            after payment.
+          </p>
+        </>
+      )}
+      {m.decision_note && (
+        <div className="co-feedback">
+          <strong>Coach’s response</strong>
+          <p>{m.decision_note}</p>
+        </div>
+      )}
+      {m.status === 'requested' &&
+        (isCoach ? (
+          <>
+            <label>
+              Response to trainee (optional)
+              <Textarea
+                value={note}
+                maxLength={1000}
+                onChange={(e) => setNote(e.target.value)}
+              />
+            </label>
+            <div className="co-actions">
+              <Button
+                className="primary"
+                disabled={busy}
+                onClick={() => setDecision('accept')}
+              >
+                Accept request
+                <Check size={17} />
+              </Button>
+              <Button
+                className="secondary"
+                disabled={busy}
+                onClick={() => setDecision('reject')}
+              >
+                Decline
+              </Button>
+            </div>
+          </>
+        ) : (
+          <p>
+            Your coach is reviewing your request. Their decision will appear
+            here.
+          </p>
+        ))}
+      {m.status === 'awaiting_payment' && (
+        <div className="co-payment-gate">
+          <Wallet size={24} />
+          <h3>
+            {isCoach
+              ? 'Accepted · waiting for trainee payment'
+              : 'Your coach accepted your request'}
+          </h3>
+          <p>
+            {isCoach
+              ? 'The client must pay before coaching begins.'
+              : 'Pay ' +
+                money(m.offer.price, m.offer.currency) +
+                ' to start your membership once checkout is available.'}
+          </p>
+          <Button className="primary" disabled>
+            Payment setup pending
+          </Button>
+          <p className="co-muted">
+            Checkout is not connected yet. No charge has been made and
+            membership has not started.
+          </p>
+        </div>
+      )}
+      {!isCoach && open && (
+        <Button
+          className="text-button co-danger"
+          disabled={busy}
+          onClick={() => setWithdraw(true)}
+        >
+          Withdraw request
+        </Button>
+      )}
+      {m.status === 'rejected' && (
+        <p>
+          The coach declined this request. You can choose another coach or
+          package in the Marketplace.
+        </p>
+      )}
+      {m.status === 'withdrawn' && (
+        <p>This request was withdrawn. No membership started.</p>
+      )}
+      {m.status === 'invited' && (
+        <p>
+          Invitations have been retired. Trainees now choose a package through
+          the Marketplace.
+        </p>
+      )}
+      {m.status === 'ended' && (
+        <p>Coaching has ended. Shared progress is no longer accessible.</p>
+      )}
+      <Dialog
+        open={!!decision || withdraw}
+        onOpenChange={(v) => {
+          if (!v) {
+            setDecision(null);
+            setWithdraw(false);
+          }
+        }}
+      >
+        <DialogContent className="form-dialog co-dialog">
+          <DialogTitle>
+            {withdraw
+              ? 'Withdraw this request?'
+              : decision === 'accept'
+                ? 'Accept this coaching request?'
+                : 'Decline this coaching request?'}
+          </DialogTitle>
+          <DialogDescription>
+            {withdraw
+              ? 'This cancels the request without starting a membership.'
+              : decision === 'accept'
+                ? 'The trainee will see your acceptance in the app. Membership stays pending until payment is verified.'
+                : 'The trainee will see your decision and optional response in the app.'}
+          </DialogDescription>
+          <Button
+            className="primary full"
+            disabled={busy}
+            onClick={async () => {
+              if (
+                await act(
+                  withdraw
+                    ? { action: 'withdraw' }
+                    : { action: 'decision', decision, note },
+                )
+              ) {
+                setDecision(null);
+                setWithdraw(false);
+              }
+            }}
+          >
+            {busy ? 'Saving…' : 'Confirm'}
+          </Button>
+        </DialogContent>
+      </Dialog>
+    </section>
+  );
+}
+export function Marketplace({ onRequests }: { onRequests: () => void }) {
+  const [coaches, setCoaches] = useState<MarketplaceCoach[] | null>(null),
+    [error, setError] = useState(''),
+    [search, setSearch] = useState(''),
+    [country, setCountry] = useState(''),
+    [selected, setSelected] = useState<{
+      coach: MarketplaceCoach;
+      offer: Member['offer'];
+    } | null>(null),
+    [success, setSuccess] = useState(false);
+  const reload = useCallback(async () => {
+    try {
+      const r = await api<{ coaches: MarketplaceCoach[] }>('?marketplace=1');
+      setCoaches(r.coaches);
+      setError('');
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }, []);
+  useEffect(() => {
+    const boot = setTimeout(() => void reload(), 0);
+    const timer = setInterval(() => {
+      if (document.visibilityState === 'visible') void reload();
+    }, 30000);
+    return () => {
+      clearTimeout(boot);
+      clearInterval(timer);
+    };
+  }, [reload]);
+  const visible = coaches?.filter(
+    (c) =>
+      (!country || c.country === country) &&
+      (c.name + ' ' + c.specialties + ' ' + c.bio)
+        .toLowerCase()
+        .includes(search.toLowerCase()),
+  );
+  return (
+    <div className="co-marketplace">
+      <div className="co-heading">
+        <div>
+          <p className="co-overline">COACHING MARKETPLACE</p>
+          <h1>Find your coach.</h1>
+          <p>
+            Explore their approach, choose a package and request to train
+            together.
+          </p>
+        </div>
+        <Button className="secondary" onClick={onRequests}>
+          My requests
+          <ChevronRight size={17} />
+        </Button>
+      </div>
+      <ErrorNote text={error} />
+      {success && (
+        <div className="co-notification" role="status">
+          <Check size={22} />
+          <div>
+            <strong>Request sent to your coach</strong>
+            <p>
+              Track their decision in My coach. You’ll pay after acceptance.
+            </p>
+          </div>
+          <Button className="secondary" onClick={onRequests}>
+            View request
+          </Button>
+        </div>
+      )}
+      <div className="co-list-toolbar">
+        <label className="co-search">
+          <Search size={18} />
+          <Input
+            aria-label="Search coaches"
+            placeholder="Coach or specialty"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </label>
+        <select
+          aria-label="Coach country"
+          value={country}
+          onChange={(e) => setCountry(e.target.value)}
+        >
+          <option value="">All locations</option>
+          <option value="QA">Qatar</option>
+          <option value="SA">Saudi Arabia</option>
+        </select>
+      </div>
+      {!coaches ? (
+        <Empty title="Loading coaches">
+          <Button onClick={() => void reload()}>Retry</Button>
+        </Empty>
+      ) : !visible?.length ? (
+        <Empty
+          title={
+            coaches.length ? 'No matching coaches' : 'Coaches will appear here'
+          }
+        >
+          <p>
+            {coaches.length
+              ? 'Try another search or location.'
+              : 'Coaches can list their profile and packages from their workspace.'}
+          </p>
+          <a className="co-workspace-link" href="/coaching">
+            Open coach workspace
+            <ArrowUpRight size={17} />
           </a>
         </Empty>
       ) : (
-        <>
-          <ErrorNote text={error} />
-          {offer && (
-            <>
-              <div className="co-heading">
-                <div>
-                  <p className="co-overline">YOUR INVITATION</p>
-                  <h1>
-                    Train with
-                    <br />
-                    {offer.coach.name}.
-                  </h1>
-                  <p>{offer.coach.bio}</p>
-                </div>
+        <div className="co-market-grid">
+          {visible.map((c) => (
+            <section key={c.coachId} className="co-card co-coach-listing">
+              <div className="co-section-line">
+                <span className="co-initials">
+                  {c.name
+                    .split(' ')
+                    .map((v) => v[0])
+                    .slice(0, 2)
+                    .join('')}
+                </span>
+                <span className="co-badge">
+                  {c.country === 'QA' ? 'Qatar' : 'Saudi Arabia'}
+                </span>
               </div>
-              <div className="co-card">
-                <span className="co-badge">Unpaid pilot</span>
-                <h2>{offer.offer.name}</h2>
-                <p className="co-preserve">{offer.offer.description}</p>
-                <p>
-                  {money(offer.offer.price, offer.offer.currency)}/month planned
-                  · no charge during this pilot
-                </p>
-                <p className="co-muted">
-                  Coach replies within {offer.offer.responseHours} hours.
-                </p>
-              </div>
-              <form
-                className="co-card"
-                onSubmit={async (e) => {
-                  e.preventDefault();
-                  if (busy) return;
-                  setBusy(true);
-                  setError('');
-                  try {
-                    await api('', { action: 'accept', token, intake, consent });
-                    setJoined(true);
-                    history.replaceState(null, '', '/join');
-                  } catch (err) {
-                    setError((err as Error).message);
-                  } finally {
-                    setBusy(false);
-                  }
-                }}
-              >
-                <h2>Tell your coach about you</h2>
-                <p className="co-muted">
-                  Your answers and saved workout and weight history will be
-                  shared only after you agree below.
-                </p>
-                <label>
-                  Your goals
-                  <Textarea
-                    required
-                    maxLength={2000}
-                    value={intake.goals}
-                    onChange={(e) =>
-                      setIntake({ ...intake, goals: e.target.value })
-                    }
-                  />
-                </label>
-                <label>
-                  Training experience
-                  <Input
-                    required
-                    maxLength={500}
-                    value={intake.experience}
-                    onChange={(e) =>
-                      setIntake({ ...intake, experience: e.target.value })
-                    }
-                  />
-                </label>
-                <label>
-                  Available equipment
-                  <Input
-                    required
-                    maxLength={500}
-                    value={intake.equipment}
-                    onChange={(e) =>
-                      setIntake({ ...intake, equipment: e.target.value })
-                    }
-                  />
-                </label>
-                <div className="co-form-grid">
-                  <label>
-                    Training days per week
-                    <Input
-                      required
-                      type="number"
-                      min={1}
-                      max={7}
-                      value={intake.days}
-                      onChange={(e) =>
-                        setIntake({ ...intake, days: Number(e.target.value) })
-                      }
-                    />
-                  </label>
-                  <label>
-                    Country
-                    <select
-                      value={intake.country}
-                      onChange={(e) =>
-                        setIntake({
-                          ...intake,
-                          country: e.target.value as 'QA' | 'SA',
-                        })
-                      }
+              <h2>{c.name}</h2>
+              <p className="co-specialties">{c.specialties}</p>
+              <p>{c.bio}</p>
+              <div className="co-package-list">
+                {c.offers.map((o) => (
+                  <div key={o.id}>
+                    <div className="co-section-line">
+                      <h3>{o.name}</h3>
+                      <strong>
+                        {money(o.price, o.currency)}
+                        <small> / month</small>
+                      </strong>
+                    </div>
+                    <p className="co-preserve">{o.description}</p>
+                    <p className="co-muted">
+                      Coach responds within {o.responseHours} hours.
+                    </p>
+                    <Button
+                      className="primary full"
+                      onClick={() => {
+                        setSuccess(false);
+                        setSelected({ coach: c, offer: o });
+                      }}
                     >
-                      <option value="QA">Qatar</option>
-                      <option value="SA">Saudi Arabia</option>
-                    </select>
-                  </label>
-                </div>
-                <label>
-                  Limitations or preferences (optional)
-                  <Textarea
-                    maxLength={2000}
-                    value={intake.limitations}
-                    onChange={(e) =>
-                      setIntake({ ...intake, limitations: e.target.value })
-                    }
-                  />
-                </label>
-                <label className="co-consent">
-                  <input
-                    type="checkbox"
-                    required
-                    checked={consent}
-                    onChange={(e) => setConsent(e.target.checked)}
-                  />
-                  <span>
-                    I agree to share my intake, existing and future workout and
-                    weight history, check-ins and messages with{' '}
-                    {offer.coach.name}. I can stop sharing by ending coaching.
-                    This pilot does not charge me or renew automatically.
-                  </span>
-                </label>
-                <ErrorNote text={error} />
-                <Button
-                  className="primary full"
-                  type="submit"
-                  disabled={busy || !consent}
-                >
-                  {busy ? 'Joining…' : 'Agree & join pilot'}
-                  <ArrowUpRight size={18} />
-                </Button>
-              </form>
-            </>
-          )}
-        </>
+                      Request package
+                      <ArrowUpRight size={17} />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
       )}
-    </main>
+      {selected && (
+        <PackageRequest
+          coach={selected.coach}
+          offer={selected.offer}
+          onClose={() => setSelected(null)}
+          onSent={() => {
+            setSelected(null);
+            setSuccess(true);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+function PackageRequest({
+  coach,
+  offer,
+  onClose,
+  onSent,
+}: {
+  coach: MarketplaceCoach;
+  offer: Member['offer'];
+  onClose: () => void;
+  onSent: () => void;
+}) {
+  const [name, setName] = useState(''),
+    [intake, setIntake] = useState<Intake>({
+      goals: '',
+      experience: '',
+      equipment: '',
+      limitations: '',
+      days: 3,
+      country: 'QA',
+    }),
+    [consent, setConsent] = useState(false),
+    [busy, setBusy] = useState(false),
+    [error, setError] = useState('');
+  const lock = useRef(false);
+  return (
+    <Dialog
+      open
+      onOpenChange={(v) => {
+        if (!v) onClose();
+      }}
+    >
+      <DialogContent className="form-dialog co-dialog">
+        <DialogTitle>Request {offer.name}</DialogTitle>
+        <DialogDescription>
+          {coach.name} · {money(offer.price, offer.currency)}/month. Your coach
+          reviews the request first. Payment is required after acceptance to
+          start membership.
+        </DialogDescription>
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            if (lock.current) return;
+            lock.current = true;
+            setBusy(true);
+            setError('');
+            try {
+              await api('', {
+                action: 'request',
+                coachId: coach.coachId,
+                profileRevision: coach.revision,
+                offerId: offer.id,
+                name,
+                intake,
+                consent,
+              });
+              onSent();
+            } catch (err) {
+              setError((err as Error).message);
+            } finally {
+              setBusy(false);
+              lock.current = false;
+            }
+          }}
+        >
+          <label>
+            Your name
+            <Input
+              required
+              maxLength={100}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </label>
+          <label>
+            Training goals
+            <Textarea
+              required
+              maxLength={2000}
+              value={intake.goals}
+              onChange={(e) => setIntake({ ...intake, goals: e.target.value })}
+            />
+          </label>
+          <label>
+            Experience
+            <Input
+              required
+              maxLength={500}
+              value={intake.experience}
+              onChange={(e) =>
+                setIntake({ ...intake, experience: e.target.value })
+              }
+            />
+          </label>
+          <label>
+            Equipment
+            <Input
+              required
+              maxLength={500}
+              value={intake.equipment}
+              onChange={(e) =>
+                setIntake({ ...intake, equipment: e.target.value })
+              }
+            />
+          </label>
+          <div className="co-form-grid">
+            <label>
+              Days per week
+              <Input
+                type="number"
+                required
+                min={1}
+                max={7}
+                value={intake.days}
+                onChange={(e) =>
+                  setIntake({ ...intake, days: Number(e.target.value) })
+                }
+              />
+            </label>
+            <label>
+              Country
+              <select
+                value={intake.country}
+                onChange={(e) =>
+                  setIntake({
+                    ...intake,
+                    country: e.target.value as 'QA' | 'SA',
+                  })
+                }
+              >
+                <option value="QA">Qatar</option>
+                <option value="SA">Saudi Arabia</option>
+              </select>
+            </label>
+          </div>
+          <label>
+            Considerations (optional)
+            <Textarea
+              maxLength={2000}
+              value={intake.limitations}
+              onChange={(e) =>
+                setIntake({ ...intake, limitations: e.target.value })
+              }
+            />
+          </label>
+          <label className="co-consent">
+            <input
+              type="checkbox"
+              required
+              checked={consent}
+              onChange={(e) => setConsent(e.target.checked)}
+            />
+            <span>
+              I agree to share this intake with {coach.name} for review. If
+              accepted, my existing and future workout and weight history will
+              be shared only after payment starts membership. I can end coaching
+              to stop sharing.
+            </span>
+          </label>
+          <p className="co-muted">
+            Payments are not connected yet. You can submit a request, but
+            accepted requests will wait for payment setup.
+          </p>
+          <ErrorNote text={error} />
+          <Button
+            className="primary full"
+            type="submit"
+            disabled={busy || !consent}
+          >
+            {busy ? 'Sending…' : 'Send coaching request'}
+            <ArrowUpRight size={17} />
+          </Button>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+export function CoachingNotice({ onOpen }: { onOpen: () => void }) {
+  const [counts, setCounts] = useState({ reviews: 0, payments: 0 });
+  useEffect(() => {
+    let alive = true;
+    const check = async () => {
+      try {
+        const n = await api<{ reviews: number; payments: number }>(
+          '?notifications=1',
+        );
+        if (alive) setCounts(n);
+      } catch {}
+    };
+    void check();
+    const timer = setInterval(() => {
+      if (document.visibilityState === 'visible') void check();
+    }, 30000);
+    return () => {
+      alive = false;
+      clearInterval(timer);
+    };
+  }, []);
+  return (
+    <>
+      {counts.reviews > 0 && (
+        <a
+          className="co-notice-button"
+          href="/coaching"
+          aria-label={`${counts.reviews} new coaching requests`}
+          title="New coaching requests"
+        >
+          <Bell size={17} />
+          <span>{counts.reviews}</span>
+        </a>
+      )}
+      {counts.payments > 0 && (
+        <button
+          className="co-notice-button"
+          onClick={onOpen}
+          aria-label={`${counts.payments} accepted requests awaiting payment`}
+          title="Your coach accepted your request"
+        >
+          <Bell size={17} />
+          <span>{counts.payments}</span>
+        </button>
+      )}
+    </>
   );
 }

@@ -28,6 +28,8 @@ type Row = {
   created_at: string;
   accepted_at: string | null;
   ended_at: string | null;
+  decided_at: string | null;
+  decision_note: string;
 };
 class RequestError extends Error {
   constructor(
@@ -52,15 +54,6 @@ const json = (data: unknown, status = 200) =>
       'Referrer-Policy': 'no-referrer',
     },
   });
-async function hash(token: string) {
-  return [
-    ...new Uint8Array(
-      await crypto.subtle.digest('SHA-256', new TextEncoder().encode(token)),
-    ),
-  ]
-    .map((n) => n.toString(16).padStart(2, '0'))
-    .join('');
-}
 function publicMember(r: Row, coachName = ''): Member {
   return {
     id: r.id,
@@ -77,6 +70,8 @@ function publicMember(r: Row, coachName = ''): Member {
     created_at: r.created_at,
     accepted_at: r.accepted_at,
     ended_at: r.ended_at,
+    decided_at: r.decided_at,
+    decision_note: r.decision_note,
     coachName,
     unread: 0,
     pending: 0,
@@ -148,41 +143,49 @@ export async function handleCoaching(
         return { m, fitness: details ? fitness : null };
       }
       // Ending coaching immediately removes access to shared health data.
-      m.intake = {} as Intake;
+      if (!['requested', 'awaiting_payment'].includes(r.status))
+        m.intake = {} as Intake;
       m.program = null;
       return { m, fitness: null };
     };
     if (request.method === 'GET') {
-      const token = url.searchParams.get('invite');
-      if (token) {
-        ensure(/^[a-f0-9]{64}$/.test(token), 'Invalid invitation.', 404);
-        const r = await db
-          .prepare('SELECT * FROM coaching_memberships WHERE token_hash=?')
-          .bind(await hash(token))
-          .first<Row>();
-        ensure(
-          r && r.status === 'invited' && r.expires_at > now,
-          'This invitation has expired or has already been used.',
+      if (url.searchParams.has('notifications')) {
+        const n = await db
+          .prepare(
+            "SELECT SUM(CASE WHEN coach_id=? AND status='requested' THEN 1 ELSE 0 END) AS reviews, SUM(CASE WHEN trainee_id=? AND status='awaiting_payment' THEN 1 ELSE 0 END) AS payments FROM coaching_memberships WHERE coach_id=? OR trainee_id=?",
+          )
+          .bind(user.userId, user.userId, user.userId, user.userId)
+          .first<{ reviews: number | null; payments: number | null }>();
+        return json({ reviews: n?.reviews ?? 0, payments: n?.payments ?? 0 });
+      }
+      if (url.searchParams.has('invite'))
+        throw new RequestError(
+          'Invitations have been replaced by the Marketplace.',
           410,
         );
-        ensure(
-          r.email === user.email.toLowerCase(),
-          'Sign in with the email address your coach invited.',
-          403,
-        );
-        const p = await profile(r.coach_id);
-        ensure(p, 'This coach is unavailable.', 404);
-        const coach = JSON.parse(p.profile) as CoachProfile;
+      if (url.searchParams.has('marketplace')) {
+        const rows = await db
+          .prepare(
+            'SELECT user_id,profile,revision FROM coach_profiles ORDER BY updated_at DESC',
+          )
+          .all<{ user_id: string; profile: string; revision: number }>();
         return json({
-          coach: {
-            name: coach.name,
-            bio: coach.bio,
-            specialties: coach.specialties,
-            country: coach.country,
-          },
-          offer: JSON.parse(r.offer),
-          name: r.name,
-          expiresAt: r.expires_at,
+          coaches: rows.results.flatMap((r) => {
+            const p = JSON.parse(r.profile) as CoachProfile;
+            return p.listed && p.offers.length
+              ? [
+                  {
+                    coachId: r.user_id,
+                    revision: r.revision,
+                    name: p.name,
+                    bio: p.bio,
+                    country: p.country,
+                    specialties: p.specialties,
+                    offers: p.offers,
+                  },
+                ]
+              : [];
+          }),
         });
       }
       const id = url.searchParams.get('member');
@@ -243,7 +246,7 @@ export async function handleCoaching(
         billing: {
           enabled: false,
           message:
-            'Unpaid pilot. Checkout, automatic renewals and payouts are not enabled.',
+            'Payment setup pending. Accepted requests cannot start memberships until payment is verified.',
         },
       });
     }
@@ -279,98 +282,131 @@ export async function handleCoaching(
       );
       return json({ ok: true });
     }
-    if (b.action === 'invite') {
-      const p = await profile();
-      ensure(p, 'Set up your coach profile first.', 403);
+    if (b.action === 'invite' || b.action === 'accept')
+      throw new RequestError(
+        'Invitations have been replaced by Marketplace requests.',
+        410,
+      );
+    if (b.action === 'request') {
       ensure(
-        text(b.email, 254) && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(b.email),
-        'Enter a valid client email.',
+        text(b.coachId, 200) && b.coachId !== user.userId,
+        'Choose another coach.',
       );
-      ensure(text(b.name, 100), 'Enter the client’s name.');
-      const email = b.email.toLowerCase().trim();
+      ensure(text(b.name, 100), 'Enter your name.');
       ensure(
-        email !== user.email.toLowerCase(),
-        'Invite a client using a different account.',
+        b.consent === true && isIntake(b.intake),
+        'Complete the intake and agree to share it with this coach.',
       );
-      const offer = (JSON.parse(p.profile) as CoachProfile).offers.find(
-        (o) => o.id === b.offerId,
+      const p = await profile(b.coachId);
+      ensure(p, 'Coach not found.', 404);
+      const coach = JSON.parse(p.profile) as CoachProfile;
+      ensure(
+        coach.listed === true,
+        'This coach is not accepting marketplace requests.',
+        409,
       );
-      ensure(offer, 'Choose a saved package.');
+      ensure(
+        p.revision === b.profileRevision,
+        'This coach’s offering changed. Refresh the Marketplace before requesting.',
+        409,
+      );
+      const offer = coach.offers.find((o) => o.id === b.offerId);
+      ensure(offer && offer.price > 0, 'Choose an available paid package.');
       const existing = await db
         .prepare(
-          "SELECT id FROM coaching_memberships WHERE coach_id=? AND email=? AND status<>'ended' AND (status='active' OR expires_at>?)",
+          "SELECT id FROM coaching_memberships WHERE coach_id=? AND trainee_id=? AND status IN ('requested','awaiting_payment','active')",
         )
-        .bind(user.userId, email, now)
+        .bind(b.coachId, user.userId)
         .first();
       ensure(
         !existing,
-        'This client already has an active membership or invitation.',
+        'You already have an open request or membership with this coach.',
         409,
       );
-      const token = [...crypto.getRandomValues(new Uint8Array(32))]
-          .map((n) => n.toString(16).padStart(2, '0'))
-          .join(''),
-        id = crypto.randomUUID();
-      const expires = new Date(Date.now() + 14 * 86400000).toISOString();
-      await db
+      const id = crypto.randomUUID();
+      const result = await db
         .prepare(
-          'INSERT INTO coaching_memberships (id,coach_id,email,name,token_hash,expires_at,offer,created_at) VALUES (?,?,?,?,?,?,?,?)',
+          "INSERT OR IGNORE INTO coaching_memberships (id,coach_id,trainee_id,email,name,status,token_hash,expires_at,offer,intake,created_at,open_key) VALUES (?,?,?,?,?,'requested',?,?,?,?,?,?)",
         )
         .bind(
           id,
+          b.coachId,
           user.userId,
-          email,
+          user.email,
           b.name,
-          await hash(token),
-          expires,
-          JSON.stringify(offer),
+          'marketplace:' + id,
           now,
-        )
-        .run();
-      return json({
-        id,
-        invitePath: '/join?invite=' + token,
-        expiresAt: expires,
-      });
-    }
-    if (b.action === 'accept') {
-      ensure(
-        text(b.token, 64) && /^[a-f0-9]{64}$/.test(b.token),
-        'Invalid invitation.',
-      );
-      ensure(
-        b.consent === true,
-        'Agree to share your progress before joining.',
-      );
-      ensure(isIntake(b.intake), 'Complete your intake form.');
-      const result = await db
-        .prepare(
-          "UPDATE coaching_memberships SET trainee_id=?,intake=?,status='active',accepted_at=?,revision=revision+1 WHERE token_hash=? AND email=? AND coach_id<>? AND status='invited' AND expires_at>?",
-        )
-        .bind(
-          user.userId,
+          JSON.stringify(offer),
           JSON.stringify(b.intake),
           now,
-          await hash(b.token),
-          user.email.toLowerCase(),
-          user.userId,
-          now,
+          JSON.stringify([b.coachId, user.userId]),
         )
         .run();
       ensure(
         result.meta.changes,
-        'This invitation is unavailable, expired, or belongs to another email.',
+        'A request is already open. Refresh your requests.',
+        409,
+      );
+      return json({ id });
+    }
+    const r = await member(b.memberId);
+    const isCoach = r.coach_id === user.userId;
+    if (b.action === 'decision') {
+      ensure(isCoach, 'Only this coach can decide the request.', 403);
+      ensure(
+        b.decision === 'accept' || b.decision === 'reject',
+        'Choose accept or decline.',
+      );
+      ensure(
+        text(b.note ?? '', 1000, false),
+        'Keep your note under 1,000 characters.',
+      );
+      const status = b.decision === 'accept' ? 'awaiting_payment' : 'rejected';
+      const result = await db
+        .prepare(
+          "UPDATE coaching_memberships SET status=?,decided_at=?,decision_note=?,open_key=CASE WHEN ?='rejected' THEN NULL ELSE open_key END,revision=revision+1 WHERE id=? AND status='requested'",
+        )
+        .bind(status, now, b.note ?? '', status, r.id)
+        .run();
+      ensure(
+        result.meta.changes,
+        'This request has already changed. Refresh it.',
         409,
       );
       return json({ ok: true });
     }
-    const r = await member(b.memberId);
-    const isCoach = r.coach_id === user.userId;
+    if (b.action === 'withdraw') {
+      ensure(!isCoach, 'Only the trainee can withdraw a request.', 403);
+      const result = await db
+        .prepare(
+          "UPDATE coaching_memberships SET status='withdrawn',ended_at=?,open_key=NULL,revision=revision+1 WHERE id=? AND status IN ('requested','awaiting_payment')",
+        )
+        .bind(now, r.id)
+        .run();
+      ensure(result.meta.changes, 'This request cannot be withdrawn.', 409);
+      return json({ ok: true });
+    }
+    if (b.action === 'checkout') {
+      ensure(!isCoach, 'Only the trainee can pay for this membership.', 403);
+      ensure(
+        r.status === 'awaiting_payment',
+        'The coach must accept this request before payment.',
+        409,
+      );
+      throw new RequestError(
+        'Payment setup is not complete. Your request is accepted, but your membership will start only after a verified payment. No charge has been made.',
+        503,
+      );
+    }
     if (b.action === 'end') {
-      ensure(r.status !== 'ended', 'This membership has already ended.', 409);
+      ensure(
+        r.status === 'active' || r.status === 'invited',
+        'Only an active membership can be ended.',
+        409,
+      );
       await db
         .prepare(
-          "UPDATE coaching_memberships SET status='ended',ended_at=?,revision=revision+1 WHERE id=?",
+          "UPDATE coaching_memberships SET status='ended',ended_at=?,open_key=NULL,revision=revision+1 WHERE id=? AND status IN ('active','invited')",
         )
         .bind(now, r.id)
         .run();
@@ -474,11 +510,6 @@ export async function handleCoaching(
       ensure(result.meta.changes, 'Check-in not found.', 404);
       return json({ ok: true });
     }
-    if (b.action === 'checkout')
-      throw new RequestError(
-        'Payments are not enabled for this pilot. No charge has been made.',
-        503,
-      );
     throw new RequestError('Unknown coaching action.');
   } catch (e) {
     if (e instanceof RequestError) return json({ error: e.message }, e.status);

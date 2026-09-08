@@ -123,7 +123,11 @@ const program = {
 };
 test('coach-client lifecycle enforces identity, consent, ownership, persistence and revocation', async () => {
   const db = memoryDB();
-  for (const name of ['0000_illegal_bug.sql', '0001_dapper_magma.sql'])
+  for (const name of [
+    '0000_illegal_bug.sql',
+    '0001_dapper_magma.sql',
+    '0002_perpetual_bloodaxe.sql',
+  ])
     db.sql.exec(await readFile('drizzle/' + name, 'utf8'));
   async function call(who, body, query = '', origin) {
     const r = await handleCoaching(
@@ -165,37 +169,133 @@ test('coach-client lifecycle enforces identity, consent, ownership, persistence 
     (await call(coach, { action: 'profile', profile, revision: 0 })).status,
     409,
   );
-  const invite = await call(coach, {
-    action: 'invite',
-    name: 'Trainee',
-    email: trainee.email,
-    offerId: 'o1',
-  });
-  assert.equal(invite.status, 200);
-  const token = new URL(
-    'https://form.test' + invite.body.invitePath,
-  ).searchParams.get('invite');
-  assert.equal((await call(stranger, null, '?invite=' + token)).status, 403);
+  assert.equal((await call(coach, { action: 'invite' })).status, 410);
   assert.equal(
-    (await call(trainee, null, '?invite=' + token)).body.coach.name,
-    'Coach One',
+    (await call(trainee, { action: 'accept', consent: true })).status,
+    410,
   );
   assert.equal(
-    (await call(trainee, { action: 'accept', token, intake, consent: false }))
-      .status,
+    (await call(trainee, null, '?marketplace=1')).body.coaches.length,
+    0,
+  );
+  assert.equal(
+    (
+      await call(coach, {
+        action: 'profile',
+        profile: { ...profile, listed: true },
+        revision: 1,
+      })
+    ).status,
+    200,
+  );
+  const catalog = (await call(trainee, null, '?marketplace=1')).body.coaches;
+  assert.equal(catalog.length, 1);
+  assert.equal(catalog[0].coachId, coach.userId);
+  assert.equal('email' in catalog[0], false);
+  const request = {
+    action: 'request',
+    coachId: coach.userId,
+    profileRevision: 2,
+    offerId: 'o1',
+    name: 'Trainee',
+    intake,
+    consent: true,
+  };
+  assert.equal((await call(coach, request)).status, 400);
+  assert.equal(
+    (await call(trainee, { ...request, consent: false })).status,
     400,
   );
   assert.equal(
-    (await call(trainee, { action: 'accept', token, intake, consent: true }))
+    (await call(trainee, { ...request, profileRevision: 1 })).status,
+    409,
+  );
+  const sent = await call(trainee, request);
+  assert.equal(sent.status, 200);
+  const memberId = sent.body.id;
+  assert.equal((await call(coach, null, '?notifications=1')).body.reviews, 1);
+  assert.equal((await call(trainee, request)).status, 409);
+  let pending = (await call(coach, null, '?member=' + memberId)).body;
+  assert.equal(pending.member.status, 'requested');
+  assert.equal(pending.fitness, null);
+  assert.equal(pending.member.intake.goals, intake.goals);
+  assert.equal(
+    (await call(trainee, { action: 'checkout', memberId })).status,
+    409,
+  );
+  assert.equal(
+    (await call(trainee, { action: 'decision', memberId, decision: 'accept' }))
       .status,
+    403,
+  );
+  assert.equal(
+    (await call(stranger, { action: 'decision', memberId, decision: 'accept' }))
+      .status,
+    404,
+  );
+  assert.equal(
+    (
+      await call(coach, {
+        action: 'decision',
+        memberId,
+        decision: 'accept',
+        note: 'Happy to work together.',
+      })
+    ).status,
     200,
   );
   assert.equal(
-    (await call(trainee, { action: 'accept', token, intake, consent: true }))
+    (await call(coach, { action: 'decision', memberId, decision: 'reject' }))
       .status,
     409,
   );
-  const memberId = invite.body.id;
+  pending = (await call(trainee, null, '?member=' + memberId)).body;
+  assert.equal(pending.member.status, 'awaiting_payment');
+  assert.equal(
+    (await call(trainee, null, '?notifications=1')).body.payments,
+    1,
+  );
+  assert.equal(
+    (await call(stranger, null, '?notifications=1')).body.payments,
+    0,
+  );
+  assert.equal(pending.member.accepted_at, null);
+  assert.equal(pending.fitness, null);
+  assert.equal(
+    (await call(trainee, { action: 'checkout', memberId })).status,
+    503,
+  );
+  assert.equal(
+    (await call(coach, { action: 'program', memberId, program, revision: 1 }))
+      .status,
+    403,
+  );
+  assert.equal(
+    (
+      await call(trainee, {
+        action: 'message',
+        memberId,
+        id: 'unpaid',
+        body: 'Hello',
+      })
+    ).status,
+    403,
+  );
+  assert.equal(
+    (await call(trainee, { action: 'activate', memberId, paid: true })).status,
+    403,
+  );
+  assert.equal(
+    (await call(trainee, null, '?member=' + memberId)).body.member.status,
+    'awaiting_payment',
+  );
+  // Seed an existing active membership ONLY in the isolated test DB to retain
+  // coverage of the established paid/legacy coaching features. No activation API exists.
+  db.sql
+    .prepare(
+      "UPDATE coaching_memberships SET status='active',accepted_at=? WHERE id=?",
+    )
+    .run(new Date().toISOString(), memberId);
   const list = (await call(coach)).body;
   assert.equal(list.clients.length, 1);
   assert.equal(list.clients[0].intake.country, 'SA');
@@ -317,7 +417,7 @@ test('coach-client lifecycle enforces identity, consent, ownership, persistence 
   assert.equal(detail.member.pending, 0);
   assert.equal(
     (await call(trainee, { action: 'checkout', memberId })).status,
-    503,
+    409,
   );
   assert.equal((await call(trainee, { action: 'end', memberId })).status, 200);
   detail = (await call(coach, null, '?member=' + memberId)).body;
@@ -333,6 +433,41 @@ test('coach-client lifecycle enforces identity, consent, ownership, persistence 
         .get(trainee.userId).data,
     ).weights[0].kg,
     80,
+  );
+  const next = await call(trainee, request);
+  assert.equal(next.status, 200);
+  assert.equal(
+    (
+      await call(coach, {
+        action: 'decision',
+        memberId: next.body.id,
+        decision: 'reject',
+        note: 'Capacity full',
+      })
+    ).status,
+    200,
+  );
+  assert.equal(
+    (await call(trainee, null, '?member=' + next.body.id)).body.member
+      .decision_note,
+    'Capacity full',
+  );
+  const third = await call(trainee, request);
+  assert.equal(third.status, 200);
+  assert.equal(
+    (await call(trainee, { action: 'withdraw', memberId: third.body.id }))
+      .status,
+    200,
+  );
+  assert.equal(
+    (
+      await call(coach, {
+        action: 'decision',
+        memberId: third.body.id,
+        decision: 'accept',
+      })
+    ).status,
+    409,
   );
   db.sql.close();
 });

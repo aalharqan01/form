@@ -31,6 +31,9 @@ export const coachingMemberships = sqliteTable('coaching_memberships', {
   createdAt: text('created_at').notNull(),
   acceptedAt: text('accepted_at'),
   endedAt: text('ended_at'),
+  openKey: text('open_key').unique(),
+  decidedAt: text('decided_at'),
+  decisionNote: text('decision_note').notNull().default(''),
 });
 export const coachingMessages = sqliteTable('coaching_messages', {
   id: text('id').primaryKey(),

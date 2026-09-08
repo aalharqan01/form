@@ -983,3 +983,145 @@ html[data-theme='dark'] .co-card {
 .co-trainee .co-card {
   color: var(--foreground);
 }
+.co-market-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 26px;
+  align-items: start;
+}
+.co-coach-listing > h2 {
+  margin-top: 24px;
+  margin-bottom: 8px;
+}
+.co-specialties {
+  color: var(--green) !important;
+  font-size: 14px !important;
+}
+.co-package-list > div {
+  padding: 22px 0;
+  border-top: 1px solid var(--line);
+}
+.co-package-list h3 {
+  margin: 0;
+}
+.co-package-list strong {
+  font-size: 18px;
+  font-weight: 500;
+}
+.co-package-list small {
+  font-size: 13px;
+  color: var(--muted);
+}
+.co-marketplace .co-list-toolbar select {
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 16px;
+  color: var(--foreground);
+  background: var(--surface);
+}
+.co-notification {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  background: var(--surface-soft);
+  border-radius: 20px;
+  padding: 22px;
+  margin: 0 0 26px;
+  color: var(--green);
+}
+.co-notification > svg {
+  flex-shrink: 0;
+}
+.co-notification > div {
+  flex: 1;
+}
+.co-notification strong {
+  font-weight: 500;
+  font-size: 16px;
+}
+.co-notification p {
+  font-size: 14px;
+  margin: 6px 0 0;
+  line-height: 1.5;
+}
+.co-request-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 24px 0;
+}
+.co-request-steps span {
+  font-size: 13px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--surface-soft);
+  color: var(--muted);
+}
+.co-request-steps .done {
+  color: var(--green);
+  font-weight: 600;
+}
+.co-actions {
+  display: flex;
+  gap: 14px;
+  margin-top: 24px;
+}
+.co-payment-gate {
+  background: var(--surface-soft);
+  padding: 24px;
+  border-radius: 20px;
+  margin: 24px 0;
+}
+.co-payment-gate .primary:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+.co-marketplace .co-heading h1 {
+  font-size: clamp(36px, 4vw, 54px);
+}
+@media (max-width: 767px) {
+  .co-market-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  .co-notification {
+    flex-wrap: wrap;
+    padding: 20px;
+  }
+  .co-notification > div {
+    flex-basis: calc(100% - 44px);
+  }
+  .co-notification > .secondary {
+    width: 100%;
+  }
+  .bottom-nav button {
+    min-width: 0;
+    padding: 10px 3px;
+    font-size: 10px;
+  }
+  .co-package-list .co-section-line {
+    gap: 10px;
+  }
+  .co-request-steps {
+    gap: 8px;
+  }
+  .co-request-steps span {
+    font-size: 12px;
+    padding: 9px;
+  }
+}
+.co-notice-button {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 40px;
+  min-height: 40px;
+  border: 0;
+  border-radius: 12px;
+  padding: 8px;
+  background: var(--surface-soft);
+  color: var(--green);
+  text-decoration: none;
+  font-size: 12px;
+}

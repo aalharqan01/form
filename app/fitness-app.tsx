@@ -21,6 +21,7 @@ import {
   FlaskConical,
   Bookmark,
   Users,
+  Search,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -47,7 +48,7 @@ import {
   lastPerformance,
 } from '@/lib/fitness';
 import WeightPanel from './weight-panel';
-import { MyCoach } from './coaching/coaching-ui';
+import { MyCoach, Marketplace, CoachingNotice } from './coaching/coaching-ui';
 import ProgressPanel from './progress-panel';
 import ThemeControl from './theme-control';
 import WorkoutPanel, { RoutineEditor } from './workout-panel';
@@ -138,8 +139,8 @@ export default function FitnessApp() {
   }, [data]);
   useEffect(() => {
     const openCoach = setTimeout(() => {
-      if (new URL(location.href).searchParams.get('view') === 'coach')
-        setTab('coach');
+      const view = new URL(location.href).searchParams.get('view');
+      if (view === 'coach' || view === 'marketplace') setTab(view);
     }, 0);
     if ('serviceWorker' in navigator)
       navigator.serviceWorker.register('/sw.js').catch(() => {});
@@ -281,6 +282,7 @@ export default function FitnessApp() {
     ['weight', 'Weight', ChartNoAxesCombined],
     ['history', 'History', History],
     ['coach', 'My coach', Users],
+    ['marketplace', 'Marketplace', Search],
   ] as const;
   const heading = tab === 'history' ? 'Workout\nhistory.' : 'Your\ntraining.';
   return (
@@ -339,6 +341,7 @@ export default function FitnessApp() {
             form<span>®</span>
           </span>
           <div className="topbar-right">
+            {!demo && <CoachingNotice onOpen={() => setTab('coach')} />}
             <span
               className={`save-status ${store.error ? 'has-error' : ''}`}
               title={demo ? 'Sample preview' : store.status}
@@ -443,6 +446,8 @@ export default function FitnessApp() {
               Explore with sample data
             </Button>
           </div>
+        ) : tab === 'marketplace' ? (
+          <Marketplace onRequests={() => setTab('coach')} />
         ) : tab === 'coach' ? (
           demo ? (
             <p className="empty-line">

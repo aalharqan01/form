@@ -8,6 +8,7 @@ export type Offer = {
   responseHours: number;
 };
 export type CoachProfile = {
+  listed?: boolean;
   name: string;
   bio: string;
   country: 'QA' | 'SA';
@@ -34,7 +35,16 @@ export type Member = {
   trainee_id: string | null;
   email: string;
   name: string;
-  status: 'invited' | 'active' | 'ended';
+  status:
+    | 'invited'
+    | 'requested'
+    | 'awaiting_payment'
+    | 'rejected'
+    | 'withdrawn'
+    | 'active'
+    | 'ended';
+  decided_at: string | null;
+  decision_note: string;
   expires_at: string;
   offer: Offer;
   intake: Intake;
@@ -113,6 +123,11 @@ export function isProfile(v: unknown): v is CoachProfile {
   const p = v as CoachProfile;
   return (
     !!p &&
+    (p.listed === undefined || typeof p.listed === 'boolean') &&
+    (!p.listed ||
+      (Array.isArray(p.offers) &&
+        p.offers.length > 0 &&
+        p.offers.every((o) => o.price > 0))) &&
     text(p.name, 100) &&
     text(p.bio, 2000, false) &&
     text(p.specialties, 300, false) &&
@@ -249,3 +264,18 @@ export const DAYS = [
   'Friday',
   'Saturday',
 ];
+
+export type MarketplaceCoach = CoachProfile & {
+  coachId: string;
+  revision: number;
+};
+export const memberStatus = (s: Member['status']) =>
+  ({
+    invited: 'Invitation retired',
+    requested: 'Awaiting coach review',
+    awaiting_payment: 'Accepted · payment required',
+    rejected: 'Declined',
+    withdrawn: 'Withdrawn',
+    active: 'Active',
+    ended: 'Ended',
+  })[s];
