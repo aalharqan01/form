@@ -1,5 +1,5 @@
 {
-  "name": "sites-project",
+  "name": "form",
   "version": "0.1.0",
   "private": true,
   "engines": {
@@ -13,7 +13,10 @@
     "format": "oxfmt",
     "db:generate": "drizzle-kit generate",
     "test": "node --experimental-strip-types --test tests/fitness.test.mjs tests/coaching.test.mjs",
-    "test:api": "node --experimental-strip-types tests/api-check.mjs"
+    "test:api": "node --experimental-strip-types tests/api-check.mjs",
+    "setup": "npm ci && npm run db:local",
+    "db:local": "wrangler d1 migrations apply DB --local --config wrangler.local.json",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "react": "19.2.6",

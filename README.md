@@ -1,36 +1,114 @@
-# Form — Training & Weight
+# Form
 
-Private, installable personal fitness tracker built with React, Vinext, and Cloudflare D1 through Sites.
+An installable workout and weight tracker with a coach–trainee Marketplace. Built with React 19, Vinext, Cloudflare D1 and R2.
 
-## Features
+## Run on another computer
 
-- Custom exercises, editable sets/reps/kg, completion checks, and a timestamp-based rest timer.
-- Reusable routines, previous performance, session notes, unfinished-session recovery, and workout history.
-- Dated weigh-ins, kg/lb body-weight display, goals, and an exponential weight trend with a seven-day time constant.
-- Account-scoped database storage and optimistic revision checks to prevent cross-device overwrites.
-- JSON backup export/restore; isolated sample-data mode.
-- PWA manifest, home-screen icons, and a public offline notice. Internet is required to load and save data.
+Install **Git** and **Node.js 22.13 or later** (Node 22 LTS is recommended). npm comes with Node. Sign into the GitHub account that has access to this private repository, then:
 
-The Google Sheet has not been imported. Historical dates must be grounded before importing weight logs. The trend algorithm is independent of Happy Scale.
+```sh
+git clone https://github.com/aalharqan01/form.git
+cd form
+npm run setup
+npm run dev
+```
 
-## Development
+`npm run setup` installs the exact dependency versions in the lockfile and applies all four database migrations to a local database. Confirm the local migration prompt if it appears. It does not need a Cloudflare account, API keys or a paid service. Local video storage is created automatically when the app runs.
 
-Use Node 22.13 or later. Run `npm install`, then initialize local D1 with:
+Open the **localhost URL printed in your terminal**; Vite may choose another port if 3000 is busy. Local sign-in uses the development identity `seedy@sites.test`. It does not connect to your live account.
 
-`npx wrangler d1 execute DB --local --config wrangler.local.json --file drizzle/0000_illegal_bug.sql`
+- `/` — personal tracker, assigned workouts, nutrition targets, Marketplace and My coach.
+- `/coaching` — coach workspace, packages, client progress and program editor.
+- `/simulate` — complete coach–trainee demo, including simulated payment, workout assignment, daily weights, video attachment and nutrition targets.
 
-Run `npm run dev` and use the localhost URL it prints. Local sign-in uses the Sites development fixture; production identity is injected by the private Sites gateway. Database access is always scoped by that identity.
+The simulation is the quickest way to explore coaching without a payment provider or real memberships. Its fictional data and attached videos stay in the current tab and disappear on refresh/reset.
 
-## Checks
+To get later code changes, stop the development server and run:
 
-- `npm test` covers trend mathematics, unit conversion, validation, and workout volume.
-- `npm run lint` checks authored code; unmodified generated UI primitives are excluded.
-- `npx tsc --noEmit` checks TypeScript across the project.
-- `npm run test:api` runs only against localhost:3002 and restores the initial database document afterward.
-- `npm run build` produces the Worker and client assets.
+```sh
+git pull
+npm run setup
+npm run dev
+```
 
-No broad browser interaction/visual QA was performed. The optional read-only WebMCP summary tool is feature-detected; its browser contract remains unverified.
+The migration runner records applied migrations. Subsequent runs apply only new migrations to a database initialized with this setup command. Existing local databases created by manually executing SQL before this command was introduced need their migration history baselined before using `db:local`; do not rerun old table-creation migrations against them.
 
-## Storage behavior
+## Phones and other devices
 
-Workout edits are debounced and saved serially. A save conflict or network failure preserves current in-memory edits and warns before page unload. Users can export unsaved changes. Do not close the page when it reports unsaved changes. Successfully saved active workouts are restored from D1 on the next visit. There is no offline write queue.
+The commands above run the app on each computer's own localhost. The local sign-in fixture deliberately accepts only loopback requests, so simply exposing a laptop's development port on Wi-Fi does not enable sign-in from a phone.
+
+For the shared installable phone app, use the existing [hosted Form app](https://form-training-weight.qtr-ar.chatgpt.site) with your authorized account. A separate internet or LAN deployment requires configured authentication and persistent storage; see the deployment notes below.
+
+## What is included
+
+- Workout tracking with sets, reps, kg/lb conversion, previous performance, editable rest timers, routines, session recovery and workout history.
+- Daily weigh-ins, smoothed weight trends, weekly averages, weekly gain/loss comparisons and coach access to individual entries.
+- Marketplace profiles and packages; trainee requests; coach acceptance/rejection; payment-gated memberships.
+- Coach-assigned workouts directly in the trainee's workout tab, shared completed workout progress, check-ins and messaging.
+- Coach-set daily calories, protein, carbohydrates, fat and notes.
+- A searchable 98-exercise library, 67 matching illustrations, and neutral icons for unmatched/custom movements.
+- Coach-uploaded MP4/WebM exercise demonstrations up to 25 MB, authenticated streaming with seeking, and supported external video embeds.
+- Light/dark themes, installable PWA, offline logging with synchronization, and JSON fitness backup export/import.
+- Database schema and migrations, exercise assets and license notices, dependency lockfile, tests and the isolated simulation.
+
+Live payments, subscription renewals and trainer payouts are **not implemented**. Accepted requests remain awaiting payment until a verified payment integration is built. The simulation's payment action does not activate real memberships. See [COACHING-PILOT.md](COACHING-PILOT.md) for the lifecycle and access rules.
+
+## Source code versus account data
+
+Git transfers the application and its history. It does not transfer live D1 account records, R2 video uploads, device backups, environment secrets, dependencies or generated build output.
+
+Each local checkout stores its own database and uploaded videos beneath `.wrangler/`. The normal tracker also maintains device-local offline state. These are ignored by Git. Personal fitness logs can be moved using the app's JSON export/import; coaching memberships and video files are not part of that fitness export. Shared live data across devices comes from using the same hosted app and signed-in account, not from `git pull`.
+
+## Checks and build
+
+```sh
+npm test
+npm run lint
+npm run typecheck
+npm run build
+```
+
+The tests cover the coaching lifecycle, permissions, nutrition, weights, mixed units, offline reconciliation, video access/ranges and simulation isolation. The build creates `dist/server` and `dist/client`, including the offline shell.
+
+With the development server running, the persistence API check can be pointed at its printed URL. For example, in macOS/Linux:
+
+```sh
+FORM_TEST_ORIGIN=http://localhost:3000 npm run test:api
+```
+
+In PowerShell:
+
+```powershell
+$env:FORM_TEST_ORIGIN = 'http://localhost:3000'
+npm run test:api
+```
+
+The API check restores the original local fitness document afterward. `tests/video-api-check.mjs` additionally tests the local Cloudflare upload runtime; it requires `FORM_TEST_ORIGIN` and `FORM_TEST_DB` pointing to the local `.wrangler/state/v3/d1/...sqlite` database. It uses a temporary membership and never connects to production.
+
+`npm start` serves an existing Worker build through Wrangler. It does **not** provide the Vite plugin's local sign-in fixture; use `npm run dev` for local interactive use.
+
+## Deployment and authentication
+
+The current production app is privately hosted through Sites. `.openai/hosting.json` preserves its existing project ID and logical `DB` and `VIDEOS` bindings; the ID is not a credential. Local development emulates those bindings without contacting the hosted databases.
+
+Production identity currently comes from the trusted Sites gateway. `app/chatgpt-auth.ts` reads gateway-supplied identity headers. A standalone public deployment must supply a verified authentication layer that strips untrusted identity headers and provisions D1/R2. Do not expose the Worker directly while treating arbitrary incoming identity headers as authenticated users.
+
+Keep deployment secrets in the hosting platform or ignored local environment files. Cloning or building this repository does not deploy or alter the existing live app.
+
+## Project map
+
+| Path | Purpose |
+| --- | --- |
+| `app/` | Tracker, coaching, simulation and API routes |
+| `lib/` | Data models, validation, coaching logic, simulation and video streaming |
+| `hooks/use-fitness.ts` | Offline-aware persistence and synchronization |
+| `db/`, `drizzle/` | Database schema, bindings and migrations |
+| `public/` | PWA resources, exercise illustrations and their license notices |
+| `scripts/` | Build and offline-shell preparation |
+| `tests/` | Automated and local API checks |
+
+## Exercise artwork
+
+Exercise illustrations are by **Everkinetic / Greg Priday**, used under **CC BY-SA 4.0**. The bundled images are unchanged. Preserve the notices and applicable share-alike terms when distributing or adapting that artwork.
+
+See [attribution](public/exercise-images/ATTRIBUTION.md), [full license](public/exercise-images/EVERKINETIC-LICENSE.md), and [per-image sources](public/exercise-images/sources.json). No new open-source license is granted for the application code by this repository setup.
