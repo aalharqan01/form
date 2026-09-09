@@ -111,14 +111,16 @@ These unresolved questions do not prevent reversible product/UI work. Production
 
 This is a work plan, not completed implementation.
 
-- [ ] Audit existing routes, navigation, screens and data against this document.
-- [ ] Separate trainee mobile navigation from website marketplace and coach navigation.
-- [ ] Replace request/approval states and screens with package capacity, **Full** states and direct checkout. Plan migration of existing records without deleting user data.
-- [ ] Support shared account identity and synchronised membership/Premium access across app and website.
-- [ ] Implement activation, expiry, renewal cancellation and overlapping standalone Premium access without losing history.
-- [ ] Complete trainee workout, bodyweight, nutrition and coaching communication flows.
-- [ ] Complete coach website workflows, including exercise selection, direct video uploads and weekly client progress review.
-- [ ] Verify all core website workflows on iPhone and desktop; evaluate the proposed PWA and notification experience.
-- [ ] Update simulations and demo copy to match immediate purchase and capacity rules; clearly distinguish simulated payments from real transactions.
-- [ ] Verify website discovery → available package → confirmed payment → app coaching/Premium → assigned workout → trainee logs → coach progress review → membership expiry.
-- [ ] Before live billing, resolve provider onboarding/settlement and store requirements. Verify payment failures, duplicate notifications, last-slot concurrency and safe reconciliation of payments received after a checkout reservation expires.
+GitHub is the execution tracker: [master implementation issue #1](https://github.com/aalharqan01/form/issues/1) and [delivery milestone](https://github.com/aalharqan01/form/milestone/1). Each issue contains acceptance criteria, dependencies and verification requirements. Use linked PRs and verification evidence to track completion. Provider/store research can proceed alongside product work; live billing is gated separately.
+
+- [ ] [#2 — Audit existing routes, navigation, screens and data](https://github.com/aalharqan01/form/issues/2) against this document.
+- [ ] [#3 — Separate trainee mobile navigation](https://github.com/aalharqan01/form/issues/3) from website marketplace and coach navigation.
+- [ ] [#5 — Replace request/approval with capacity and direct checkout](https://github.com/aalharqan01/form/issues/5), including **Full** states and migration of existing records without deleting user data.
+- [ ] [#4 — Support shared account identity](https://github.com/aalharqan01/form/issues/4) and synchronised membership/Premium access across app and website.
+- [ ] [#6 — Implement membership and Premium lifecycle](https://github.com/aalharqan01/form/issues/6): activation, expiry, renewal cancellation and overlapping standalone Premium access without losing history.
+- [ ] [#7 — Complete trainee workflows](https://github.com/aalharqan01/form/issues/7): workout, bodyweight, nutrition and coaching communication.
+- [ ] [#8 — Complete coach website workflows](https://github.com/aalharqan01/form/issues/8), including exercise selection, direct video uploads and weekly client progress review.
+- [ ] [#9 — Optimise and verify the website on iPhone and desktop](https://github.com/aalharqan01/form/issues/9); evaluate the proposed PWA and notification experience.
+- [ ] [#10 — Update simulations and demo copy](https://github.com/aalharqan01/form/issues/10) to match immediate purchase and capacity rules; clearly distinguish simulated payments from real transactions.
+- [ ] [#12 — Verify the full website-to-app journey](https://github.com/aalharqan01/form/issues/12): discovery → available package → confirmed payment → app coaching/Premium → assigned workout → trainee logs → coach progress review → membership expiry.
+- [ ] [#11 — Resolve live billing readiness](https://github.com/aalharqan01/form/issues/11): provider onboarding/settlement and store requirements, payment failures, duplicate notifications, last-slot concurrency and safe reconciliation of payments received after a checkout reservation expires.
