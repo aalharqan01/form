@@ -3,6 +3,7 @@ import tailwindcss from '@tailwindcss/postcss';
 import vinext from 'vinext';
 import { defineConfig } from 'vite';
 import hostingConfig from './.openai/hosting.json';
+import { localRoles } from './dev/roles';
 
 const SITE_CREATOR_PLACEHOLDER_DATABASE_ID =
   '00000000-0000-4000-8000-000000000000';
@@ -46,15 +47,25 @@ export default defineConfig(async () => {
 
   return {
     css: { postcss: { plugins: [tailwindcss()] } },
-    server: isCodexSeatbeltSandbox
-      ? { watch: { useFsEvents: false, usePolling: true } }
-      : undefined,
+    server: {
+      strictPort: true,
+      ...(isCodexSeatbeltSandbox
+        ? { watch: { useFsEvents: false, usePolling: true } }
+        : {}),
+    },
     plugins: [
       vinext(),
       sites(),
+      localRoles(process.env.FORM_DEV_TOKEN),
       cloudflare({
+        inspectorPort: process.env.FORM_DEV_TOKEN ? false : undefined,
         viteEnvironment: { name: 'rsc', childEnvironments: ['ssr'] },
-        config: localBindingConfig,
+        ...(process.env.FORM_DEPLOY_TARGET === 'cloudflare'
+          ? {
+              configPath:
+                process.env.FORM_CONFIG_FILE || '.cloudflare/wrangler.json',
+            }
+          : { config: localBindingConfig }),
       }),
     ],
   };

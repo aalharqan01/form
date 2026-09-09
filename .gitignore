@@ -40,3 +40,9 @@ next-env.d.ts
 # Local runtime credentials and generated compiler cache
 .dev.vars*
 *.tsbuildinfo
+playwright-report/
+test-results/
+.cloudflare/
+mobile/node_modules/
+mobile/.expo/
+mobile/dist/

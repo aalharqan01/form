@@ -35,6 +35,10 @@ The migration runner records applied migrations. Subsequent runs apply only new 
 
 ## Phones and other devices
 
+For separate coach and client sessions and the Expo mobile prototype, see [Development workflow](docs/DEVELOPMENT.md). Run `npm run dev:roles` and, in another terminal, `npm run mobile:web` after `npm run mobile:setup`. Open `http://127.0.0.1:3100/__dev/phones` for both role previews. Native iOS testing requires full Xcode and an installed Simulator runtime.
+
+The team Cloudflare staging target and GitHub Actions setup are documented in [Deployment setup](docs/DEPLOYMENT.md). Deployment remains disabled until the team's resources, authentication, and GitHub configuration are ready.
+
 The commands above run the app on each computer's own localhost. The local sign-in fixture deliberately accepts only loopback requests, so simply exposing a laptop's development port on Wi-Fi does not enable sign-in from a phone.
 
 For the shared installable phone app, use the existing [hosted Form app](https://form-training-weight.qtr-ar.chatgpt.site) with your authorized account. A separate internet or LAN deployment requires configured authentication and persistent storage; see the deployment notes below.
