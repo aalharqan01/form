@@ -242,3 +242,71 @@ test('offline worker serves its current shell and never intercepts private API o
   });
   await assert.rejects(install, /Sign in/);
 });
+
+test('native training copies routines, preserves video instructions and converts display units without changing stored load', async () => {
+  const {
+    startTraining,
+    changeExerciseUnit,
+    routineFromWorkout,
+    restRemaining,
+  } = await import('../lib/training.ts');
+  let n = 0;
+  const routine = {
+    id: 'day',
+    name: 'Technique & Strength',
+    exercises: [
+      {
+        name: 'Bench press',
+        muscle: 'Chest',
+        sets: 2,
+        reps: 8,
+        unit: 'kg',
+        instructions: 'Pause at the bottom.',
+        restSeconds: 120,
+        videoUrl: 'https://www.youtube.com/watch?v=abcdefghijk',
+      },
+    ],
+  };
+  const workout = startTraining(
+    routine,
+    () => String(++n),
+    'member',
+    new Date('2026-09-10T10:00:00Z'),
+  );
+  assert.equal(workout.programSessionId, 'day');
+  assert.equal(workout.exercises[0].restSeconds, 120);
+  assert.equal(workout.exercises[0].videoUrl, routine.exercises[0].videoUrl);
+  workout.exercises[0].sets[0] = {
+    ...workout.exercises[0].sets[0],
+    kg: '100',
+    load: '100',
+    done: true,
+  };
+  const pounds = changeExerciseUnit(workout.exercises[0], 'lb');
+  assert.equal(pounds.sets[0].kg, '100');
+  assert.equal(pounds.sets[0].load, '220.46');
+  assert.equal(changeExerciseUnit(pounds, 'kg').sets[0].load, '100');
+  const saved = routineFromWorkout(workout, 'routine-copy', 'My strength day');
+  assert.equal(saved.exercises[0].sets, 2);
+  assert.equal(saved.exercises[0].restSeconds, 120);
+  saved.exercises[0].restSeconds = 45;
+  assert.equal(workout.exercises[0].restSeconds, 120);
+  assert.equal(
+    validateData({
+      ...EMPTY,
+      active: {
+        ...workout,
+        exercises: [{ ...workout.exercises[0], restSeconds: -1 }],
+      },
+    }),
+    false,
+  );
+  saved.exercises[0].name = 'Changed';
+  assert.equal(workout.exercises[0].name, 'Bench press');
+  assert.equal(routine.exercises[0].sets, 2);
+  assert.equal(startTraining(null, () => String(++n)).membershipId, undefined);
+  assert.equal(restRemaining(10000, 1501), 9);
+  assert.equal(restRemaining(10000, 15000), 0);
+  assert.equal(restRemaining(null, 15000), 0);
+  assert.ok(validateData({ ...EMPTY, active: workout }));
+});

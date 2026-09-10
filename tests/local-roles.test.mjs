@@ -41,7 +41,7 @@ test('role fixture rejects remote sockets, hosts, cross-site and forged request 
     true,
   );
 });
-test('native workout preserves assignment attribution and rejects incomplete sets', () => {
+test('native workout preserves assignment attribution and saves partial sessions without marking skipped sets done', () => {
   let counter = 0;
   const program = foundationProgram();
   program.sessions[0].exercises[0].unit = 'lb';
@@ -52,12 +52,24 @@ test('native workout preserves assignment attribution and rejects incomplete set
   );
   assert.equal(workout.membershipId, 'membership');
   assert.equal(workout.programSessionId, program.sessions[0].id);
-  assert.throws(() => finishAssignedWorkout(workout), /Complete every set/);
+  assert.throws(() => finishAssignedWorkout(workout), /Log at least one set/);
   const first = workout.exercises[0];
   assert.throws(
     () => editWorkoutSet(workout, first.id, first.sets[0].id, { done: true }),
     /valid weight/,
   );
+  const partial = finishAssignedWorkout(
+    editWorkoutSet(workout, first.id, first.sets[0].id, {
+      load: '100',
+      done: true,
+    }),
+  );
+  assert.equal(partial.endedEarly, true);
+  assert.equal(
+    partial.exercises.flatMap((e) => e.sets).filter((set) => set.done).length,
+    1,
+  );
+  assert.equal(partial.exercises[0].sets[1].done, false);
   for (const exercise of workout.exercises)
     for (const set of exercise.sets) {
       workout = editWorkoutSet(workout, exercise.id, set.id, {
@@ -70,4 +82,5 @@ test('native workout preserves assignment attribution and rejects incomplete set
     Math.abs(Number(workout.exercises[0].sets[0].kg) - 45.3592) < 0.001,
   );
   assert.ok(finishAssignedWorkout(workout).finishedAt);
+  assert.equal(finishAssignedWorkout(workout).endedEarly, false);
 });

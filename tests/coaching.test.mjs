@@ -986,3 +986,53 @@ test('private reusable templates enforce ownership and revision checks without s
   );
   db.sql.close();
 });
+
+test('exercise rest targets validate and early finishes do not count as fully completed assignments', () => {
+  const now = new Date('2026-09-10T12:00:00Z');
+  const program = {
+    title: 'Strength',
+    notes: '',
+    startDate: '2026-09-10',
+    sessions: [
+      {
+        id: 'day',
+        name: 'Technique',
+        day: 4,
+        exercises: [
+          {
+            name: 'Bench press',
+            muscle: 'Chest',
+            sets: 3,
+            reps: 8,
+            restSeconds: 120,
+          },
+        ],
+      },
+    ],
+  };
+  assert.equal(isProgram(program), true);
+  for (const restSeconds of [-1, 601, 1.5, '90']) {
+    const invalid = structuredClone(program);
+    invalid.sessions[0].exercises[0].restSeconds = restSeconds;
+    assert.equal(isProgram(invalid), false);
+  }
+  const workout = {
+    id: 'workout',
+    membershipId: 'member',
+    programSessionId: 'day',
+    name: 'Technique',
+    startedAt: now.toISOString(),
+    finishedAt: now.toISOString(),
+    endedEarly: true,
+    exercises: [],
+    notes: '',
+  };
+  const stats = memberStats(
+    { ...EMPTY, workouts: [workout] },
+    { id: 'member', program },
+    now,
+  );
+  assert.equal(stats.workouts, 1);
+  assert.equal(stats.due, 1);
+  assert.equal(stats.completed, 0);
+});

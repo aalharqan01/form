@@ -455,6 +455,12 @@ export default function CoachingWorkspace() {
                         {m.stats?.completed ?? 0}/{m.stats?.due ?? 0}
                       </strong>
                       <small>Scheduled · 7 days</small>
+                      <strong className="co-weekly-change">
+                        {m.stats?.averageChangeKg == null
+                          ? '—'
+                          : `${m.stats.averageChangeKg > 0 ? '+' : ''}${m.stats.averageChangeKg.toFixed(2)} kg`}
+                      </strong>
+                      <small>Weekly average change</small>
                     </span>
                     <span className="co-client-signals">
                       {m.pending > 0 ? (
@@ -1396,6 +1402,7 @@ function SharedProgress({ fitness }: { fitness: FitnessData }) {
           <details key={w.id}>
             <summary>
               {w.name} · {dateLabel(w.startedAt)} · {completedSets(w)} sets
+              {w.endedEarly ? ' · Finished early' : ''}
             </summary>
             {w.exercises.map((e) => (
               <div key={e.id} className="co-workout-read">
@@ -1408,6 +1415,8 @@ function SharedProgress({ fitness }: { fitness: FitnessData }) {
                         `${displayWeight(Number(s.kg), e.unit ?? 'kg').toFixed(1)} ${e.unit ?? 'kg'} × ${s.reps}${s.kind === 'warmup' ? ' (warm-up)' : ''}`,
                     )
                     .join(' · ')}
+                  {e.sets.some((set) => !set.done) &&
+                    ` · ${e.sets.filter((set) => !set.done).length} skipped sets`}
                 </span>
               </div>
             ))}
@@ -1818,6 +1827,11 @@ function ProgramEditor({
                   >
                     Refresh templates
                   </Button>
+                  <p className="co-muted">
+                    Add any saved workout day to this program. Edit the copied
+                    exercises, targets and rest times for this client; your
+                    original template stays saved.
+                  </p>
                 </section>
                 <ErrorNote text={templateError} />
                 {templateNotice && (
@@ -1949,6 +1963,26 @@ function ProgramEditor({
                       </label>
                     </div>
                     <label>
+                      Rest between sets (seconds)
+                      <Input
+                        aria-label="Rest between sets (seconds)"
+                        required
+                        type="number"
+                        min={0}
+                        max={600}
+                        step={1}
+                        value={e.restSeconds ?? 90}
+                        onChange={(v) =>
+                          exercise(i, j, {
+                            restSeconds: Number(v.target.value),
+                          })
+                        }
+                      />
+                      <small className="co-muted">
+                        Applies to this exercise. Set 0 for no rest countdown.
+                      </small>
+                    </label>
+                    <label>
                       Coaching instructions
                       <Input
                         maxLength={1000}
@@ -1956,7 +1990,7 @@ function ProgramEditor({
                         onChange={(v) =>
                           exercise(i, j, { instructions: v.target.value })
                         }
-                        placeholder="Tempo, effort, rest or target load"
+                        placeholder="Tempo, effort or target load"
                       />
                     </label>
                     {templateMode ? (

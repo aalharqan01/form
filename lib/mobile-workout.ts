@@ -58,6 +58,8 @@ export function startAssignedWorkout(
       muscle: exercise.muscle,
       unit: exercise.unit ?? 'kg',
       instructions: exercise.instructions,
+      videoUrl: exercise.videoUrl,
+      restSeconds: exercise.restSeconds ?? 90,
       sets: Array.from({ length: exercise.sets }, () => ({
         id: id(),
         kg: '',
@@ -114,7 +116,11 @@ export function finishAssignedWorkout(
   now = new Date(),
 ): Workout {
   const sets = workout.exercises.flatMap((exercise) => exercise.sets);
-  if (!sets.length || sets.some((set) => !set.done))
-    throw new Error('Complete every set before finishing the workout.');
-  return { ...workout, finishedAt: now.toISOString() };
+  if (!sets.some((set) => set.done))
+    throw new Error('Log at least one set, or discard the empty workout.');
+  return {
+    ...workout,
+    endedEarly: sets.some((set) => !set.done),
+    finishedAt: now.toISOString(),
+  };
 }

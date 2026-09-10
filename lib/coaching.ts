@@ -274,6 +274,10 @@ export function isProgram(v: unknown): v is Program {
             e.reps >= 1 &&
             e.reps <= 100 &&
             ['kg', 'lb'].includes(e.unit ?? 'kg') &&
+            (e.restSeconds === undefined ||
+              (Number.isInteger(e.restSeconds) &&
+                e.restSeconds >= 0 &&
+                e.restSeconds <= 600)) &&
             (e.instructions === undefined ||
               text(e.instructions, 1000, false)) &&
             videoURL(e.videoUrl),
@@ -309,6 +313,7 @@ export function memberStats(
         if (
           workouts.some(
             (w) =>
+              w.endedEarly !== true &&
               w.membershipId === member.id &&
               w.programSessionId === s.id &&
               w.startedAt.slice(0, 10) === day,
