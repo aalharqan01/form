@@ -13,7 +13,7 @@ npm run setup
 npm run dev
 ```
 
-`npm run setup` installs the exact dependency versions in the lockfile and applies all four database migrations to a local database. Confirm the local migration prompt if it appears. It does not need a Cloudflare account, API keys or a paid service. Local video storage is created automatically when the app runs.
+`npm run setup` installs the exact dependency versions in the lockfile and applies all database migrations to a local database. Confirm the local migration prompt if it appears. It does not need a Cloudflare account, API keys or a paid service. Local video storage is created automatically when the app runs.
 
 Open the **localhost URL printed in your terminal**; Vite may choose another port if 3000 is busy. Local sign-in uses the development identity `seedy@sites.test`. It does not connect to your live account.
 
@@ -33,7 +33,13 @@ npm run dev
 
 The migration runner records applied migrations. Subsequent runs apply only new migrations to a database initialized with this setup command. Existing local databases created by manually executing SQL before this command was introduced need their migration history baselined before using `db:local`; do not rerun old table-creation migrations against them.
 
+Recent changes and what is still open are summarised in [CHANGELOG.md](CHANGELOG.md).
+
 ## Phones and other devices
+
+For separate coach and client sessions and the Expo mobile prototype, see [Development workflow](docs/DEVELOPMENT.md). Run `npm run dev:roles` and, in another terminal, `npm run mobile:web` after `npm run mobile:setup`. Open `http://127.0.0.1:3100/__dev/phones` for both role previews. Native iOS testing requires full Xcode and an installed Simulator runtime.
+
+The team Cloudflare staging target and GitHub Actions setup are documented in [Deployment setup](docs/DEPLOYMENT.md). Deployment remains disabled until the team's resources, authentication, and GitHub configuration are ready.
 
 The commands above run the app on each computer's own localhost. The local sign-in fixture deliberately accepts only loopback requests, so simply exposing a laptop's development port on Wi-Fi does not enable sign-in from a phone.
 

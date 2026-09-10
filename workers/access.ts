@@ -1,0 +1,83 @@
+import { createRemoteJWKSet, jwtVerify, type JWTVerifyGetKey } from 'jose';
+
+export type AccessEnvironment = {
+  ACCESS_TEAM_DOMAIN?: string;
+  ACCESS_AUD?: string;
+};
+const keysets = new Map<string, ReturnType<typeof createRemoteJWKSet>>();
+
+export async function authenticateAccess(
+  request: Request,
+  env: AccessEnvironment,
+  testKey?: JWTVerifyGetKey,
+): Promise<Request | Response> {
+  const issuer = env.ACCESS_TEAM_DOMAIN;
+  const audience = env.ACCESS_AUD;
+  if (
+    !issuer ||
+    !/^https:\/\/[a-z0-9-]+\.cloudflareaccess\.com$/.test(issuer) ||
+    !audience
+  ) {
+    return new Response('Access authentication is not configured.', {
+      status: 503,
+      headers: { 'Cache-Control': 'no-store' },
+    });
+  }
+  const token = request.headers.get('cf-access-jwt-assertion');
+  if (!token)
+    return new Response(
+      'Sign in through the protected Cloudflare Access URL.',
+      { status: 401, headers: { 'Cache-Control': 'no-store' } },
+    );
+  try {
+    let key = testKey ?? keysets.get(issuer);
+    if (!key) {
+      const remote = createRemoteJWKSet(
+        new URL(`${issuer}/cdn-cgi/access/certs`),
+      );
+      keysets.set(issuer, remote);
+      key = remote;
+    }
+    const { payload } = await jwtVerify(token, key, {
+      issuer,
+      audience,
+      algorithms: ['RS256'],
+      requiredClaims: ['sub', 'email', 'exp', 'iat'],
+    });
+    if (
+      typeof payload.sub !== 'string' ||
+      !payload.sub ||
+      typeof payload.email !== 'string' ||
+      !payload.email.includes('@')
+    )
+      throw new Error('A user identity is required.');
+    const headers = new Headers(request.headers);
+    const originalNames = [...headers.keys()];
+    for (const name of originalNames) {
+      if (
+        name.startsWith('oai-authenticated-user-') ||
+        name.startsWith('x-form-dev-')
+      )
+        headers.delete(name);
+    }
+    headers.delete('cf-access-jwt-assertion');
+    headers.set('oai-authenticated-user-id', `cf-access:${payload.sub}`);
+    headers.set('oai-authenticated-user-email', payload.email);
+    if (typeof payload.name === 'string' && payload.name) {
+      headers.set(
+        'oai-authenticated-user-full-name',
+        encodeURIComponent(payload.name),
+      );
+      headers.set(
+        'oai-authenticated-user-full-name-encoding',
+        'percent-encoded-utf-8',
+      );
+    }
+    return new Request(request, { headers });
+  } catch {
+    return new Response(
+      'Your session is invalid or expired. Sign in again through Cloudflare Access.',
+      { status: 401, headers: { 'Cache-Control': 'no-store' } },
+    );
+  }
+}

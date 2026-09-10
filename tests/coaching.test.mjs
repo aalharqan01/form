@@ -32,9 +32,8 @@ const { handleCoaching } = await import(
   pathToFileURL(`${temp}/coaching-server.mjs`).href
 );
 const { EMPTY } = await import(pathToFileURL(`${temp}/fitness.mjs`).href);
-const { isProgram, memberStats } = await import(
-  pathToFileURL(`${temp}/coaching.mjs`).href
-);
+const { isProgram, memberStats, templateRoutine, sessionFromTemplate } =
+  await import(pathToFileURL(`${temp}/coaching.mjs`).href);
 function memoryDB() {
   const sql = new DatabaseSync(':memory:');
   return {
@@ -856,4 +855,184 @@ test('video access is scoped to the active client, coach ownership, and valid by
     413,
   );
   assert.equal((await handleVideo(db, bucket, coach, upload())).status, 415);
+});
+
+test('private reusable templates enforce ownership and revision checks without sharing client videos', async () => {
+  const db = memoryDB();
+  for (const name of [
+    '0000_illegal_bug',
+    '0001_dapper_magma',
+    '0002_perpetual_bloodaxe',
+    '0003_normal_thunderbird',
+    '0004_coach_workout_templates',
+  ])
+    db.sql.exec(await readFile(`drizzle/${name}.sql`, 'utf8'));
+  const call = async (who, body, query = '') => {
+    const response = await handleCoaching(
+      db,
+      who,
+      new Request(
+        'https://form.test/api/coaching' + query,
+        body
+          ? {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(body),
+            }
+          : {},
+      ),
+    );
+    return { status: response.status, body: await response.json() };
+  };
+  assert.equal(
+    (await call(coach, { action: 'profile', profile, revision: 0 })).status,
+    200,
+  );
+  assert.equal(
+    (await call(stranger, { action: 'profile', profile, revision: 0 })).status,
+    200,
+  );
+  const source = structuredClone(program.sessions[0]);
+  source.name = 'My custom workout day';
+  source.exercises[0].videoUrl =
+    '/api/videos?id=00000000-0000-4000-8000-000000000000';
+  const routine = templateRoutine(source);
+  assert.equal(routine.exercises[0].videoUrl, '');
+  assert.match(source.exercises[0].videoUrl, /api\/videos/);
+  assert.equal(
+    (await call(coach, { action: 'template-save', routine: source })).status,
+    400,
+  );
+  assert.equal(
+    (await call(trainee, { action: 'template-save', routine })).status,
+    403,
+  );
+  assert.equal((await call(null, null, '?templates=1')).status, 401);
+  const created = await call(coach, { action: 'template-save', routine });
+  assert.equal(created.status, 200);
+  const templateId = created.body.id;
+  const saved = (await call(coach, null, '?templates=1')).body.templates[0];
+  assert.equal(saved.routine.name, 'My custom workout day');
+  assert.deepEqual(
+    (await call(stranger, null, '?templates=1')).body.templates,
+    [],
+  );
+  assert.equal(
+    (
+      await call(stranger, {
+        action: 'template-save',
+        id: templateId,
+        revision: 1,
+        routine,
+      })
+    ).status,
+    409,
+  );
+  const assigned = sessionFromTemplate(saved.routine, 'client-session', 4);
+  assigned.exercises[0].sets = 9;
+  assert.notEqual(saved.routine.exercises[0].sets, 9);
+  assert.equal(assigned.day, 4);
+  assert.equal(assigned.id, 'client-session');
+  routine.name = 'Edited template';
+  assert.equal(
+    (
+      await call(coach, {
+        action: 'template-save',
+        id: templateId,
+        revision: 1,
+        routine,
+      })
+    ).status,
+    200,
+  );
+  assert.equal(
+    (
+      await call(coach, {
+        action: 'template-save',
+        id: templateId,
+        revision: 1,
+        routine,
+      })
+    ).status,
+    409,
+  );
+  assert.equal(assigned.name, 'My custom workout day');
+  assert.equal(
+    (
+      await call(coach, {
+        action: 'template-save',
+        routine: { ...routine, exercises: [] },
+      })
+    ).status,
+    400,
+  );
+  assert.equal(
+    (
+      await call(coach, {
+        action: 'template-save',
+        routine: { ...routine, name: '' },
+      })
+    ).status,
+    400,
+  );
+  assert.equal(
+    (
+      await call(coach, {
+        action: 'template-save',
+        routine: { ...routine, exercises: [null] },
+      })
+    ).status,
+    400,
+  );
+  db.sql.close();
+});
+
+test('exercise rest targets validate and early finishes do not count as fully completed assignments', () => {
+  const now = new Date('2026-09-10T12:00:00Z');
+  const program = {
+    title: 'Strength',
+    notes: '',
+    startDate: '2026-09-10',
+    sessions: [
+      {
+        id: 'day',
+        name: 'Technique',
+        day: 4,
+        exercises: [
+          {
+            name: 'Bench press',
+            muscle: 'Chest',
+            sets: 3,
+            reps: 8,
+            restSeconds: 120,
+          },
+        ],
+      },
+    ],
+  };
+  assert.equal(isProgram(program), true);
+  for (const restSeconds of [-1, 601, 1.5, '90']) {
+    const invalid = structuredClone(program);
+    invalid.sessions[0].exercises[0].restSeconds = restSeconds;
+    assert.equal(isProgram(invalid), false);
+  }
+  const workout = {
+    id: 'workout',
+    membershipId: 'member',
+    programSessionId: 'day',
+    name: 'Technique',
+    startedAt: now.toISOString(),
+    finishedAt: now.toISOString(),
+    endedEarly: true,
+    exercises: [],
+    notes: '',
+  };
+  const stats = memberStats(
+    { ...EMPTY, workouts: [workout] },
+    { id: 'member', program },
+    now,
+  );
+  assert.equal(stats.workouts, 1);
+  assert.equal(stats.due, 1);
+  assert.equal(stats.completed, 0);
 });

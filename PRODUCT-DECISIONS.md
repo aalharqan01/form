@@ -1,6 +1,6 @@
 # Form: product and business decisions
 
-Last updated: 9 September 2026. Keep these decisions as the baseline until the user explicitly changes them. This document defines the target product for the next implementation phase; it does not claim the existing application already implements it. Recommendations and unresolved commercial details are identified separately from confirmed product requirements.
+Last updated: 10 September 2026. Keep these decisions as the baseline until the user explicitly changes them. This document defines the target product for the next implementation phase; it does not claim the existing application already implements it. Recommendations and unresolved commercial details are identified separately from confirmed product requirements.
 
 ## Two paid offerings, with free tracking underneath
 
@@ -61,6 +61,7 @@ Public coach discovery profiles, marketplace browsing, package details and coach
 - Create and edit public profiles, packages, pricing and slot availability.
 - Receive new-member notifications and manage onboarding.
 - Create programmes and assign schedules to individual trainees.
+- Save and edit reusable workout-day templates with arbitrary coach-defined names and exercises; examples such as upper day or full body are illustrative, not fixed categories. Coaches can add a template to any client programme and personalise the assigned copy. Implementation default: editing a saved template does not retroactively change assigned programmes.
 - Select exercises from a preloaded library rather than requiring exercise names to be typed from scratch.
 - Upload demonstration videos directly and attach them to exercises for embedded playback. A video-link-only workflow does not meet the requirement.
 - Assign and update calorie and macronutrient targets.

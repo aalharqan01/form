@@ -13,6 +13,13 @@ export const coachProfiles = sqliteTable('coach_profiles', {
   revision: integer('revision').notNull().default(0),
   updatedAt: text('updated_at').notNull(),
 });
+export const coachWorkoutTemplates = sqliteTable('coach_workout_templates', {
+  id: text('id').primaryKey(),
+  coachId: text('coach_id').notNull(),
+  routine: text('routine').notNull(),
+  revision: integer('revision').notNull().default(1),
+  updatedAt: text('updated_at').notNull(),
+});
 export const coachingMemberships = sqliteTable('coaching_memberships', {
   id: text('id').primaryKey(),
   coachId: text('coach_id').notNull(),

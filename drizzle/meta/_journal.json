@@ -29,6 +29,13 @@
       "when": 1788861088778,
       "tag": "0003_normal_thunderbird",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1789012153292,
+      "tag": "0004_coach_workout_templates",
+      "breakpoints": true
     }
   ]
 }

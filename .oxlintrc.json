@@ -23,6 +23,7 @@
     "typeCheck": true
   },
   "ignorePatterns": [
+    "mobile/**",
     ".next/**",
     ".vinext/**",
     "out/**",
@@ -63,5 +64,15 @@
         "Textarea": "textarea"
       }
     }
-  }
+  },
+  "overrides": [
+    {
+      "files": [
+        "tests/*.test.mjs"
+      ],
+      "rules": {
+        "typescript/no-floating-promises": "off"
+      }
+    }
+  ]
 }
