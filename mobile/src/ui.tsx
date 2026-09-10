@@ -976,12 +976,10 @@ export function Sheet({
         useNativeDriver: native,
       }).start();
     } else if (visible) {
-      Animated.timing(progress, {
-        toValue: 0,
-        duration: 140,
-        easing: Easing.out(Easing.quad),
-        useNativeDriver: native,
-      }).start(() => setVisible(false));
+      // Unmount at once: a closing modal keeps its focus trap, which would
+      // swallow taps and typing aimed at the page behind it.
+      progress.stopAnimation();
+      setVisible(false);
     }
   }, [open, progress, visible]);
   if (!visible) return null;

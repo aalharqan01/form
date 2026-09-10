@@ -225,6 +225,10 @@ test('trainee finishes early with completed work and skipped sets visible to the
     await page
       .getByRole('button', { name: 'Save rest for Bench press', exact: true })
       .click();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await expect(
+      page.getByRole('button', { name: 'Rest time for Bench press', exact: true }),
+    ).toHaveText('Rest · 1:15');
     await page
       .getByRole('textbox', { name: 'Bench press set 1 weight', exact: true })
       .fill('40');
