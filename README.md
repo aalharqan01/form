@@ -33,6 +33,8 @@ npm run dev
 
 The migration runner records applied migrations. Subsequent runs apply only new migrations to a database initialized with this setup command. Existing local databases created by manually executing SQL before this command was introduced need their migration history baselined before using `db:local`; do not rerun old table-creation migrations against them.
 
+Recent changes and what is still open are summarised in [CHANGELOG.md](CHANGELOG.md).
+
 ## Phones and other devices
 
 For separate coach and client sessions and the Expo mobile prototype, see [Development workflow](docs/DEVELOPMENT.md). Run `npm run dev:roles` and, in another terminal, `npm run mobile:web` after `npm run mobile:setup`. Open `http://127.0.0.1:3100/__dev/phones` for both role previews. Native iOS testing requires full Xcode and an installed Simulator runtime.

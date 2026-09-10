@@ -1,6 +1,5 @@
 import { webkit, chromium, devices } from '@playwright/test';
 
-const native = process.argv.includes('--native');
 const engine = process.argv.includes('--chromium') ? chromium : webkit;
 const browser = await engine.launch({ headless: false });
 for (const role of ['coach', 'client']) {
@@ -12,9 +11,7 @@ for (const role of ['coach', 'client']) {
   const url =
     role === 'coach'
       ? 'http://127.0.0.1:3100/coaching'
-      : native
-        ? 'http://127.0.0.1:8081/'
-        : 'http://127.0.0.1:3101/';
+      : 'http://127.0.0.1:8081/';
   await page.goto(url);
 }
 console.log(

@@ -14,6 +14,12 @@ export const identities = {
     email: 'client@form.test',
     name: 'Alex Client',
   },
+  // Independent trainee with no coaching membership: free-tier app view.
+  solo: {
+    id: 'local-form-solo',
+    email: 'solo@form.test',
+    name: 'Riley Solo',
+  },
 } as const;
 export type DevRole = keyof typeof identities;
 const hosts = new Set(['localhost', '127.0.0.1', '[::1]']);

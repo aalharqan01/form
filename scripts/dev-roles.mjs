@@ -113,6 +113,7 @@ try {
   if (!stopping) {
     await proxy('coach', 3100);
     await proxy('client', 3101);
+    await proxy('solo', 3103);
     const child = spawn(
       process.execPath,
       [
@@ -138,7 +139,7 @@ try {
       if (!stopping) stop(code || 1);
     });
     console.log(
-      '\nCoach: http://127.0.0.1:3100/coaching\nClient: http://127.0.0.1:3101/\nSeparate identities; shared local database.\n',
+      '\nCoach: http://127.0.0.1:3100/coaching\nClient: http://127.0.0.1:3101/\nSolo (no coach): http://127.0.0.1:3103/\nSeparate identities; shared local database.\n',
     );
   }
 } catch (error) {

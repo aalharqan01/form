@@ -7,7 +7,7 @@ export type FitnessResponse = {
   userKey: string;
   name: string;
 };
-const origin = 'http://127.0.0.1:3101';
+import { API_ORIGIN as origin } from './account';
 export async function request<T>(
   path: string,
   body?: unknown,

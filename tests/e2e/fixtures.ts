@@ -1,0 +1,96 @@
+import {
+  expect,
+  request as playwrightRequest,
+  type APIRequestContext,
+} from '@playwright/test';
+import { execFileSync } from 'node:child_process';
+import type { FitnessData } from '../../lib/fitness';
+import type { MemberDetail, WorkoutTemplate } from '../../lib/coaching';
+const client = 'http://127.0.0.1:3101';
+const coach = 'http://127.0.0.1:3100';
+const quote = (value: unknown) =>
+  "'" + String(value).replaceAll("'", "''") + "'";
+export async function fixture(request: APIRequestContext) {
+  const saved = await (await request.get(client + '/api/data')).json();
+  expect(saved.userKey).toBe('local-form-client');
+  const detail: MemberDetail = await (
+    await request.get(coach + '/api/coaching?member=local-form-membership')
+  ).json();
+  expect(detail.member.coach_id).toBe('local-form-coach');
+  const before = await (
+    await request.get(coach + '/api/coaching?templates=1')
+  ).json();
+  const write = async (data: FitnessData, api = request) => {
+    const current = await (await api.get(client + '/api/data')).json();
+    expect(current.userKey).toBe('local-form-client');
+    expect(
+      (
+        await api.put(client + '/api/data', {
+          data: { data, revision: current.revision },
+        })
+      ).ok(),
+    ).toBe(true);
+  };
+  await write({ ...saved.data, active: null });
+  return {
+    saved: saved.data as FitnessData,
+    write,
+    async restore() {
+      const cleanup = await playwrightRequest.newContext();
+      try {
+        await write(saved.data, cleanup);
+        const after = await (
+          await cleanup.get(coach + '/api/coaching?templates=1')
+        ).json();
+        const added: WorkoutTemplate[] = after.templates.filter(
+          (t: WorkoutTemplate) =>
+            !before.templates.some((v: WorkoutTemplate) => v.id === t.id),
+        );
+        const latest: MemberDetail = await (
+          await cleanup.get(
+            coach + '/api/coaching?member=local-form-membership',
+          )
+        ).json();
+        const messages = latest.messages.filter(
+          (v) => !detail.messages.some((x) => x.id === v.id),
+        );
+        const checkins = latest.checkins.filter(
+          (v) => !detail.checkins.some((x) => x.id === v.id),
+        );
+        const statements = [
+          `UPDATE coaching_memberships SET program=${quote(JSON.stringify(detail.member.program))},nutrition=${quote(JSON.stringify(detail.member.nutrition))},revision=revision+1 WHERE id='local-form-membership' AND coach_id='local-form-coach' AND trainee_id='local-form-client'`,
+          ...added.map(
+            (t) =>
+              `DELETE FROM coach_workout_templates WHERE id=${quote(t.id)} AND coach_id='local-form-coach'`,
+          ),
+          ...messages.map(
+            (m) =>
+              `DELETE FROM coaching_messages WHERE id=${quote(m.id)} AND membership_id='local-form-membership'`,
+          ),
+          ...checkins.map(
+            (c) =>
+              `DELETE FROM coaching_checkins WHERE id=${quote(c.id)} AND membership_id='local-form-membership'`,
+          ),
+        ];
+        // Explicit local-only config. Never seed or clean a remote database.
+        execFileSync(
+          'npx',
+          [
+            'wrangler',
+            'd1',
+            'execute',
+            'DB',
+            '--local',
+            '--config',
+            'wrangler.local.json',
+            '--command',
+            statements.join(';'),
+          ],
+          { stdio: 'pipe' },
+        );
+      } finally {
+        await cleanup.dispose();
+      }
+    },
+  };
+}

@@ -1,23 +1,12 @@
 import { test, expect, devices } from '@playwright/test';
+import { fixture } from './fixtures';
 import { foundationProgram } from '../../lib/mobile-workout';
 
 test('coach assigns, client completes real sets, coach sees the saved workout', async ({
   browser,
   request,
 }) => {
-  const existing = await (
-    await request.get('http://127.0.0.1:3101/api/data')
-  ).json();
-  expect(existing.userKey).toBe('local-form-client');
-  if (existing.data.active) {
-    const cleared = await request.put('http://127.0.0.1:3101/api/data', {
-      data: {
-        data: { ...existing.data, active: null },
-        revision: existing.revision,
-      },
-    });
-    expect(cleared.ok()).toBe(true);
-  }
+  const clean = await fixture(request);
   const coachContext = await browser.newContext({
     ...devices['iPhone 13'],
     serviceWorkers: 'block',
@@ -35,8 +24,8 @@ test('coach assigns, client completes real sets, coach sees the saved workout', 
     await expect(
       client.getByRole('button', { name: /Preview as coach/ }),
     ).toHaveCount(0);
-    const templateName = `Workout day ${String(Date.now()).slice(-6)}`;
-    const title = `${templateName} personal`;
+    const templateName = 'Upper Body Strength — Technique';
+    const title = 'Upper Body Strength — Alex';
     await coach
       .getByRole('button', { name: 'Workout templates', exact: true })
       .click();
@@ -57,6 +46,10 @@ test('coach assigns, client completes real sets, coach sees the saved workout', 
         .click();
       await coach.getByLabel('Sets', { exact: true }).last().fill('2');
       await coach.getByLabel('Reps', { exact: true }).last().fill(reps);
+      await coach
+        .getByLabel('Rest between sets (seconds)', { exact: true })
+        .last()
+        .fill(name === 'Bench press' ? '120' : '45');
     }
     await coach
       .getByRole('button', { name: 'Save template', exact: true })
@@ -104,7 +97,9 @@ test('coach assigns, client completes real sets, coach sees the saved workout', 
     await dialog
       .getByRole('button', { name: 'Add template', exact: true })
       .click();
-    await dialog.getByLabel('Name', { exact: true }).fill('First assigned day');
+    await dialog
+      .getByLabel('Name', { exact: true })
+      .fill('Upper Body Strength — Foundation');
     await dialog
       .getByRole('button', { name: 'Add template', exact: true })
       .click();
@@ -130,18 +125,23 @@ test('coach assigns, client completes real sets, coach sees the saved workout', 
     expect(saved.routine.exercises[0].instructions).toBe('Move with control.');
     expect(saved.revision).toBe(2);
     expect(saved.routine.name).toBe(templateName);
+    expect(saved.routine.exercises[0].restSeconds).toBe(120);
+    expect(saved.routine.exercises[1].restSeconds).toBe(45);
     expect(
       await coach.evaluate(
         () => document.documentElement.scrollWidth <= window.innerWidth,
       ),
     ).toBe(true);
+    await client.getByRole('tab', { name: 'Train', exact: true }).click();
+    await expect(
+      client.getByText(title, { exact: true }).first(),
+    ).toBeVisible();
     await client
-      .getByRole('button', { name: `${title} · Mon`, exact: true })
+      .getByRole('button', { name: `Start workout: ${title}`, exact: true })
       .click();
-    await expect(client.getByText(title, { exact: true })).toBeVisible();
-    await client
-      .getByRole('button', { name: 'Start workout', exact: true })
-      .click();
+    await expect(
+      client.getByRole('textbox', { name: 'Workout name', exact: true }),
+    ).toHaveValue(title);
     for (const [name, weight] of [
       ['Bench press', '40'],
       ['Seated cable row', '30'],
@@ -159,6 +159,11 @@ test('coach assigns, client completes real sets, coach sees the saved workout', 
         await checkbox.click();
         await expect(checkbox).toBeChecked();
         await expect(
+          client.getByLabel('Rest countdown', { exact: true }),
+        ).toHaveText(
+          name === 'Bench press' ? /^(2:00|1:5\d)$/ : /^0:4\d$/,
+        );
+        await expect(
           client.getByRole('checkbox', {
             name: 'Complete Bench press set 1',
             exact: true,
@@ -172,6 +177,9 @@ test('coach assigns, client completes real sets, coach sees the saved workout', 
     });
     await expect(finish).toBeEnabled();
     await finish.click();
+    await client
+      .getByRole('button', { name: 'Save workout', exact: true })
+      .click();
     await expect(
       client.getByText('Workout saved. Your coach can review your sets.'),
     ).toBeVisible();
@@ -196,8 +204,8 @@ test('coach assigns, client completes real sets, coach sees the saved workout', 
       ),
     ).toBe(true);
   } finally {
-    await coachContext.close();
-    await clientContext.close();
+    await Promise.allSettled([coachContext.close(), clientContext.close()]);
+    await clean.restore();
   }
 });
 
