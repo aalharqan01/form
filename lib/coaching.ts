@@ -29,6 +29,58 @@ export type Program = {
   startDate: string;
   sessions: (Routine & { day: number })[];
 };
+export type WorkoutTemplate = {
+  id: string;
+  routine: Routine;
+  revision: number;
+  updatedAt: string;
+};
+
+// Uploaded demonstrations belong to a specific membership. They must be attached
+// for each client until a separately authorized shared video library exists.
+export function templateRoutine(session: Routine): Routine {
+  return {
+    id: session.id,
+    name: session.name,
+    exercises: session.exercises.map((exercise) => ({
+      ...exercise,
+      videoUrl: exercise.videoUrl?.startsWith('/api/videos')
+        ? ''
+        : exercise.videoUrl,
+    })),
+  };
+}
+
+export function isTemplateRoutine(value: unknown): value is Routine {
+  if (!value || typeof value !== 'object') return false;
+  const routine = value as Routine;
+  if (
+    !Array.isArray(routine.exercises) ||
+    routine.exercises.some(
+      (exercise) => !exercise || typeof exercise !== 'object',
+    )
+  )
+    return false;
+  return (
+    isProgram({
+      title: 'Template',
+      notes: '',
+      startDate: '2026-01-01',
+      sessions: [{ ...routine, day: 0 }],
+    }) &&
+    routine.exercises.every(
+      (exercise) => !exercise.videoUrl?.startsWith('/api/videos'),
+    )
+  );
+}
+
+export function sessionFromTemplate(
+  routine: Routine,
+  sessionId: string,
+  day = 1,
+): Program['sessions'][number] {
+  return { ...templateRoutine(routine), id: sessionId, day };
+}
 export type NutritionTargets = {
   calories: number;
   protein: number;

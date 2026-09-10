@@ -2,6 +2,7 @@ import type { ChatGPTUser } from '../app/chatgpt-auth';
 import type { Member, CoachProfile, Offer, Program, Intake } from './coaching';
 import {
   isProfile,
+  isTemplateRoutine,
   isNutrition,
   isProgram,
   isIntake,
@@ -153,6 +154,32 @@ export async function handleCoaching(
       return { m, fitness: null };
     };
     if (request.method === 'GET') {
+      if (url.searchParams.has('templates')) {
+        ensure(
+          await profile(),
+          'Set up a coach profile to use templates.',
+          403,
+        );
+        const rows = await db
+          .prepare(
+            'SELECT id,routine,revision,updated_at FROM coach_workout_templates WHERE coach_id=? ORDER BY updated_at DESC, id',
+          )
+          .bind(user.userId)
+          .all<{
+            id: string;
+            routine: string;
+            revision: number;
+            updated_at: string;
+          }>();
+        return json({
+          templates: rows.results.map((row) => ({
+            id: row.id,
+            routine: JSON.parse(row.routine),
+            revision: row.revision,
+            updatedAt: row.updated_at,
+          })),
+        });
+      }
       if (url.searchParams.has('notifications')) {
         const n = await db
           .prepare(
@@ -264,6 +291,40 @@ export async function handleCoaching(
       throw new RequestError('Invalid request.');
     }
     ensure(b && typeof b === 'object', 'Invalid request.');
+    if (b.action === 'template-save') {
+      ensure(await profile(), 'Only coaches can save workout templates.', 403);
+      ensure(
+        isTemplateRoutine(b.routine),
+        'Check the template name and exercises. Attach uploaded videos separately in each client program.',
+      );
+      if (b.id !== undefined) {
+        ensure(
+          text(b.id, 100) && Number.isInteger(b.revision),
+          'Reload your templates.',
+          409,
+        );
+        const result = await db
+          .prepare(
+            'UPDATE coach_workout_templates SET routine=?,revision=revision+1,updated_at=? WHERE id=? AND coach_id=? AND revision=?',
+          )
+          .bind(JSON.stringify(b.routine), now, b.id, user.userId, b.revision)
+          .run();
+        ensure(
+          result.meta.changes,
+          'Template changed or is unavailable. Close the editor and reload before saving.',
+          409,
+        );
+        return json({ ok: true, id: b.id });
+      }
+      const templateId = crypto.randomUUID();
+      await db
+        .prepare(
+          'INSERT INTO coach_workout_templates (id,coach_id,routine,revision,updated_at) VALUES (?,?,?,1,?)',
+        )
+        .bind(templateId, user.userId, JSON.stringify(b.routine), now)
+        .run();
+      return json({ ok: true, id: templateId });
+    }
     if (b.action === 'profile') {
       ensure(isProfile(b.profile), 'Check your coach profile and packages.');
       ensure(Number.isInteger(b.revision), 'Reload your profile.', 409);

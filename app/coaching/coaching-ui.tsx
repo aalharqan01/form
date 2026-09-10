@@ -33,6 +33,10 @@ import {
   type MemberDetail,
   type CoachProfile,
   type Program,
+  type WorkoutTemplate,
+  templateRoutine,
+  sessionFromTemplate,
+  isTemplateRoutine,
   type Checkin,
   type Intake,
   DAYS,
@@ -143,7 +147,9 @@ function Empty({
 }
 export default function CoachingWorkspace() {
   const c = useCoaching();
-  const [section, setSection] = useState<'clients' | 'offering'>('clients'),
+  const [section, setSection] = useState<'clients' | 'offering' | 'templates'>(
+      'clients',
+    ),
     [selected, setSelected] = useState<string | null>(null),
     [filter, setFilter] = useState(''),
     [attention, setAttention] = useState(false);
@@ -187,6 +193,16 @@ export default function CoachingWorkspace() {
           >
             <Wallet size={20} strokeWidth={1.5} />
             Profile & packages
+          </button>
+          <button
+            aria-current={section === 'templates' ? 'page' : undefined}
+            onClick={() => {
+              setSection('templates');
+              setSelected(null);
+            }}
+          >
+            <ClipboardList size={20} strokeWidth={1.5} />
+            Workout templates
           </button>
           <a href="/simulate">
             <ClipboardList size={20} strokeWidth={1.5} />
@@ -264,6 +280,8 @@ export default function CoachingWorkspace() {
               void c.reload();
             }}
           />
+        ) : section === 'templates' ? (
+          <TemplateLibrary />
         ) : section === 'offering' ? (
           <>
             <div className="co-heading">
@@ -1463,7 +1481,147 @@ function ProgramView({
     </div>
   );
 }
+function TemplateLibrary() {
+  const api = useCoachingTransport();
+  const [templates, setTemplates] = useState<WorkoutTemplate[]>([]);
+  const [editing, setEditing] = useState<WorkoutTemplate | 'new' | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [saveError, setSaveError] = useState('');
+  const reload = useCallback(async () => {
+    setLoading(true);
+    try {
+      const result = await api<{ templates: WorkoutTemplate[] }>(
+        '?templates=1',
+      );
+      setTemplates(result.templates);
+      setError('');
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  }, [api]);
+  useEffect(() => {
+    const boot = setTimeout(() => void reload(), 0);
+    return () => clearTimeout(boot);
+  }, [reload]);
+  return (
+    <>
+      <div className="co-heading">
+        <div>
+          <p className="co-overline">YOUR TRAINING LIBRARY</p>
+          <h1>Workout templates</h1>
+          <p>Build a day once. Make it personal for every client.</p>
+        </div>
+        <Button
+          className="primary"
+          onClick={() => {
+            setSaveError('');
+            setEditing('new');
+          }}
+        >
+          <Plus size={18} />
+          Create template
+        </Button>
+      </div>
+      <p className="co-muted">
+        Templates are private to you. Adding one to a program creates an
+        editable copy; later template changes leave assigned programs as they
+        are.
+      </p>
+      <ErrorNote text={error} />
+      <Button
+        className="secondary"
+        disabled={loading}
+        onClick={() => void reload()}
+      >
+        {loading ? 'Loading templates…' : 'Refresh templates'}
+      </Button>
+      {!loading && !error && !templates.length && (
+        <Empty icon={ClipboardList} title="Your best sessions, ready to reuse">
+          <p>
+            Create a template with any name and exercises, or save a day while
+            editing a client’s program.
+          </p>
+        </Empty>
+      )}
+      <div className="co-template-grid">
+        {templates.map((template) => (
+          <article key={template.id} className="co-template-card">
+            <p className="co-overline">
+              {template.routine.exercises.length} EXERCISES ·{' '}
+              {template.routine.exercises.reduce((n, e) => n + e.sets, 0)} SETS
+            </p>
+            <h2>{template.routine.name}</h2>
+            <p>{template.routine.exercises.map((e) => e.name).join(' · ')}</p>
+            <Button
+              className="secondary"
+              onClick={() => {
+                setSaveError('');
+                setEditing(template);
+              }}
+              aria-label={`Edit template ${template.routine.name}`}
+            >
+              Edit template
+              <ArrowUpRight size={16} />
+            </Button>
+          </article>
+        ))}
+      </div>
+      {editing && (
+        <ProgramEditor
+          templateMode
+          memberId=""
+          busy={busy}
+          error={saveError}
+          program={
+            editing === 'new'
+              ? null
+              : {
+                  title: editing.routine.name,
+                  notes: '',
+                  startDate: today(),
+                  sessions: [
+                    sessionFromTemplate(editing.routine, editing.routine.id),
+                  ],
+                }
+          }
+          onClose={() => {
+            if (!busy) {
+              setEditing(null);
+              void reload();
+            }
+          }}
+          onSave={async (program) => {
+            if (busy) return;
+            setBusy(true);
+            setSaveError('');
+            try {
+              await api('', {
+                action: 'template-save',
+                ...(editing === 'new'
+                  ? {}
+                  : { id: editing.id, revision: editing.revision }),
+                routine: templateRoutine(program.sessions[0]),
+              });
+              setEditing(null);
+              await reload();
+            } catch (e) {
+              setSaveError((e as Error).message);
+            } finally {
+              setBusy(false);
+            }
+          }}
+        />
+      )}
+    </>
+  );
+}
+
 function ProgramEditor({
+  templateMode = false,
   memberId,
   program,
   busy,
@@ -1471,6 +1629,7 @@ function ProgramEditor({
   onClose,
   onSave,
 }: {
+  templateMode?: boolean;
   program: Program | null;
   busy: boolean;
   error: string;
@@ -1478,6 +1637,27 @@ function ProgramEditor({
   onSave: (p: Program) => Promise<void>;
   memberId: string;
 }) {
+  const api = useCoachingTransport();
+  const [templates, setTemplates] = useState<WorkoutTemplate[]>([]);
+  const [templateId, setTemplateId] = useState('');
+  const [templateBusy, setTemplateBusy] = useState(false);
+  const [templateError, setTemplateError] = useState('');
+  const [templateNotice, setTemplateNotice] = useState('');
+  const loadTemplates = useCallback(async () => {
+    if (templateMode) return;
+    try {
+      setTemplates(
+        (await api<{ templates: WorkoutTemplate[] }>('?templates=1')).templates,
+      );
+      setTemplateError('');
+    } catch (e) {
+      setTemplateError((e as Error).message);
+    }
+  }, [api, templateMode]);
+  useEffect(() => {
+    const boot = setTimeout(() => void loadTemplates(), 0);
+    return () => clearTimeout(boot);
+  }, [loadTemplates]);
   const [uploading, setUploading] = useState(false);
   const [picker, setPicker] = useState<{
     sessionId: string;
@@ -1497,7 +1677,14 @@ function ProgramEditor({
       title: 'Training program',
       notes: '',
       startDate: today(),
-      sessions: [{ id: id(), name: 'Session 1', day: 1, exercises: [] }],
+      sessions: [
+        {
+          id: id(),
+          name: templateMode ? '' : 'Session 1',
+          day: 1,
+          exercises: [],
+        },
+      ],
     },
   );
   const session = (i: number, patch: Partial<Program['sessions'][number]>) =>
@@ -1519,16 +1706,23 @@ function ProgramEditor({
     <Dialog
       open
       onOpenChange={(v) => {
-        if (!v && !uploading) onClose();
+        if (!v && !uploading && !busy && !templateBusy) onClose();
       }}
     >
       <DialogContent className="form-dialog co-dialog co-program-dialog">
         <DialogTitle>
-          {program ? 'Edit program' : 'Build a program'}
+          {templateMode
+            ? program
+              ? 'Edit workout template'
+              : 'Create workout template'
+            : program
+              ? 'Edit program'
+              : 'Build a program'}
         </DialogTitle>
         <DialogDescription>
-          Assign a weekly schedule. Saving updates the client’s program without
-          changing completed workouts.
+          {templateMode
+            ? 'Name your workout day and choose its exercises. Saving a template does not change any assigned program.'
+            : 'Assign a weekly schedule. Saving updates the client’s program without changing completed workouts.'}
         </DialogDescription>
         <form
           onSubmit={(e) => {
@@ -1536,56 +1730,126 @@ function ProgramEditor({
             if (!uploading) void onSave(p);
           }}
         >
-          <fieldset disabled={uploading || busy} className="program-fields">
-            <div className="co-form-grid">
-              <label>
-                Program title
-                <Input
-                  required
-                  maxLength={100}
-                  value={p.title}
-                  onChange={(e) => setP({ ...p, title: e.target.value })}
-                />
-              </label>
-              <label>
-                Start date
-                <Input
-                  type="date"
-                  required
-                  value={p.startDate}
-                  onChange={(e) => setP({ ...p, startDate: e.target.value })}
-                />
-              </label>
-            </div>
-            <label>
-              Program notes
-              <Textarea
-                maxLength={2000}
-                value={p.notes}
-                onChange={(e) => setP({ ...p, notes: e.target.value })}
-              />
-            </label>
-            {p.sessions.map((s, i) => (
-              <div key={s.id} className="co-session-editor">
-                <div className="co-section-line">
-                  <h3>Session {i + 1}</h3>
+          <fieldset
+            disabled={uploading || busy || templateBusy}
+            className="program-fields"
+          >
+            {!templateMode && (
+              <>
+                <div className="co-form-grid">
+                  <label>
+                    Program title
+                    <Input
+                      required
+                      maxLength={100}
+                      value={p.title}
+                      onChange={(e) => setP({ ...p, title: e.target.value })}
+                    />
+                  </label>
+                  <label>
+                    Start date
+                    <Input
+                      type="date"
+                      required
+                      value={p.startDate}
+                      onChange={(e) =>
+                        setP({ ...p, startDate: e.target.value })
+                      }
+                    />
+                  </label>
+                </div>
+                <label>
+                  Program notes
+                  <Textarea
+                    maxLength={2000}
+                    value={p.notes}
+                    onChange={(e) => setP({ ...p, notes: e.target.value })}
+                  />
+                </label>
+                <section
+                  className="co-template-picker"
+                  aria-label="Add a saved template"
+                >
+                  <label>
+                    Saved workout template
+                    <select
+                      aria-label="Saved workout template"
+                      value={templateId}
+                      onChange={(e) => setTemplateId(e.target.value)}
+                    >
+                      <option value="">Choose a template</option>
+                      {templates.map((template) => (
+                        <option key={template.id} value={template.id}>
+                          {template.routine.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <Button
+                    type="button"
+                    className="secondary"
+                    disabled={!templateId || p.sessions.length >= 14}
+                    onClick={() => {
+                      const template = templates.find(
+                        (item) => item.id === templateId,
+                      );
+                      if (!template) return;
+                      const copy = sessionFromTemplate(template.routine, id());
+                      setP({
+                        ...p,
+                        sessions:
+                          p.sessions.length === 1 &&
+                          !p.sessions[0].exercises.length
+                            ? [copy]
+                            : [...p.sessions, copy],
+                      });
+                      setTemplateNotice(
+                        `Added ${template.routine.name}. Edit this copy for your client, then assign the program.`,
+                      );
+                    }}
+                  >
+                    <Plus size={16} />
+                    Add template
+                  </Button>
                   <Button
                     type="button"
                     variant="ghost"
-                    aria-label={`Remove session ${i + 1}`}
-                    onClick={() =>
-                      setP({
-                        ...p,
-                        sessions: p.sessions.filter((v) => v.id !== s.id),
-                      })
-                    }
+                    onClick={() => void loadTemplates()}
                   >
-                    <X size={18} />
+                    Refresh templates
                   </Button>
+                </section>
+                <ErrorNote text={templateError} />
+                {templateNotice && (
+                  <p role="status" className="co-template-notice">
+                    {templateNotice}
+                  </p>
+                )}
+              </>
+            )}
+            {p.sessions.map((s, i) => (
+              <div key={s.id} className="co-session-editor">
+                <div className="co-section-line">
+                  <h3>{templateMode ? 'Workout day' : `Session ${i + 1}`}</h3>
+                  {!templateMode && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      aria-label={`Remove session ${i + 1}`}
+                      onClick={() =>
+                        setP({
+                          ...p,
+                          sessions: p.sessions.filter((v) => v.id !== s.id),
+                        })
+                      }
+                    >
+                      <X size={18} />
+                    </Button>
+                  )}
                 </div>
                 <div className="co-form-grid">
                   <label>
-                    Name
+                    {templateMode ? 'Template name' : 'Name'}
                     <Input
                       required
                       maxLength={100}
@@ -1593,21 +1857,23 @@ function ProgramEditor({
                       onChange={(e) => session(i, { name: e.target.value })}
                     />
                   </label>
-                  <label>
-                    Training day
-                    <select
-                      value={s.day}
-                      onChange={(e) =>
-                        session(i, { day: Number(e.target.value) })
-                      }
-                    >
-                      {DAYS.map((d, k) => (
-                        <option key={d} value={k}>
-                          {d}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                  {!templateMode && (
+                    <label>
+                      Training day
+                      <select
+                        value={s.day}
+                        onChange={(e) =>
+                          session(i, { day: Number(e.target.value) })
+                        }
+                      >
+                        {DAYS.map((d, k) => (
+                          <option key={d} value={k}>
+                            {d}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
                 </div>
                 {s.exercises.map((e, j) => (
                   <div className="co-exercise-editor" key={j}>
@@ -1693,13 +1959,26 @@ function ProgramEditor({
                         placeholder="Tempo, effort, rest or target load"
                       />
                     </label>
-                    <VideoUpload
-                      onBusy={setUploading}
-                      memberId={memberId}
-                      name={e.name}
-                      value={e.videoUrl ?? ''}
-                      onChange={(videoUrl) => exercise(i, j, { videoUrl })}
-                    />
+                    {templateMode ? (
+                      <label>
+                        Demonstration URL (optional)
+                        <Input
+                          maxLength={1000}
+                          value={e.videoUrl ?? ''}
+                          onChange={(v) =>
+                            exercise(i, j, { videoUrl: v.target.value })
+                          }
+                        />
+                      </label>
+                    ) : (
+                      <VideoUpload
+                        onBusy={setUploading}
+                        memberId={memberId}
+                        name={e.name}
+                        value={e.videoUrl ?? ''}
+                        onChange={(videoUrl) => exercise(i, j, { videoUrl })}
+                      />
+                    )}
                   </div>
                 ))}
                 {!s.exercises.length && (
@@ -1716,30 +1995,64 @@ function ProgramEditor({
                   <Plus size={17} />
                   Add exercise
                 </Button>
+                {!templateMode && (
+                  <Button
+                    type="button"
+                    className="secondary co-save-template"
+                    disabled={!isTemplateRoutine(templateRoutine(s))}
+                    onClick={() => {
+                      setTemplateBusy(true);
+                      setTemplateError('');
+                      setTemplateNotice('');
+                      void api('', {
+                        action: 'template-save',
+                        routine: templateRoutine(s),
+                      })
+                        .then(async () => {
+                          await loadTemplates();
+                          setTemplateNotice(
+                            `Saved ${s.name} to your template library.`,
+                          );
+                        })
+                        .catch((e: Error) => setTemplateError(e.message))
+                        .finally(() => setTemplateBusy(false));
+                    }}
+                  >
+                    <ClipboardList size={16} />
+                    Save as template
+                  </Button>
+                )}
+                <p className="co-muted co-template-video-note">
+                  Client-specific uploaded videos stay with their program.
+                  Attach them separately to each assigned copy; external
+                  demonstration URLs can be saved in templates.
+                </p>
               </div>
             ))}
-            <Button
-              type="button"
-              className="secondary full"
-              disabled={p.sessions.length >= 14}
-              onClick={() =>
-                setP({
-                  ...p,
-                  sessions: [
-                    ...p.sessions,
-                    {
-                      id: id(),
-                      name: `Session ${p.sessions.length + 1}`,
-                      day: 3,
-                      exercises: [],
-                    },
-                  ],
-                })
-              }
-            >
-              <Plus size={17} />
-              Add session
-            </Button>
+            {!templateMode && (
+              <Button
+                type="button"
+                className="secondary full"
+                disabled={p.sessions.length >= 14}
+                onClick={() =>
+                  setP({
+                    ...p,
+                    sessions: [
+                      ...p.sessions,
+                      {
+                        id: id(),
+                        name: `Session ${p.sessions.length + 1}`,
+                        day: 3,
+                        exercises: [],
+                      },
+                    ],
+                  })
+                }
+              >
+                <Plus size={17} />
+                Add session
+              </Button>
+            )}
             <ErrorNote text={error} />
             <Button
               className="primary full"
@@ -1758,7 +2071,11 @@ function ProgramEditor({
                 )
               }
             >
-              {busy ? 'Saving…' : 'Assign program'}
+              {busy
+                ? 'Saving…'
+                : templateMode
+                  ? 'Save template'
+                  : 'Assign program'}
               <Check size={18} />
             </Button>
           </fieldset>

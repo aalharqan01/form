@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   AppState,
-  Platform,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -18,52 +17,20 @@ import type { Workout } from '../lib/fitness';
 import {
   editWorkoutSet,
   finishAssignedWorkout,
-  foundationProgram,
   startAssignedWorkout,
 } from '../lib/mobile-workout';
-import { loadWorkspace, request, type Role } from './src/api';
+import { loadWorkspace, request } from './src/api';
 
 type Snapshot = Awaited<ReturnType<typeof loadWorkspace>>;
-function initialRole(): Role {
-  if (
-    Platform.OS === 'web' &&
-    typeof window !== 'undefined' &&
-    new URLSearchParams(window.location.search).get('role') === 'coach'
-  )
-    return 'coach';
-  return 'client';
-}
 export default function App() {
-  const [role, setRole] = useState<Role>(initialRole);
   return (
     <SafeAreaProvider>
       <StatusBar style="dark" />
       <SafeAreaView style={styles.safe}>
         <View style={styles.preview}>
           <Text style={styles.previewLabel}>LOCAL PREVIEW</Text>
-          <View style={styles.roles}>
-            {(['coach', 'client'] as const).map((item) => (
-              <Pressable
-                key={item}
-                accessibilityRole="button"
-                accessibilityLabel={`Preview as ${item}`}
-                accessibilityState={{ selected: role === item }}
-                onPress={() => setRole(item)}
-                style={[styles.role, role === item && styles.roleActive]}
-              >
-                <Text
-                  style={[
-                    styles.roleLabel,
-                    role === item && styles.roleLabelActive,
-                  ]}
-                >
-                  {item === 'coach' ? 'Coach' : 'Client'}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
         </View>
-        <Workspace key={role} role={role} />
+        <Workspace />
       </SafeAreaView>
     </SafeAreaProvider>
   );
@@ -100,17 +67,14 @@ function Button({
     </Pressable>
   );
 }
-function Workspace({ role }: { role: Role }) {
+function Workspace() {
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [sessionId, setSessionId] = useState('');
   const [draft, setDraft] = useState<Workout | null>(null);
-  const [title, setTitle] = useState('Strength A');
-  const [notes, setNotes] = useState(
-    'Leave two reps in reserve. Move with control.',
-  );
   const mounted = useRef(true);
   const refreshingRef = useRef(false);
   const busyRef = useRef(false);
@@ -118,7 +82,7 @@ function Workspace({ role }: { role: Role }) {
     if (refreshingRef.current) return;
     refreshingRef.current = true;
     try {
-      const next = await loadWorkspace(role);
+      const next = await loadWorkspace();
       if (mounted.current) {
         setSnapshot(next);
         setError('');
@@ -131,7 +95,7 @@ function Workspace({ role }: { role: Role }) {
     } finally {
       refreshingRef.current = false;
     }
-  }, [role]);
+  }, []);
   useEffect(() => {
     mounted.current = true;
     void refresh();
@@ -166,6 +130,9 @@ function Workspace({ role }: { role: Role }) {
   const fitness = snapshot?.fitness;
   const active = draft ?? fitness?.data.active ?? null;
   const program = member?.program;
+  const selectedSession =
+    program?.sessions.find((session) => session.id === sessionId) ??
+    program?.sessions[0];
   const history =
     snapshot?.detail?.fitness?.workouts ?? fitness?.data.workouts ?? [];
   const sharedHistory = history.filter(
@@ -174,7 +141,6 @@ function Workspace({ role }: { role: Role }) {
   async function saveActive(workout: Workout) {
     if (!fitness) throw new Error('Reload your workout log before saving.');
     await request(
-      role,
       '/api/data',
       {
         data: { ...fitness.data, active: workout },
@@ -229,20 +195,10 @@ function Workspace({ role }: { role: Role }) {
         <Text style={styles.brand}>
           form<Text style={styles.brandDot}>.</Text>
         </Text>
-        <Text style={styles.eyebrow}>
-          {role === 'coach' ? 'COACH WORKSPACE' : 'TRAINING JOURNAL'}
-        </Text>
+        <Text style={styles.eyebrow}>TRAINING JOURNAL</Text>
       </View>
-      <Text style={styles.greeting}>
-        {role === 'coach'
-          ? 'Make progress\npersonal.'
-          : 'Show up.\nGet stronger.'}
-      </Text>
-      <Text style={styles.subtitle}>
-        {role === 'coach'
-          ? 'A clear plan. A client moving forward.'
-          : 'Your coach’s plan, one set at a time.'}
-      </Text>
+      <Text style={styles.greeting}>{'Show up.\nGet stronger.'}</Text>
+      <Text style={styles.subtitle}>Your training, one set at a time.</Text>
       {!!error && (
         <View style={styles.error} accessibilityRole="alert">
           <Text style={styles.errorText}>{error}</Text>
@@ -277,274 +233,202 @@ function Workspace({ role }: { role: Role }) {
         <>
           <View style={styles.person}>
             <View style={styles.avatar}>
-              <Text style={styles.avatarText}>
-                {role === 'coach' ? 'AC' : 'SC'}
-              </Text>
+              <Text style={styles.avatarText}>SC</Text>
             </View>
             <View style={styles.flex}>
-              <Text style={styles.personName}>
-                {role === 'coach' ? member.name : member.coachName}
-              </Text>
-              <Text style={styles.muted}>
-                {role === 'coach'
-                  ? 'Your client · Strength coaching'
-                  : 'Your coach · Strength coaching'}
-              </Text>
+              <Text style={styles.personName}>{member.coachName}</Text>
+              <Text style={styles.muted}>Your coach · Strength coaching</Text>
             </View>
             <Text style={styles.activeLabel}>Active</Text>
           </View>
-          {role === 'coach' ? (
-            <>
-              <View style={styles.stats}>
-                <View>
-                  <Text style={styles.statValue}>
-                    {sharedHistory.length.toString().padStart(2, '0')}
-                  </Text>
-                  <Text style={styles.muted}>Shared workouts</Text>
-                </View>
-                <View style={styles.statDivider} />
-                <View>
-                  <Text style={styles.statValue}>{program ? '01' : '00'}</Text>
-                  <Text style={styles.muted}>Assigned program</Text>
-                </View>
-              </View>
-              <View style={styles.sectionHead}>
-                <Text style={styles.sectionTitle}>The next session</Text>
-                <Text style={styles.sectionNumber}>01</Text>
-              </View>
+
+          <>
+            <View style={styles.sectionHead}>
+              <Text style={styles.sectionTitle}>
+                {active ? 'Your workout' : 'Your next session'}
+              </Text>
+              <Text style={styles.sectionNumber}>01</Text>
+            </View>
+            {!program && !active ? (
               <View style={styles.card}>
-                <Text style={styles.label}>SESSION NAME</Text>
-                <TextInput
-                  accessibilityLabel="Session name"
-                  value={title}
-                  onChangeText={setTitle}
-                  maxLength={100}
-                  style={styles.input}
-                  editable={!busy}
-                />
-                <Text style={styles.label}>COACH’S NOTE</Text>
-                <TextInput
-                  accessibilityLabel="Coach note"
-                  value={notes}
-                  onChangeText={setNotes}
-                  maxLength={2000}
-                  multiline
-                  style={[styles.input, styles.noteInput]}
-                  editable={!busy}
-                />
-                <View style={styles.exerciseSummary}>
-                  <Text style={styles.bodyStrong}>Bench press</Text>
-                  <Text style={styles.muted}>2 × 8</Text>
-                </View>
-                <View style={styles.exerciseSummary}>
-                  <Text style={styles.bodyStrong}>Seated cable row</Text>
-                  <Text style={styles.muted}>2 × 10</Text>
-                </View>
-                <Button
-                  label={
-                    busy
-                      ? 'Saving…'
-                      : program
-                        ? 'Update assignment'
-                        : 'Assign workout'
-                  }
-                  disabled={busy || !title.trim()}
-                  onPress={() =>
-                    void perform(async () => {
-                      await request(role, '/api/coaching', {
-                        action: 'program',
-                        memberId: member.id,
-                        revision: member.revision,
-                        program: foundationProgram(title.trim(), notes),
-                      });
-                      setNotice('Workout assigned. Alex can start it now.');
-                    })
-                  }
-                />
-              </View>
-            </>
-          ) : (
-            <>
-              <View style={styles.sectionHead}>
-                <Text style={styles.sectionTitle}>
-                  {active ? 'Your workout' : 'Your next session'}
+                <Text style={styles.cardTitle}>A plan is on its way.</Text>
+                <Text style={styles.body}>
+                  Your coach hasn’t assigned a workout yet. It will appear here
+                  when it’s ready.
                 </Text>
-                <Text style={styles.sectionNumber}>01</Text>
               </View>
-              {!program && !active ? (
-                <View style={styles.card}>
-                  <Text style={styles.cardTitle}>A plan is on its way.</Text>
-                  <Text style={styles.body}>
-                    Your coach hasn’t assigned a workout yet. It will appear
-                    here when it’s ready.
+            ) : (
+              <>
+                <View style={styles.sessionCard}>
+                  <Text style={styles.sessionEyebrow}>
+                    {active ? 'IN PROGRESS' : 'ASSIGNED BY YOUR COACH'}
                   </Text>
-                </View>
-              ) : (
-                <>
-                  <View style={styles.sessionCard}>
-                    <Text style={styles.sessionEyebrow}>
-                      {active ? 'IN PROGRESS' : 'ASSIGNED BY YOUR COACH'}
-                    </Text>
-                    <Text style={styles.sessionTitle}>
-                      {active?.name ?? program?.title}
-                    </Text>
-                    <Text style={styles.sessionNote}>{program?.notes}</Text>
-                    {active ? (
-                      <>
-                        <Text style={styles.sessionNote}>
-                          {completed} of {total} sets complete
-                        </Text>
-                        <View style={styles.track}>
-                          <View
-                            style={[
-                              styles.progress,
-                              {
-                                width: `${total ? (completed / total) * 100 : 0}%`,
-                              },
-                            ]}
-                          />
-                        </View>
-                      </>
-                    ) : (
+                  <Text style={styles.sessionTitle}>
+                    {active?.name ?? selectedSession?.name}
+                  </Text>
+                  <Text style={styles.sessionNote}>{program?.notes}</Text>
+                  {active ? (
+                    <>
                       <Text style={styles.sessionNote}>
-                        {program?.sessions[0]?.exercises.length} exercises ·
-                        Strength
+                        {completed} of {total} sets complete
                       </Text>
-                    )}
+                      <View style={styles.track}>
+                        <View
+                          style={[
+                            styles.progress,
+                            {
+                              width: `${total ? (completed / total) * 100 : 0}%`,
+                            },
+                          ]}
+                        />
+                      </View>
+                    </>
+                  ) : (
+                    <Text style={styles.sessionNote}>
+                      {selectedSession?.exercises.length} exercises · Strength
+                    </Text>
+                  )}
+                </View>
+                {!active && program && program.sessions.length > 1 && (
+                  <View style={styles.card}>
+                    <Text style={styles.cardTitle}>Assigned workouts</Text>
+                    {program.sessions.map((session) => (
+                      <Button
+                        key={session.id}
+                        label={`${session.name} · ${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][session.day]}`}
+                        secondary={selectedSession?.id !== session.id}
+                        onPress={() => setSessionId(session.id)}
+                      />
+                    ))}
                   </View>
-                  {!active && program && (
+                )}
+                {!active && program && (
+                  <Button
+                    label="Start workout"
+                    disabled={busy}
+                    onPress={() =>
+                      void perform(async () => {
+                        const workout = startAssignedWorkout(
+                          {
+                            ...program,
+                            sessions: selectedSession ? [selectedSession] : [],
+                          },
+                          member.id,
+                          randomUUID,
+                        );
+                        await saveActive(workout);
+                        setDraft(workout);
+                      })
+                    }
+                  />
+                )}
+                {active && (
+                  <>
+                    {active.exercises.map((exercise, index) => (
+                      <View key={exercise.id} style={styles.card}>
+                        <Text style={styles.label}>
+                          EXERCISE {String(index + 1).padStart(2, '0')}
+                        </Text>
+                        <Text style={styles.cardTitle}>{exercise.name}</Text>
+                        <View style={styles.setHeader}>
+                          <Text style={styles.setIndex}>SET</Text>
+                          <Text style={styles.setHeading}>
+                            {(exercise.unit ?? 'kg').toUpperCase()}
+                          </Text>
+                          <Text style={styles.setHeading}>REPS</Text>
+                          <Text style={styles.setIndex}>DONE</Text>
+                        </View>
+                        {exercise.sets.map((set, setIndex) => (
+                          <View key={set.id} style={styles.setRow}>
+                            <Text style={styles.setIndex}>{setIndex + 1}</Text>
+                            <TextInput
+                              accessibilityLabel={`${exercise.name} set ${setIndex + 1} weight`}
+                              value={set.load ?? set.kg}
+                              placeholder="0"
+                              keyboardType="decimal-pad"
+                              style={[
+                                styles.setInput,
+                                set.done && styles.setComplete,
+                              ]}
+                              editable={!busy && !set.done}
+                              onChangeText={(load) =>
+                                updateSet(exercise.id, set.id, { load })
+                              }
+                            />
+                            <TextInput
+                              accessibilityLabel={`${exercise.name} set ${setIndex + 1} reps`}
+                              value={set.reps}
+                              keyboardType="number-pad"
+                              style={[
+                                styles.setInput,
+                                set.done && styles.setComplete,
+                              ]}
+                              editable={!busy && !set.done}
+                              onChangeText={(reps) =>
+                                updateSet(exercise.id, set.id, { reps })
+                              }
+                            />
+                            <Pressable
+                              accessibilityRole="checkbox"
+                              accessibilityLabel={`Complete ${exercise.name} set ${setIndex + 1}`}
+                              accessibilityState={{
+                                checked: set.done,
+                                disabled: busy,
+                              }}
+                              aria-checked={set.done}
+                              disabled={busy}
+                              onPress={() =>
+                                updateSet(exercise.id, set.id, {
+                                  done: !set.done,
+                                })
+                              }
+                              style={[styles.check, set.done && styles.checked]}
+                            >
+                              <Text
+                                style={
+                                  set.done ? styles.checkOn : styles.checkOff
+                                }
+                              >
+                                {set.done ? '✓' : '○'}
+                              </Text>
+                            </Pressable>
+                          </View>
+                        ))}
+                      </View>
+                    ))}
                     <Button
-                      label="Start workout"
-                      disabled={busy}
+                      label={busy ? 'Saving…' : 'Finish workout'}
+                      disabled={busy || completed !== total}
                       onPress={() =>
                         void perform(async () => {
-                          const workout = startAssignedWorkout(
-                            program,
-                            member.id,
-                            randomUUID,
+                          if (!fitness) return;
+                          const workout = finishAssignedWorkout(active);
+                          await request(
+                            '/api/data',
+                            {
+                              data: {
+                                ...fitness.data,
+                                active: null,
+                                workouts: [workout, ...fitness.data.workouts],
+                              },
+                              revision: fitness.revision,
+                            },
+                            'PUT',
                           );
-                          await saveActive(workout);
-                          setDraft(workout);
+                          setDraft(null);
+                          setNotice(
+                            'Workout saved. Your coach can review your sets.',
+                          );
                         })
                       }
                     />
-                  )}
-                  {active && (
-                    <>
-                      {active.exercises.map((exercise, index) => (
-                        <View key={exercise.id} style={styles.card}>
-                          <Text style={styles.label}>
-                            EXERCISE {String(index + 1).padStart(2, '0')}
-                          </Text>
-                          <Text style={styles.cardTitle}>{exercise.name}</Text>
-                          <View style={styles.setHeader}>
-                            <Text style={styles.setIndex}>SET</Text>
-                            <Text style={styles.setHeading}>
-                              {(exercise.unit ?? 'kg').toUpperCase()}
-                            </Text>
-                            <Text style={styles.setHeading}>REPS</Text>
-                            <Text style={styles.setIndex}>DONE</Text>
-                          </View>
-                          {exercise.sets.map((set, setIndex) => (
-                            <View key={set.id} style={styles.setRow}>
-                              <Text style={styles.setIndex}>
-                                {setIndex + 1}
-                              </Text>
-                              <TextInput
-                                accessibilityLabel={`${exercise.name} set ${setIndex + 1} weight`}
-                                value={set.load ?? set.kg}
-                                placeholder="0"
-                                keyboardType="decimal-pad"
-                                style={[
-                                  styles.setInput,
-                                  set.done && styles.setComplete,
-                                ]}
-                                editable={!busy && !set.done}
-                                onChangeText={(load) =>
-                                  updateSet(exercise.id, set.id, { load })
-                                }
-                              />
-                              <TextInput
-                                accessibilityLabel={`${exercise.name} set ${setIndex + 1} reps`}
-                                value={set.reps}
-                                keyboardType="number-pad"
-                                style={[
-                                  styles.setInput,
-                                  set.done && styles.setComplete,
-                                ]}
-                                editable={!busy && !set.done}
-                                onChangeText={(reps) =>
-                                  updateSet(exercise.id, set.id, { reps })
-                                }
-                              />
-                              <Pressable
-                                accessibilityRole="checkbox"
-                                accessibilityLabel={`Complete ${exercise.name} set ${setIndex + 1}`}
-                                accessibilityState={{
-                                  checked: set.done,
-                                  disabled: busy,
-                                }}
-                                aria-checked={set.done}
-                                disabled={busy}
-                                onPress={() =>
-                                  updateSet(exercise.id, set.id, {
-                                    done: !set.done,
-                                  })
-                                }
-                                style={[
-                                  styles.check,
-                                  set.done && styles.checked,
-                                ]}
-                              >
-                                <Text
-                                  style={
-                                    set.done ? styles.checkOn : styles.checkOff
-                                  }
-                                >
-                                  {set.done ? '✓' : '○'}
-                                </Text>
-                              </Pressable>
-                            </View>
-                          ))}
-                        </View>
-                      ))}
-                      <Button
-                        label={busy ? 'Saving…' : 'Finish workout'}
-                        disabled={busy || completed !== total}
-                        onPress={() =>
-                          void perform(async () => {
-                            if (!fitness) return;
-                            const workout = finishAssignedWorkout(active);
-                            await request(
-                              role,
-                              '/api/data',
-                              {
-                                data: {
-                                  ...fitness.data,
-                                  active: null,
-                                  workouts: [workout, ...fitness.data.workouts],
-                                },
-                                revision: fitness.revision,
-                              },
-                              'PUT',
-                            );
-                            setDraft(null);
-                            setNotice(
-                              'Workout saved. Your coach can review your sets.',
-                            );
-                          })
-                        }
-                      />
-                    </>
-                  )}
-                </>
-              )}
-            </>
-          )}
+                  </>
+                )}
+              </>
+            )}
+          </>
           <View style={styles.sectionHead}>
-            <Text style={styles.sectionTitle}>
-              {role === 'coach' ? 'Client activity' : 'Your recent work'}
-            </Text>
+            <Text style={styles.sectionTitle}>Your recent work</Text>
             <Text style={styles.sectionNumber}>02</Text>
           </View>
           {!sharedHistory.length ? (

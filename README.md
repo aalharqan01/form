@@ -13,7 +13,7 @@ npm run setup
 npm run dev
 ```
 
-`npm run setup` installs the exact dependency versions in the lockfile and applies all four database migrations to a local database. Confirm the local migration prompt if it appears. It does not need a Cloudflare account, API keys or a paid service. Local video storage is created automatically when the app runs.
+`npm run setup` installs the exact dependency versions in the lockfile and applies all database migrations to a local database. Confirm the local migration prompt if it appears. It does not need a Cloudflare account, API keys or a paid service. Local video storage is created automatically when the app runs.
 
 Open the **localhost URL printed in your terminal**; Vite may choose another port if 3000 is busy. Local sign-in uses the development identity `seedy@sites.test`. It does not connect to your live account.
 

@@ -9,11 +9,12 @@ for (const role of ['coach', 'client']) {
     serviceWorkers: 'block',
   });
   const page = await context.newPage();
-  const url = native
-    ? `http://127.0.0.1:8081/?role=${role}`
-    : role === 'coach'
+  const url =
+    role === 'coach'
       ? 'http://127.0.0.1:3100/coaching'
-      : 'http://127.0.0.1:3101/';
+      : native
+        ? 'http://127.0.0.1:8081/'
+        : 'http://127.0.0.1:3101/';
   await page.goto(url);
 }
 console.log(

@@ -9,7 +9,10 @@ export default defineConfig({
   reporter: [['list'], ['html', { open: 'never' }]],
   use: {
     ...devices['iPhone 13'],
-    browserName: process.env.CI ? 'webkit' : 'chromium',
+    browserName:
+      process.env.CI || process.env.FORM_E2E_WEBKIT === '1'
+        ? 'webkit'
+        : 'chromium',
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     serviceWorkers: 'block',

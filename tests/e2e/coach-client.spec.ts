@@ -29,17 +29,115 @@ test('coach assigns, client completes real sets, coach sees the saved workout', 
   const coach = await coachContext.newPage();
   const client = await clientContext.newPage();
   try {
-    await coach.goto('http://127.0.0.1:8081/?role=coach');
-    await client.goto('http://127.0.0.1:8081/?role=client');
+    await coach.goto('http://127.0.0.1:3100/coaching');
+    await client.goto('http://127.0.0.1:8081/');
     await expect(coach.getByText('Alex Client', { exact: true })).toBeVisible();
-    const title = `Strength ${String(Date.now()).slice(-5)}`;
-    await coach.getByRole('textbox', { name: 'Session name' }).fill(title);
+    await expect(
+      client.getByRole('button', { name: /Preview as coach/ }),
+    ).toHaveCount(0);
+    const templateName = `Workout day ${String(Date.now()).slice(-6)}`;
+    const title = `${templateName} personal`;
     await coach
-      .getByRole('button', { name: /Assign workout|Update assignment/ })
+      .getByRole('button', { name: 'Workout templates', exact: true })
+      .click();
+    await coach
+      .getByRole('button', { name: 'Create template', exact: true })
+      .click();
+    await coach.getByLabel('Template name', { exact: true }).fill(templateName);
+    for (const [name, reps] of [
+      ['Bench press', '8'],
+      ['Seated cable row', '10'],
+    ]) {
+      await coach
+        .getByRole('button', { name: 'Add exercise', exact: true })
+        .click();
+      await coach
+        .locator('.exercise-options button')
+        .filter({ has: coach.getByText(name, { exact: true }) })
+        .click();
+      await coach.getByLabel('Sets', { exact: true }).last().fill('2');
+      await coach.getByLabel('Reps', { exact: true }).last().fill(reps);
+    }
+    await coach
+      .getByRole('button', { name: 'Save template', exact: true })
       .click();
     await expect(
-      coach.getByText('Workout assigned. Alex can start it now.'),
+      coach.getByRole('heading', { name: templateName, exact: true }),
     ).toBeVisible();
+    await coach
+      .getByRole('button', {
+        name: `Edit template ${templateName}`,
+        exact: true,
+      })
+      .click();
+    await coach
+      .getByLabel('Coaching instructions', { exact: true })
+      .first()
+      .fill('Move with control.');
+    await coach
+      .getByRole('button', { name: 'Save template', exact: true })
+      .click();
+    await expect(coach.getByRole('dialog')).toHaveCount(0);
+    await coach
+      .getByRole('button', { name: 'Clients & requests', exact: true })
+      .click();
+    await coach
+      .locator('.co-client-row')
+      .filter({ hasText: 'Alex Client' })
+      .click();
+    await coach
+      .getByRole('button', { name: /^(Edit program|Assign program)$/ })
+      .click();
+    const dialog = coach.getByRole('dialog');
+    await dialog.getByLabel('Program title', { exact: true }).fill(title);
+    while (
+      await dialog.getByRole('button', { name: /^Remove session/ }).count()
+    ) {
+      await dialog
+        .getByRole('button', { name: /^Remove session/ })
+        .first()
+        .click();
+    }
+    await dialog
+      .getByLabel('Saved workout template', { exact: true })
+      .selectOption({ label: templateName });
+    await dialog
+      .getByRole('button', { name: 'Add template', exact: true })
+      .click();
+    await dialog.getByLabel('Name', { exact: true }).fill('First assigned day');
+    await dialog
+      .getByRole('button', { name: 'Add template', exact: true })
+      .click();
+    await dialog.getByLabel('Name', { exact: true }).nth(1).fill(title);
+    await dialog
+      .getByRole('button', { name: 'Save as template', exact: true })
+      .nth(1)
+      .click();
+    await expect(dialog.getByRole('status')).toContainText(
+      `Saved ${title} to your template library.`,
+    );
+    await dialog
+      .getByRole('button', { name: 'Assign program', exact: true })
+      .click();
+    await expect(dialog).toHaveCount(0);
+    const library = await (
+      await request.get('http://127.0.0.1:3100/api/coaching?templates=1')
+    ).json();
+    const saved = library.templates.find(
+      (item: { routine: { name: string } }) =>
+        item.routine.name === templateName,
+    );
+    expect(saved.routine.exercises[0].instructions).toBe('Move with control.');
+    expect(saved.revision).toBe(2);
+    expect(saved.routine.name).toBe(templateName);
+    expect(
+      await coach.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+    ).toBe(true);
+    await client
+      .getByRole('button', { name: `${title} · Mon`, exact: true })
+      .click();
     await expect(client.getByText(title, { exact: true })).toBeVisible();
     await client
       .getByRole('button', { name: 'Start workout', exact: true })
@@ -77,10 +175,13 @@ test('coach assigns, client completes real sets, coach sees the saved workout', 
     await expect(
       client.getByText('Workout saved. Your coach can review your sets.'),
     ).toBeVisible();
-    await expect(coach.getByText(title, { exact: true })).toBeVisible();
-    await expect(
-      coach.getByText('40 kg × 8 · 40 kg × 8', { exact: true }).first(),
-    ).toBeVisible();
+    await coach.reload();
+    await expect(coach.getByText('Alex Client', { exact: true })).toBeVisible();
+    await coach
+      .locator('.co-client-row')
+      .filter({ hasText: 'Alex Client' })
+      .click();
+    await expect(coach.getByText(title, { exact: true }).first()).toBeVisible();
     const state = await (
       await request.get('http://127.0.0.1:3100/api/coaching')
     ).json();
