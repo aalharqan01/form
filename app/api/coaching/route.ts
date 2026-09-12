@@ -1,10 +1,13 @@
 import { getChatGPTUser } from '@/app/chatgpt-auth';
-import { database } from '@/db/store';
+import { database, previewRolesEnabled } from '@/db/store';
 import { handleCoaching } from '@/lib/coaching-server';
+import { ensureDeveloperFixtures } from '@/lib/dev-fixtures';
 export const dynamic = 'force-dynamic';
-export async function GET(request: Request) {
-  return handleCoaching(database(), await getChatGPTUser(), request);
+async function handle(request: Request) {
+  const user = await getChatGPTUser();
+  if (user && previewRolesEnabled())
+    await ensureDeveloperFixtures(database(), user);
+  return handleCoaching(database(), user, request);
 }
-export async function POST(request: Request) {
-  return handleCoaching(database(), await getChatGPTUser(), request);
-}
+export const GET = handle;
+export const POST = handle;

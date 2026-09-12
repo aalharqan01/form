@@ -5,9 +5,9 @@ import { EMPTY, validateData, type FitnessData } from '../../lib/fitness';
 import { mergeData, type Envelope } from '../../lib/sync';
 import type { CoachingState, MemberDetail } from '../../lib/coaching';
 import { request, type FitnessResponse } from './api';
-import { USER_KEY } from './account';
+import { PREVIEW_ROLE, USER_KEY } from './account';
 
-const CACHE = `form-trainee:${USER_KEY || 'hosted'}:v1`;
+const CACHE = `form-trainee:${USER_KEY || `hosted-${PREVIEW_ROLE ?? 'me'}`}:v1`;
 export function useTraining() {
   const [data, setData] = useState<FitnessData>(EMPTY);
   const [loaded, setLoaded] = useState(false);

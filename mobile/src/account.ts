@@ -15,6 +15,16 @@ export const HOSTED =
   Platform.OS === 'web' &&
   typeof location !== 'undefined' &&
   !LOCAL_HOSTS.has(location.hostname);
+/** On the hosted site, ?role=coached|solo views the app as a fixture trainee. */
+export const PREVIEW_ROLE: 'coached' | 'solo' | null = (() => {
+  if (!HOSTED) return null;
+  const role = new URLSearchParams(location.search).get('role');
+  return role === 'coached' || role === 'client'
+    ? 'coached'
+    : role === 'solo'
+      ? 'solo'
+      : null;
+})();
 function pick(): { userKey: string; origin: string } {
   if (HOSTED) return { userKey: '', origin: '' };
   if (Platform.OS === 'web' && typeof location !== 'undefined') {

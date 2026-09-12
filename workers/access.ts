@@ -3,7 +3,46 @@ import { createRemoteJWKSet, jwtVerify, type JWTVerifyGetKey } from 'jose';
 export type AccessEnvironment = {
   ACCESS_TEAM_DOMAIN?: string;
   ACCESS_AUD?: string;
+  /** 'true' only on development deployments: allows the ?role= preview identities. */
+  PREVIEW_ROLES?: string;
 };
+const PREVIEW_ROLES = ['coached', 'solo'] as const;
+const PREVIEW_NAMES = { coached: 'Abdullah Al-Harbi', solo: 'Sara Al-Otaibi' };
+/**
+ * On development deployments a signed-in developer can view the app as one of
+ * their own fixture trainees by sending `X-Form-Preview: coached|solo` (or
+ * `?preview=` for media loaded by <img>/<video>). The identity stays derived
+ * from the verified account, so nobody can reach another developer's fixtures.
+ * Production never sets PREVIEW_ROLES, so the header is ignored there.
+ */
+export function applyPreviewRole(
+  request: Request,
+  env: AccessEnvironment,
+): Request {
+  if (env.PREVIEW_ROLES !== 'true') return request;
+  const url = new URL(request.url);
+  const role =
+    request.headers.get('x-form-preview') ?? url.searchParams.get('preview');
+  if (!role || !(PREVIEW_ROLES as readonly string[]).includes(role))
+    return request;
+  const developer = request.headers.get('oai-authenticated-user-id');
+  if (!developer) return request;
+  const headers = new Headers(request.headers);
+  headers.set('oai-authenticated-user-id', `${developer}:preview-${role}`);
+  headers.set(
+    'oai-authenticated-user-email',
+    `${role}.${developer.replace(/[^a-z0-9]/gi, '')}@preview.invalid`,
+  );
+  headers.set(
+    'oai-authenticated-user-full-name',
+    encodeURIComponent(PREVIEW_NAMES[role as keyof typeof PREVIEW_NAMES]),
+  );
+  headers.set(
+    'oai-authenticated-user-full-name-encoding',
+    'percent-encoded-utf-8',
+  );
+  return new Request(request, { headers });
+}
 const keysets = new Map<string, ReturnType<typeof createRemoteJWKSet>>();
 
 export async function authenticateAccess(

@@ -66,6 +66,8 @@ jobs:
       FORM_ACCESS_TEAM_DOMAIN: ${{ vars.FORM_ACCESS_TEAM_DOMAIN }}
       FORM_ACCESS_AUD: ${{ vars.FORM_ACCESS_AUD }}
       FORM_WORKER_NAME: ${{ vars.FORM_WORKER_NAME || 'form-dev' }}
+      # The development site lets every developer preview the app as fixture trainees.
+      FORM_PREVIEW_ROLES: 'true'
     steps:
       - name: Check the deployment configuration
         id: config

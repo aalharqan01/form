@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { generateKeyPair, exportJWK, SignJWT, createLocalJWKSet } from 'jose';
-import { authenticateAccess } from '../workers/access.ts';
+import { applyPreviewRole, authenticateAccess } from '../workers/access.ts';
 const env = {
   ACCESS_TEAM_DOMAIN: 'https://form-test.cloudflareaccess.com',
   ACCESS_AUD: 'test-audience',
@@ -120,4 +120,51 @@ test('Access rejects wrong audience, wrong issuer, expired tokens, and service i
     ).status,
     401,
   );
+});
+
+test('preview roles derive fixture identities from the verified account only on development deployments', () => {
+  const signedIn = new Request('https://form.example/api/data', {
+    headers: {
+      'oai-authenticated-user-id': 'cf-access:abc',
+      'oai-authenticated-user-email': 'dev@example.test',
+      'x-form-preview': 'coached',
+    },
+  });
+  assert.equal(applyPreviewRole(signedIn, env), signedIn);
+  const preview = applyPreviewRole(signedIn, { ...env, PREVIEW_ROLES: 'true' });
+  assert.equal(
+    preview.headers.get('oai-authenticated-user-id'),
+    'cf-access:abc:preview-coached',
+  );
+  assert.equal(
+    preview.headers.get('oai-authenticated-user-email'),
+    'coached.cfaccessabc@preview.invalid',
+  );
+  const media = applyPreviewRole(
+    new Request('https://form.example/api/media?id=1&preview=solo', {
+      headers: { 'oai-authenticated-user-id': 'cf-access:abc' },
+    }),
+    { ...env, PREVIEW_ROLES: 'true' },
+  );
+  assert.equal(
+    media.headers.get('oai-authenticated-user-id'),
+    'cf-access:abc:preview-solo',
+  );
+  const bogus = applyPreviewRole(
+    new Request('https://form.example/', {
+      headers: {
+        'oai-authenticated-user-id': 'cf-access:abc',
+        'x-form-preview': 'admin',
+      },
+    }),
+    { ...env, PREVIEW_ROLES: 'true' },
+  );
+  assert.equal(bogus.headers.get('oai-authenticated-user-id'), 'cf-access:abc');
+  const anonymous = applyPreviewRole(
+    new Request('https://form.example/', {
+      headers: { 'x-form-preview': 'coached' },
+    }),
+    { ...env, PREVIEW_ROLES: 'true' },
+  );
+  assert.equal(anonymous.headers.get('oai-authenticated-user-id'), null);
 });

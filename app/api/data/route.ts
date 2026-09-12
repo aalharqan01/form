@@ -1,7 +1,7 @@
 import { getChatGPTUser } from '@/app/chatgpt-auth';
-import { database } from '@/db/store';
+import { database, previewRolesEnabled } from '@/db/store';
 import { EMPTY, validateData } from '@/lib/fitness';
-import { claimPendingIdentity } from '@/lib/coaching-server';
+import { ensureDeveloperFixtures } from '@/lib/dev-fixtures';
 export const dynamic = 'force-dynamic';
 const reply = (value: unknown, status = 200) =>
   Response.json(value, {
@@ -12,7 +12,7 @@ export async function GET() {
   const user = await getChatGPTUser();
   if (!user) return reply({ error: 'Sign in to save your progress.' }, 401);
   try {
-    await claimPendingIdentity(database(), user);
+    if (previewRolesEnabled()) await ensureDeveloperFixtures(database(), user);
     const row = await database()
       .prepare('SELECT data, revision FROM fitness_accounts WHERE user_id = ?')
       .bind(user.userId)

@@ -1,4 +1,4 @@
-import { EMPTY } from '../lib/fitness.ts';
+import { EMPTY } from './fitness.ts';
 import { coachedHistory, soloHistory } from './synthetic.ts';
 import {
   coachProfile,
@@ -28,8 +28,8 @@ const json = (value: unknown) => quote(JSON.stringify(value));
 const EMPTY_LOG =
   "json_array_length(json_extract(data,'$.workouts'))=0 AND json_array_length(json_extract(data,'$.weights'))=0";
 
-/** SQL that inserts the sample coach, clients and history. Idempotent. */
-export function seedSql(plan: SeedPlan) {
+/** Statements that insert the sample coach, clients and history. Idempotent. */
+export function seedStatements(plan: SeedPlan): string[] {
   const now = plan.now ?? new Date();
   const stamp = now.toISOString();
   const { prefix, refresh } = plan;
@@ -87,5 +87,8 @@ ${refresh ? `UPDATE coaching_memberships SET name=${quote(name)}, program=${stat
       ];
     }),
   ];
-  return lines.filter(Boolean).join('\n') + '\n';
+  return lines.filter(Boolean);
 }
+/** The same statements as one SQL script. */
+export const seedSql = (plan: SeedPlan) =>
+  seedStatements(plan).join('\n') + '\n';

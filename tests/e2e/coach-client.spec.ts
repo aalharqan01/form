@@ -6,6 +6,8 @@ test('coach assigns, client completes real sets, coach sees the saved workout', 
   browser,
   request,
 }) => {
+  // Two full sessions in WebKit on a CI runner can approach the default budget.
+  test.slow();
   const clean = await fixture(request);
   const coachContext = await browser.newContext({
     ...devices['iPhone 13'],
@@ -20,7 +22,9 @@ test('coach assigns, client completes real sets, coach sees the saved workout', 
   try {
     await coach.goto('http://127.0.0.1:3100/coaching');
     await client.goto('http://127.0.0.1:8081/');
-    await expect(coach.getByText('Abdullah Al-Harbi', { exact: true })).toBeVisible();
+    await expect(
+      coach.getByText('Abdullah Al-Harbi', { exact: true }),
+    ).toBeVisible();
     await expect(
       client.getByRole('button', { name: /Preview as coach/ }),
     ).toHaveCount(0);
@@ -184,7 +188,9 @@ test('coach assigns, client completes real sets, coach sees the saved workout', 
       client.getByText('Workout saved. Your coach can review your sets.'),
     ).toBeVisible();
     await coach.reload();
-    await expect(coach.getByText('Abdullah Al-Harbi', { exact: true })).toBeVisible();
+    await expect(
+      coach.getByText('Abdullah Al-Harbi', { exact: true }),
+    ).toBeVisible();
     await coach
       .locator('.co-client-row')
       .filter({ hasText: 'Abdullah Al-Harbi' })

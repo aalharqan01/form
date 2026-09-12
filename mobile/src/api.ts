@@ -7,7 +7,10 @@ export type FitnessResponse = {
   userKey: string;
   name: string;
 };
-import { API_ORIGIN as origin, HOSTED } from './account';
+import { API_ORIGIN as origin, HOSTED, PREVIEW_ROLE } from './account';
+const previewHeaders: Record<string, string> = PREVIEW_ROLE
+  ? { 'X-Form-Preview': PREVIEW_ROLE }
+  : {};
 export async function request<T>(
   path: string,
   body?: unknown,
@@ -18,7 +21,10 @@ export async function request<T>(
   try {
     const response = await fetch(origin + path, {
       method: body === undefined ? 'GET' : method,
-      headers: body === undefined ? {} : { 'Content-Type': 'application/json' },
+      headers: {
+        ...previewHeaders,
+        ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
+      },
       body: body === undefined ? undefined : JSON.stringify(body),
       signal: abort.signal,
     });
@@ -74,7 +80,11 @@ export async function uploadMedia(
     origin + '/api/media?member=' + encodeURIComponent(memberId),
     {
       method: 'POST',
-      headers: { 'Content-Type': type, 'X-Media-Size': String(blob.size) },
+      headers: {
+        ...previewHeaders,
+        'Content-Type': type,
+        'X-Media-Size': String(blob.size),
+      },
       body: blob,
     },
   ).catch(() => {
@@ -85,4 +95,8 @@ export async function uploadMedia(
     throw new Error(data.error || 'Upload failed. Please retry.');
   return data;
 }
-export const mediaUri = (id: string) => origin + '/api/media?id=' + id;
+export const mediaUri = (id: string) =>
+  origin +
+  '/api/media?id=' +
+  id +
+  (PREVIEW_ROLE ? '&preview=' + PREVIEW_ROLE : '');
