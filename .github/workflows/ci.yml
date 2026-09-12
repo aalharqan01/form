@@ -50,7 +50,7 @@ jobs:
     # when the repository has not been configured yet (see docs/DEPLOYMENT.md).
     name: Deploy development to Cloudflare
     needs: checks
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment:
