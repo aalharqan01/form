@@ -114,7 +114,10 @@ export function localRoles(token: string | undefined): Plugin {
             'Access-Control-Allow-Methods',
             'GET, POST, PUT, OPTIONS',
           );
-          response.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+          response.setHeader(
+            'Access-Control-Allow-Headers',
+            'Content-Type, X-Media-Size',
+          );
           if (request.method === 'OPTIONS') {
             response.writeHead(204);
             response.end();

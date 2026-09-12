@@ -4,12 +4,12 @@ import { WebView } from 'react-native-webview';
 import { exerciseVideo } from '../../../lib/video';
 import { API_ORIGIN, Body } from '../ui';
 
-function FileVideo({ uri }: { uri: string }) {
+export function FileVideo({ uri, height = 190 }: { uri: string; height?: number }) {
   const player = useVideoPlayer(uri);
   return (
     <VideoView
       player={player}
-      style={{ height: 190, borderRadius: 14 }}
+      style={{ height, borderRadius: 14 }}
       nativeControls
       contentFit="contain"
     />

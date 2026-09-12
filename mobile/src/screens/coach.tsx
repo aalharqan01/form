@@ -1,7 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ScrollView, View } from 'react-native';
-import { ArrowUpRight, Check, ChevronRight, ClipboardList, MessageCircle } from 'lucide-react-native';
-import { randomUUID } from 'expo-crypto';
+import { ArrowDownRight, ArrowUpRight, Check, ChevronRight, ClipboardList, Minus } from 'lucide-react-native';
 import { dateLabel, type Routine } from '../../../lib/fitness';
 import { memberStatus, weekOf, type Checkin } from '../../../lib/coaching';
 import { request } from '../api';
@@ -10,9 +9,10 @@ import { useTheme } from '../theme';
 import {
   Body,
   Card,
-  Divider,
+
   Eyebrow,
   Field,
+  Divider,
   H2,
   H3,
   Input,
@@ -23,17 +23,42 @@ import {
   TextButton,
 } from '../ui';
 import { NutritionCard, ProgramNote, SessionCard } from './assigned';
+import { ConversationScreen } from './conversation';
 import type { Act } from './shared';
 
 import { USER_KEY as USER } from '../account';
 type CoachTab = 'overview' | 'program' | 'checkins' | 'messages';
 
-function weightChange(value: number | null | undefined) {
-  return value == null
-    ? 'No previous week to compare'
-    : Math.abs(value) < 0.05
-      ? 'No change vs previous week'
-      : `${Math.abs(value).toFixed(1)} kg ${value > 0 ? 'gain' : 'loss'} vs previous week`;
+function WeeklyChange({ value }: { value: number | null | undefined }) {
+  const { theme } = useTheme();
+  if (value == null)
+    return (
+      <T weight={500} size={26} line={34} tracking={-1} color={theme.muted} accessibilityLabel="No previous week to compare">
+        —
+      </T>
+    );
+  const flat = Math.abs(value) < 0.05;
+  const color = flat ? theme.muted : value > 0 ? theme.amberText : theme.green;
+  const Icon = flat ? Minus : value > 0 ? ArrowUpRight : ArrowDownRight;
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+      <Icon size={18} color={color} />
+      <T
+        weight={500}
+        size={26}
+        line={34}
+        tracking={-1}
+        color={color}
+        accessibilityLabel={`${flat ? 'No change' : `${Math.abs(value).toFixed(1)} kg ${value > 0 ? 'gain' : 'loss'}`} vs last week's average`}
+      >
+        {flat ? '0.0' : Math.abs(value).toFixed(1)}
+        <T size={14} color={theme.muted}>
+          {' '}
+          kg
+        </T>
+      </T>
+    </View>
+  );
 }
 
 function Badge({ text, amber }: { text: string; amber?: boolean }) {
@@ -157,11 +182,13 @@ export function CoachScreen({
   act,
   busy,
   onStart,
+  scrollToEnd,
 }: {
   training: Training;
   act: Act;
   busy: boolean;
   onStart: (routine: Routine, membershipId: string) => void;
+  scrollToEnd: () => void;
 }) {
   const { theme } = useTheme();
   const detail = training.detail;
@@ -169,9 +196,7 @@ export function CoachScreen({
   const [energy, setEnergy] = useState(3),
     [sleep, setSleep] = useState('7'),
     [wins, setWins] = useState(''),
-    [challenges, setChallenges] = useState(''),
-    [body, setBody] = useState('');
-  const pending = useRef<{ id: string; body: string } | null>(null);
+    [challenges, setChallenges] = useState('');
   const memberId = detail?.member.id;
   const lastMessage = detail?.messages.at(-1)?.created_at;
   useEffect(() => {
@@ -249,15 +274,31 @@ export function CoachScreen({
               suffix={`/${m.stats?.due ?? 0}`}
               small="Completed · last 7 calendar days (UTC)"
             />
-            <Metric
-              label="Weekly average weight"
-              value={m.stats?.averageKg?.toFixed(1) ?? '—'}
-              suffix=" kg"
-              small={`${m.stats?.weightCount ?? 0} weigh-ins · this week, Mon–Sun (UTC)`}
-              style={{ minWidth: '100%' }}
-            >
-              <Body size={12}>{weightChange(m.stats?.averageChangeKg)}</Body>
-            </Metric>
+            <View style={{ minWidth: '100%', backgroundColor: theme.surface, borderRadius: 22, padding: 18, gap: 14 }}>
+              <T size={13} line={17} color={theme.muted}>
+                Weekly average weight
+              </T>
+              <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 22, flexWrap: 'wrap' }}>
+                <View style={{ gap: 2 }}>
+                  <T weight={500} size={30} line={34} tracking={-1.4}>
+                    {m.stats?.averageKg?.toFixed(1) ?? '—'}
+                    <T size={14} color={theme.muted}>
+                      {' '}
+                      kg
+                    </T>
+                  </T>
+                  <T size={11} line={15} color={theme.muted}>
+                    {m.stats?.weightCount ?? 0} weigh-ins this week
+                  </T>
+                </View>
+                <View style={{ gap: 2 }}>
+                  <WeeklyChange value={m.stats?.averageChangeKg} />
+                  <T size={11} line={15} color={theme.muted}>
+                    vs last week’s average
+                  </T>
+                </View>
+              </View>
+            </View>
           </View>
           <NutritionCard targets={m.nutrition} />
           <Card style={{ marginTop: 14 }}>
@@ -395,81 +436,13 @@ export function CoachScreen({
         </View>
       )}
       {tab === 'messages' && (
-        <Card>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-            <View style={{ flex: 1 }}>
-              <H2 size={22}>Conversation</H2>
-              <Body size={13} style={{ marginTop: 8 }}>
-                Coach replies within {m.offer.responseHours} hours. Updates refresh while the app is open.
-              </Body>
-            </View>
-            <MessageCircle size={25} strokeWidth={1.5} color={theme.muted} />
-          </View>
-          <View style={{ gap: 14, paddingVertical: 24 }} accessibilityLiveRegion="polite">
-            {!detail.messages.length && <Body size={14}>Start a conversation about the training program.</Body>}
-            {detail.messages.map((message) => {
-              const mine = message.sender_id === USER;
-              return (
-                <View
-                  key={message.id}
-                  style={{
-                    maxWidth: '85%',
-                    alignSelf: mine ? 'flex-end' : 'flex-start',
-                    paddingVertical: 14,
-                    paddingHorizontal: 16,
-                    backgroundColor: mine ? theme.mine : theme.message,
-                    borderRadius: 18,
-                    borderBottomRightRadius: mine ? 4 : 18,
-                    borderBottomLeftRadius: mine ? 18 : 4,
-                    gap: 8,
-                  }}
-                >
-                  <T size={15} line={21} color={mine ? theme.mineText : theme.ink}>
-                    {message.body}
-                  </T>
-                  <T size={11} line={14} color={mine ? theme.mineText : theme.muted} style={{ opacity: 0.75 }}>
-                    {mine ? 'You' : m.coachName} ·{' '}
-                    {new Date(message.created_at).toLocaleString('en-GB', {
-                      month: 'short',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
-                  </T>
-                </View>
-              );
-            })}
-          </View>
-          <Divider />
-          <Field label="Message">
-            <Input
-              accessibilityLabel="Message your coach"
-              multiline
-              maxLength={4000}
-              value={body}
-              onChangeText={setBody}
-              placeholder="Write a message…"
-            />
-          </Field>
-          <View style={{ marginTop: 14, alignItems: 'flex-end' }}>
-            <PrimaryButton
-              label={busy ? 'Sending…' : 'Send message'}
-              accessibilityLabel="Send message"
-              icon={<ArrowUpRight size={17} color={theme.primaryText} />}
-              disabled={busy || !body.trim()}
-              onPress={() =>
-                act(async () => {
-                  if (pending.current?.body !== body.trim())
-                    pending.current = { id: randomUUID(), body: body.trim() };
-                  await request('/api/coaching', { action: 'message', memberId: m.id, ...pending.current });
-                  pending.current = null;
-                  setBody('');
-                  await training.refreshCoach();
-                }, 'Message sent.')
-              }
-            />
-          </View>
-        </Card>
+        <ConversationScreen
+          training={training}
+          detail={detail}
+          act={act}
+          busy={busy}
+          onThreadReady={scrollToEnd}
+        />
       )}
     </>
   );

@@ -63,10 +63,7 @@ test('coach assigns, client completes real sets, coach sees the saved workout', 
         exact: true,
       })
       .click();
-    await coach
-      .getByLabel('Coaching instructions', { exact: true })
-      .first()
-      .fill('Move with control.');
+    await coach.getByLabel('Reps', { exact: true }).last().fill('12');
     await coach
       .getByRole('button', { name: 'Save template', exact: true })
       .click();
@@ -91,18 +88,21 @@ test('coach assigns, client completes real sets, coach sees the saved workout', 
         .first()
         .click();
     }
-    await dialog
-      .getByLabel('Saved workout template', { exact: true })
-      .selectOption({ label: templateName });
-    await dialog
-      .getByRole('button', { name: 'Add template', exact: true })
-      .click();
+    const addTemplate = dialog.getByRole('button', {
+      name: `Add template ${templateName}`,
+      exact: true,
+    });
+    await addTemplate.click();
+    await expect(dialog.getByRole('status')).toContainText(
+      `${templateName} added as session 1`,
+    );
     await dialog
       .getByLabel('Name', { exact: true })
       .fill('Upper Body Strength — Foundation');
-    await dialog
-      .getByRole('button', { name: 'Add template', exact: true })
-      .click();
+    await addTemplate.click();
+    await expect(dialog.getByRole('status')).toContainText(
+      `${templateName} added as session 2`,
+    );
     await dialog.getByLabel('Name', { exact: true }).nth(1).fill(title);
     await dialog
       .getByRole('button', { name: 'Save as template', exact: true })
@@ -122,7 +122,7 @@ test('coach assigns, client completes real sets, coach sees the saved workout', 
       (item: { routine: { name: string } }) =>
         item.routine.name === templateName,
     );
-    expect(saved.routine.exercises[0].instructions).toBe('Move with control.');
+    expect(saved.routine.exercises[1].reps).toBe(12);
     expect(saved.revision).toBe(2);
     expect(saved.routine.name).toBe(templateName);
     expect(saved.routine.exercises[0].restSeconds).toBe(120);

@@ -53,3 +53,33 @@ export async function loadWorkspace() {
   ]);
   return { state, detail, fitness };
 }
+
+export type UploadedMedia = {
+  id: string;
+  kind: 'image' | 'video';
+  contentType: string;
+  size: number;
+};
+/** Upload a picked photo or video for one membership; the server validates it. */
+export async function uploadMedia(
+  memberId: string,
+  uri: string,
+  contentType: string,
+): Promise<UploadedMedia> {
+  const blob = await (await fetch(uri)).blob();
+  const type = contentType || blob.type;
+  const response = await fetch(
+    origin + '/api/media?member=' + encodeURIComponent(memberId),
+    {
+      method: 'POST',
+      headers: { 'Content-Type': type, 'X-Media-Size': String(blob.size) },
+      body: blob,
+    },
+  ).catch(() => {
+    throw new Error('Upload failed. Check your connection and retry.');
+  });
+  const data = (await response.json()) as UploadedMedia & { error?: string };
+  if (!response.ok) throw new Error(data.error || 'Upload failed. Please retry.');
+  return data;
+}
+export const mediaUri = (id: string) => origin + '/api/media?id=' + id;

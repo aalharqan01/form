@@ -162,7 +162,13 @@ function AppContent() {
               ) : tab === 'history' ? (
                 <HistoryScreen training={training} act={act} busy={busy} onStart={() => start(null)} onRepeat={repeat} />
               ) : (
-                <CoachScreen training={training} act={act} busy={busy} onStart={start} />
+                <CoachScreen
+                  training={training}
+                  act={act}
+                  busy={busy}
+                  onStart={start}
+                  scrollToEnd={() => scroll.current?.scrollToEnd({ animated: false })}
+                />
               )}
             </Reveal>
           )}

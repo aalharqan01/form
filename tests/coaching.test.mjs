@@ -16,6 +16,7 @@ for (const name of [
   'simulation',
   'video',
   'video-server',
+  'media-server',
 ]) {
   const source = await readFile(`lib/${name}.ts`, 'utf8');
   const code = ts
@@ -25,7 +26,10 @@ for (const name of [
         target: ts.ScriptTarget.ES2022,
       },
     })
-    .outputText.replace(/from '\.\/(fitness|coaching)'/g, "from './$1.mjs'");
+    .outputText.replace(
+      /from '\.\/(fitness|coaching|video-server)'/g,
+      "from './$1.mjs'",
+    );
   await writeFile(`${temp}/${name}.mjs`, code);
 }
 const { handleCoaching } = await import(
@@ -134,6 +138,8 @@ test('coach-client lifecycle enforces identity, consent, ownership, persistence 
     '0001_dapper_magma.sql',
     '0002_perpetual_bloodaxe.sql',
     '0003_normal_thunderbird.sql',
+    '0004_coach_workout_templates.sql',
+    '0005_coaching_media.sql',
   ])
     db.sql.exec(await readFile('drizzle/' + name, 'utf8'));
   async function call(who, body, query = '', origin) {
@@ -865,6 +871,7 @@ test('private reusable templates enforce ownership and revision checks without s
     '0002_perpetual_bloodaxe',
     '0003_normal_thunderbird',
     '0004_coach_workout_templates',
+    '0005_coaching_media',
   ])
     db.sql.exec(await readFile(`drizzle/${name}.sql`, 'utf8'));
   const call = async (who, body, query = '') => {
@@ -1035,4 +1042,189 @@ test('exercise rest targets validate and early finishes do not count as fully co
   assert.equal(stats.workouts, 1);
   assert.equal(stats.due, 1);
   assert.equal(stats.completed, 0);
+});
+
+test('shared media is scoped to its membership and progress photos post into the conversation', async () => {
+  const { handleMedia, validMediaHeader } = await import(
+    pathToFileURL(`${temp}/media-server.mjs`).href
+  );
+  const db = memoryDB();
+  for (const name of [
+    '0000_illegal_bug',
+    '0001_dapper_magma',
+    '0002_perpetual_bloodaxe',
+    '0003_normal_thunderbird',
+    '0004_coach_workout_templates',
+    '0005_coaching_media',
+  ])
+    db.sql.exec(await readFile(`drizzle/${name}.sql`, 'utf8'));
+  const now = new Date().toISOString();
+  db.sql
+    .prepare(
+      "INSERT INTO coaching_memberships (id,coach_id,trainee_id,email,name,status,token_hash,expires_at,offer,intake,program,created_at,accepted_at) VALUES (?,?,?,?,?,'active',?,?,?,?,'null',?,?)",
+    )
+    .run('m', 'coach', 'trainee', 't@example.com', 'Trainee', 'hash-m', '2099-01-01', '{}', '{}', now, now);
+  db.sql
+    .prepare(
+      "INSERT INTO coaching_memberships (id,coach_id,trainee_id,email,name,status,token_hash,expires_at,offer,intake,program,created_at,accepted_at) VALUES (?,?,?,?,?,'active',?,?,?,?,'null',?,?)",
+    )
+    .run('other', 'coach', 'someone', 's@example.com', 'Someone', 'hash-o', '2099-01-01', '{}', '{}', now, now);
+  const objects = new Map();
+  const bucket = {
+    async put(key, stream, options) {
+      const chunks = [];
+      for await (const chunk of stream) chunks.push(chunk);
+      objects.set(key, { bytes: Buffer.concat(chunks), ...options });
+    },
+    async head(key) {
+      const o = objects.get(key);
+      return o
+        ? {
+            size: o.bytes.length,
+            customMetadata: o.customMetadata,
+            writeHttpMetadata: (h) =>
+              h.set('Content-Type', o.httpMetadata.contentType),
+          }
+        : null;
+    },
+    async get(key) {
+      const o = objects.get(key);
+      return o ? { body: o.bytes } : null;
+    },
+    async delete(key) {
+      objects.delete(key);
+    },
+  };
+  const jpeg = new Uint8Array(40);
+  jpeg.set([0xff, 0xd8, 0xff, 0xe0]);
+  const upload = (who, member, body = jpeg, headers = {}) =>
+    handleMedia(
+      db,
+      bucket,
+      who,
+      new Request('https://form.test/api/media?member=' + member, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'image/jpeg',
+          'X-Media-Size': String(body.length),
+          ...headers,
+        },
+        body,
+      }),
+    );
+  assert.equal(validMediaHeader('image/jpeg', jpeg), true);
+  assert.equal(validMediaHeader('image/png', jpeg), false);
+  assert.equal((await upload(user('stranger'), 'm')).status, 403);
+  assert.equal(
+    (await upload(coach, 'm', jpeg, { Origin: 'https://evil.test' })).status,
+    403,
+  );
+  assert.equal(
+    (await upload(trainee, 'm', new Uint8Array(40))).status,
+    415,
+    'magic bytes are checked',
+  );
+  const uploaded = await upload(trainee, 'm');
+  assert.equal(uploaded.status, 200);
+  const media = await uploaded.json();
+  assert.equal(media.kind, 'image');
+  const fetchMedia = (who) =>
+    handleMedia(
+      db,
+      bucket,
+      who,
+      new Request('https://form.test/api/media?id=' + media.id),
+    );
+  assert.equal((await fetchMedia(coach)).status, 200);
+  assert.equal((await fetchMedia(trainee)).status, 200);
+  assert.equal((await fetchMedia(user('someone'))).status, 403);
+
+  const call = async (who, body, query = '') => {
+    const response = await handleCoaching(
+      db,
+      who,
+      new Request('https://form.test/api/coaching' + query, {
+        method: body ? 'POST' : 'GET',
+        headers: { 'Content-Type': 'application/json' },
+        body: body ? JSON.stringify(body) : undefined,
+      }),
+    );
+    return { status: response.status, data: await response.json() };
+  };
+  // A message can be just an attachment, but only the uploader may attach it.
+  assert.equal(
+    (
+      await call(trainee, {
+        action: 'message',
+        memberId: 'm',
+        id: 'msg-photo',
+        body: '',
+        mediaId: media.id,
+      })
+    ).status,
+    200,
+  );
+  assert.equal(
+    (
+      await call(coach, {
+        action: 'message',
+        memberId: 'm',
+        id: 'msg-steal',
+        body: 'Look',
+        mediaId: media.id,
+      })
+    ).status,
+    404,
+  );
+  assert.equal(
+    (await call(coach, { action: 'message', memberId: 'm', id: 'msg-empty', body: '' }))
+      .status,
+    400,
+  );
+  const today = now.slice(0, 10);
+  assert.equal(
+    (
+      await call(trainee, {
+        action: 'photo',
+        memberId: 'm',
+        id: 'photo-1',
+        mediaId: media.id,
+        view: 'front',
+        takenOn: today,
+        note: 'Week one',
+      })
+    ).status,
+    200,
+  );
+  assert.equal(
+    (
+      await call(trainee, {
+        action: 'photo',
+        memberId: 'm',
+        id: 'photo-2',
+        mediaId: media.id,
+        view: 'upside',
+        takenOn: today,
+      })
+    ).status,
+    400,
+  );
+  const detail = (await call(coach, null, '?member=m')).data;
+  assert.equal(detail.photos.length, 1);
+  assert.equal(detail.photos[0].view, 'front');
+  assert.equal(detail.photos[0].media.id, media.id);
+  assert.equal(detail.messages.length, 2);
+  assert.equal(detail.messages[0].media.kind, 'image');
+  assert.match(detail.messages[1].body, /Progress photo · Front view · Week one/);
+  assert.equal(
+    (await call(coach, { action: 'photo-delete', memberId: 'm', id: 'photo-1' })).status,
+    403,
+  );
+  assert.equal(
+    (await call(trainee, { action: 'photo-delete', memberId: 'm', id: 'photo-1' })).status,
+    200,
+  );
+  const after = (await call(coach, null, '?member=m')).data;
+  assert.equal(after.photos.length, 0);
+  assert.equal(after.messages.length, 1, 'the photo message goes with the photo');
 });

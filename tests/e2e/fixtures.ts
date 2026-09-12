@@ -20,6 +20,7 @@ export async function fixture(request: APIRequestContext) {
   const before = await (
     await request.get(coach + '/api/coaching?templates=1')
   ).json();
+  const startedAt = new Date().toISOString();
   const write = async (data: FitnessData, api = request) => {
     const current = await (await api.get(client + '/api/data')).json();
     expect(current.userKey).toBe('local-form-client');
@@ -57,6 +58,9 @@ export async function fixture(request: APIRequestContext) {
         const checkins = latest.checkins.filter(
           (v) => !detail.checkins.some((x) => x.id === v.id),
         );
+        const photos = (latest.photos ?? []).filter(
+          (v) => !(detail.photos ?? []).some((x) => x.id === v.id),
+        );
         const statements = [
           `UPDATE coaching_memberships SET program=${quote(JSON.stringify(detail.member.program))},nutrition=${quote(JSON.stringify(detail.member.nutrition))},revision=revision+1 WHERE id='local-form-membership' AND coach_id='local-form-coach' AND trainee_id='local-form-client'`,
           ...added.map(
@@ -71,6 +75,11 @@ export async function fixture(request: APIRequestContext) {
             (c) =>
               `DELETE FROM coaching_checkins WHERE id=${quote(c.id)} AND membership_id='local-form-membership'`,
           ),
+          ...photos.map(
+            (p) =>
+              `DELETE FROM progress_photos WHERE id=${quote(p.id)} AND membership_id='local-form-membership'`,
+          ),
+          `DELETE FROM coaching_media WHERE membership_id='local-form-membership' AND created_at>${quote(startedAt)}`,
         ];
         // Explicit local-only config. Never seed or clean a remote database.
         execFileSync(

@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
 export const fitnessAccounts = sqliteTable('fitness_accounts', {
   userId: text('user_id').primaryKey(),
   data: text('data').notNull(),
@@ -49,7 +49,38 @@ export const coachingMessages = sqliteTable('coaching_messages', {
   senderId: text('sender_id').notNull(),
   body: text('body').notNull(),
   createdAt: text('created_at').notNull(),
+  mediaId: text('media_id'),
 });
+// Uploaded images and short videos shared inside one coaching membership.
+export const coachingMedia = sqliteTable(
+  'coaching_media',
+  {
+    id: text('id').primaryKey(),
+    membershipId: text('membership_id').notNull(),
+    ownerId: text('owner_id').notNull(),
+    kind: text('kind').notNull(),
+    contentType: text('content_type').notNull(),
+    size: integer('size').notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => [index('coaching_media_membership').on(table.membershipId)],
+);
+export const progressPhotos = sqliteTable(
+  'progress_photos',
+  {
+    id: text('id').primaryKey(),
+    membershipId: text('membership_id').notNull(),
+    ownerId: text('owner_id').notNull(),
+    mediaId: text('media_id').notNull(),
+    view: text('view').notNull(),
+    takenOn: text('taken_on').notNull(),
+    note: text('note').notNull().default(''),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => [
+    index('progress_photos_membership').on(table.membershipId, table.takenOn),
+  ],
+);
 export const coachingCheckins = sqliteTable('coaching_checkins', {
   id: text('id').primaryKey(),
   membershipId: text('membership_id').notNull(),
