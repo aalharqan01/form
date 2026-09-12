@@ -103,10 +103,12 @@ test('coach assigns, client completes real sets, coach sees the saved workout', 
     await expect(dialog.getByRole('status')).toContainText(
       `${templateName} added as session 2`,
     );
-    await dialog.getByLabel('Name', { exact: true }).nth(1).fill(title);
-    await dialog
+    // Adding a template opens that session and collapses the others.
+    const session = dialog.locator('details[open]');
+    await expect(session).toHaveCount(1);
+    await session.getByLabel('Name', { exact: true }).fill(title);
+    await session
       .getByRole('button', { name: 'Save as template', exact: true })
-      .nth(1)
       .click();
     await expect(dialog.getByRole('status')).toContainText(
       `Saved ${title} to your template library.`,
@@ -160,9 +162,7 @@ test('coach assigns, client completes real sets, coach sees the saved workout', 
         await expect(checkbox).toBeChecked();
         await expect(
           client.getByLabel('Rest countdown', { exact: true }),
-        ).toHaveText(
-          name === 'Bench press' ? /^(2:00|1:5\d)$/ : /^0:4\d$/,
-        );
+        ).toHaveText(name === 'Bench press' ? /^(2:00|1:5\d)$/ : /^0:4\d$/);
         await expect(
           client.getByRole('checkbox', {
             name: 'Complete Bench press set 1',

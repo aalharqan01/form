@@ -124,7 +124,10 @@ function useCoaching() {
 function WeeklyChange({ value }: { value: number | null | undefined }) {
   if (value == null)
     return (
-      <strong className="co-metric-change flat" title="No previous week to compare">
+      <strong
+        className="co-metric-change flat"
+        title="No previous week to compare"
+      >
         —
       </strong>
     );
@@ -466,36 +469,52 @@ export default function CoachingWorkspace() {
                     </span>
                     <span className="co-client-name">
                       <strong>{m.name}</strong>
-                      <small>{m.offer.name}</small>
+                      <small>
+                        {m.status === 'active'
+                          ? m.stats?.lastWorkout
+                            ? `${m.offer.name} · trained ${dateLabel(m.stats.lastWorkout)}`
+                            : `${m.offer.name} · no workouts yet`
+                          : `${m.offer.name} · ${memberStatus(m.status)}`}
+                      </small>
                     </span>
-                    <span className="co-client-stat">
-                      <strong>
-                        {m.stats?.completed ?? 0}/{m.stats?.due ?? 0}
-                      </strong>
-                      <small>Scheduled · 7 days</small>
-                      <strong className="co-weekly-change">
-                        {m.stats?.averageChangeKg == null
-                          ? '—'
-                          : `${m.stats.averageChangeKg > 0 ? '+' : ''}${m.stats.averageChangeKg.toFixed(2)} kg`}
-                      </strong>
-                      <small>Weekly average change</small>
-                    </span>
-                    <span className="co-client-signals">
-                      {m.pending > 0 ? (
-                        <span className="co-badge amber">
-                          {m.pending} check-in{m.pending > 1 ? 's' : ''}
+                    {m.status === 'active' && (
+                      <span className="co-client-stats">
+                        <span>
+                          <strong>
+                            {m.stats?.completed ?? 0}
+                            <em>/{m.stats?.due ?? 0}</em>
+                          </strong>
+                          <small>sessions</small>
                         </span>
-                      ) : m.unread > 0 ? (
-                        <span className="co-badge amber">
-                          {m.unread} unread
+                        <span>
+                          <strong
+                            className={
+                              m.stats?.averageChangeKg == null
+                                ? ''
+                                : m.stats.averageChangeKg < -0.05
+                                  ? 'down'
+                                  : m.stats.averageChangeKg > 0.05
+                                    ? 'up'
+                                    : ''
+                            }
+                          >
+                            {m.stats?.averageChangeKg == null
+                              ? '—'
+                              : `${m.stats.averageChangeKg > 0 ? '+' : '−'}${Math.abs(m.stats.averageChangeKg).toFixed(1)}`}
+                            {m.stats?.averageChangeKg != null && <em> kg</em>}
+                          </strong>
+                          <small>this week</small>
                         </span>
-                      ) : (
-                        <span className="co-badge">
-                          {memberStatus(m.status)}
-                        </span>
-                      )}
-                    </span>
-                    <ChevronRight size={18} />
+                      </span>
+                    )}
+                    {m.pending > 0 ? (
+                      <span className="co-badge amber">
+                        {m.pending} check-in{m.pending > 1 ? 's' : ''}
+                      </span>
+                    ) : m.unread > 0 ? (
+                      <span className="co-badge amber">{m.unread} unread</span>
+                    ) : null}
+                    <ChevronRight size={18} className="co-client-chevron" />
                   </button>
                 ))}
               </div>
@@ -1676,6 +1695,9 @@ function ProgramEditor({
   const api = useCoachingTransport();
   const [templates, setTemplates] = useState<WorkoutTemplate[]>([]);
   const [templateId, setTemplateId] = useState('');
+  const [openSession, setOpenSession] = useState(
+    () => program?.sessions[0]?.id ?? '',
+  );
   const [templateBusy, setTemplateBusy] = useState(false);
   const [templateError, setTemplateError] = useState('');
   const [templateNotice, setTemplateNotice] = useState('');
@@ -1845,6 +1867,7 @@ function ProgramEditor({
                                   : [...p.sessions, copy],
                               });
                               setTemplateId(copy.id);
+                              setOpenSession(copy.id);
                               setTemplateNotice(
                                 `${template.routine.name} added as session ${replacing ? 1 : p.sessions.length + 1}. Edit this copy for your client; the template stays as it is.`,
                               );
@@ -1878,9 +1901,19 @@ function ProgramEditor({
               </>
             )}
             {p.sessions.map((s, i) => (
-              <div
+              <details
                 key={s.id}
                 className={`co-session-editor ${s.id === templateId ? 'co-session-new' : ''}`}
+                open={
+                  templateMode || (openSession ? openSession === s.id : i === 0)
+                }
+                onToggle={(e) => {
+                  if (templateMode) return;
+                  const el = e.currentTarget as HTMLDetailsElement;
+                  setOpenSession((current) =>
+                    el.open ? s.id : current === s.id ? '' : current,
+                  );
+                }}
                 ref={
                   s.id === templateId
                     ? (node) => {
@@ -1892,24 +1925,41 @@ function ProgramEditor({
                     : undefined
                 }
               >
-                <div className="co-section-line">
-                  <h3>{templateMode ? 'Workout day' : `Session ${i + 1}`}</h3>
+                <summary className="co-session-summary">
+                  <span className="co-session-summary-text">
+                    <strong>
+                      {templateMode
+                        ? 'Workout day'
+                        : s.name.trim() || `Session ${i + 1}`}
+                    </strong>
+                    {!templateMode && (
+                      <small>
+                        {DAYS[s.day]} · {s.exercises.length}{' '}
+                        {s.exercises.length === 1 ? 'exercise' : 'exercises'}
+                      </small>
+                    )}
+                  </span>
                   {!templateMode && (
                     <Button
                       type="button"
                       variant="ghost"
+                      className="co-session-remove"
                       aria-label={`Remove session ${i + 1}`}
-                      onClick={() =>
+                      onClick={(e) => {
+                        e.preventDefault();
                         setP({
                           ...p,
                           sessions: p.sessions.filter((v) => v.id !== s.id),
-                        })
-                      }
+                        });
+                      }}
                     >
                       <X size={18} />
                     </Button>
                   )}
-                </div>
+                  {!templateMode && (
+                    <ChevronRight size={18} className="co-session-chevron" />
+                  )}
+                </summary>
                 <div className="co-form-grid">
                   <label>
                     {templateMode ? 'Template name' : 'Name'}
@@ -1969,7 +2019,7 @@ function ProgramEditor({
                       </span>
                       <ChevronRight size={18} />
                     </button>
-                    <div className="co-form-grid three">
+                    <div className="co-exercise-numbers">
                       <label>
                         Sets
                         <Input
@@ -1997,7 +2047,7 @@ function ProgramEditor({
                         />
                       </label>
                       <label>
-                        Load unit
+                        Unit
                         <select
                           value={e.unit ?? 'kg'}
                           onChange={(v) =>
@@ -2010,47 +2060,52 @@ function ProgramEditor({
                           <option>lb</option>
                         </select>
                       </label>
-                    </div>
-                    <label>
-                      Rest between sets (seconds)
-                      <Input
-                        aria-label="Rest between sets (seconds)"
-                        required
-                        type="number"
-                        min={0}
-                        max={600}
-                        step={1}
-                        value={e.restSeconds ?? 90}
-                        onChange={(v) =>
-                          exercise(i, j, {
-                            restSeconds: Number(v.target.value),
-                          })
-                        }
-                      />
-                      <small className="co-muted">
-                        Applies to this exercise. Set 0 for no rest countdown.
-                      </small>
-                    </label>
-                    {templateMode ? (
                       <label>
-                        Demonstration URL (optional)
+                        Rest (s)
                         <Input
-                          maxLength={1000}
-                          value={e.videoUrl ?? ''}
+                          aria-label="Rest between sets (seconds)"
+                          required
+                          type="number"
+                          min={0}
+                          max={600}
+                          step={5}
+                          value={e.restSeconds ?? 90}
                           onChange={(v) =>
-                            exercise(i, j, { videoUrl: v.target.value })
+                            exercise(i, j, {
+                              restSeconds: Number(v.target.value),
+                            })
                           }
                         />
                       </label>
-                    ) : (
-                      <VideoUpload
-                        onBusy={setUploading}
-                        memberId={memberId}
-                        name={e.name}
-                        value={e.videoUrl ?? ''}
-                        onChange={(videoUrl) => exercise(i, j, { videoUrl })}
-                      />
-                    )}
+                    </div>
+                    <details className="co-exercise-video" open={!!e.videoUrl}>
+                      <summary>
+                        {e.videoUrl
+                          ? 'Demonstration attached'
+                          : 'Add a demonstration video'}
+                      </summary>
+                      {templateMode ? (
+                        <label>
+                          Demonstration URL
+                          <Input
+                            maxLength={1000}
+                            value={e.videoUrl ?? ''}
+                            placeholder="YouTube, Vimeo or direct video URL"
+                            onChange={(v) =>
+                              exercise(i, j, { videoUrl: v.target.value })
+                            }
+                          />
+                        </label>
+                      ) : (
+                        <VideoUpload
+                          onBusy={setUploading}
+                          memberId={memberId}
+                          name={e.name}
+                          value={e.videoUrl ?? ''}
+                          onChange={(videoUrl) => exercise(i, j, { videoUrl })}
+                        />
+                      )}
+                    </details>
                   </div>
                 ))}
                 {!s.exercises.length && (
@@ -2094,62 +2149,61 @@ function ProgramEditor({
                     Save as template
                   </Button>
                 )}
-                <p className="co-muted co-template-video-note">
-                  Client-specific uploaded videos stay with their program.
-                  Attach them separately to each assigned copy; external
-                  demonstration URLs can be saved in templates.
-                </p>
-              </div>
+              </details>
             ))}
             {!templateMode && (
               <Button
                 type="button"
                 className="secondary full"
                 disabled={p.sessions.length >= 14}
-                onClick={() =>
-                  setP({
-                    ...p,
-                    sessions: [
-                      ...p.sessions,
-                      {
-                        id: id(),
-                        name: `Session ${p.sessions.length + 1}`,
-                        day: 3,
-                        exercises: [],
-                      },
-                    ],
-                  })
-                }
+                onClick={() => {
+                  const next = {
+                    id: id(),
+                    name: `Session ${p.sessions.length + 1}`,
+                    day: 3,
+                    exercises: [],
+                  };
+                  setP({ ...p, sessions: [...p.sessions, next] });
+                  setOpenSession(next.id);
+                }}
               >
                 <Plus size={17} />
                 Add session
               </Button>
             )}
-            <ErrorNote text={error} />
-            <Button
-              className="primary full"
-              type="submit"
-              disabled={
-                busy ||
-                !p.sessions.length ||
-                p.sessions.some(
-                  (s) =>
-                    !s.exercises.length ||
-                    s.exercises.some(
-                      (e) =>
-                        !e.name.trim() ||
-                        (!!e.videoUrl && !exerciseVideo(e.videoUrl)),
-                    ),
-                )
-              }
-            >
-              {busy
-                ? 'Saving…'
-                : templateMode
-                  ? 'Save template'
-                  : 'Assign program'}
-              <Check size={18} />
-            </Button>
+            {!templateMode && (
+              <p className="co-muted co-template-video-note">
+                Uploaded videos stay with this client’s program; templates keep
+                external demonstration links only.
+              </p>
+            )}
+            <div className="co-dialog-footer">
+              <ErrorNote text={error} />
+              <Button
+                className="primary full"
+                type="submit"
+                disabled={
+                  busy ||
+                  !p.sessions.length ||
+                  p.sessions.some(
+                    (s) =>
+                      !s.exercises.length ||
+                      s.exercises.some(
+                        (e) =>
+                          !e.name.trim() ||
+                          (!!e.videoUrl && !exerciseVideo(e.videoUrl)),
+                      ),
+                  )
+                }
+              >
+                {busy
+                  ? 'Saving…'
+                  : templateMode
+                    ? 'Save template'
+                    : 'Assign program'}
+                <Check size={18} />
+              </Button>
+            </div>
           </fieldset>
         </form>
         <ExercisePicker
