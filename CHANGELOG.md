@@ -2,6 +2,14 @@
 
 Newest first. Each entry says what changed, how to run it, and what is still open, so a fresh `git pull` is enough to get going.
 
+## 12 September 2026 — first Cloudflare deployment fixes
+
+### What changed
+
+- The Worker now serves built static files (scripts, styles, fonts, images) from the assets binding before handing the request to the app. Because the Worker runs ahead of assets so Cloudflare Access guards everything, the first deployment shipped an unstyled page with every bundle returning 404.
+- Manual "Run workflow" on `main` also deploys.
+- Development site: https://form-dev.al3kbari131.workers.dev behind Cloudflare Access (one-time PIN). Access needs a login method enabled under Zero Trust → Settings → Authentication.
+
 ## 12 September 2026 — deploy on merge, workout pause, coach nav
 
 ### What changed
