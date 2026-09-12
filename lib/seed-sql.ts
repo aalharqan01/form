@@ -17,6 +17,8 @@ export type SeedPlan = {
   client: { id: string | null; email: string; name: string };
   /** Account that receives the independent-trainee history, if any. */
   solo: { id: string } | null;
+  /** The signed-in developer as an active client of their own coach. */
+  self?: { id: string; email: string; name: string };
   /** Rewrite existing fixture history and names instead of only filling gaps. */
   refresh: boolean;
   now?: Date;
@@ -76,6 +78,28 @@ ${refresh ? `UPDATE coaching_memberships SET name=${quote(name)}, program=${stat
     fill(clientAccount, coachedHistory(program, membership, now)),
     ...(plan.solo
       ? [account(plan.solo.id), fill(plan.solo.id, soloHistory(now))]
+      : []),
+    ...(plan.self
+      ? [
+          account(plan.self.id),
+          member(
+            `${prefix}-membership-self`,
+            plan.self.id,
+            plan.self.email,
+            plan.self.name,
+            'active',
+          ),
+          fill(
+            plan.self.id,
+            coachedHistory(program, `${prefix}-membership-self`, now, {
+              seed: 41,
+              startKg: 74.2,
+              perWeek: -0.25,
+              missed: [10],
+              early: [],
+            }),
+          ),
+        ]
       : []),
     ...EXTRA_CLIENTS.flatMap((c) => {
       const id = `${prefix}-client-${c.slug}`;

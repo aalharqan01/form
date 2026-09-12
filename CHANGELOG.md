@@ -7,6 +7,7 @@ Newest first. Each entry says what changed, how to run it, and what is still ope
 ### What changed
 
 - **Developer fixtures on first sign-in.** On the development site each signed-in developer automatically becomes coach That Guy with the sample clients and gets two private fixture trainees: Abdullah (coached by you, program and history) and Sara (free tier, history). Created once by `lib/dev-fixtures.ts`; nothing is shared between developers.
+- The developer's own account is also an active client of That Guy with sample history, so `/app/` without a role shows the coached experience for whoever signs in.
 - **`?role=coached` / `?role=solo`** on `/app/` view the app as those trainees. The Worker maps the `X-Form-Preview` header (or `?preview=` on media URLs) to a fixture identity derived from the verified account, only when the Worker variable `PREVIEW_ROLES` is `true`, which the workflow sets for the development target only.
 - `/__dev/phones` on the dev site now shows the three frames the local launcher shows.
 - Removed the one-off `db:seed:dev-site` script and the claim-by-email step from the previous entry; the fixture generators moved from `dev/` to `lib/` so the Worker can use them.
