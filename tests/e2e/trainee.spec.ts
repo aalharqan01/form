@@ -181,7 +181,7 @@ test('dated weigh-ins show arithmetic weekly change to trainee and coach; coachi
     }
     await page.goto('http://127.0.0.1:3100/coaching');
     await expect(
-      page.locator('.co-client-row').filter({ hasText: 'Alex Client' }),
+      page.locator('.co-client-row').filter({ hasText: 'Abdullah Al-Harbi' }),
     ).toContainText('−0.5 kg');
     expect(
       await page.evaluate(

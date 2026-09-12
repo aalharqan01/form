@@ -2,6 +2,13 @@
 
 Newest first. Each entry says what changed, how to run it, and what is still open, so a fresh `git pull` is enough to get going.
 
+## 12 September 2026 — Saudi fixture names
+
+### What changed
+
+- Local fixture people now have Saudi names: coach Faisal Al-Qahtani, coached client Abdullah Al-Harbi (port 3101), independent trainee Sara Al-Otaibi (port 3103), extra clients Mohammed Al-Ghamdi, Noura Al-Shehri, Khalid Al-Dossari and the pending request Reem Al-Zahrani. The simulation trainee is Abdullah.
+- `npm run db:seed -- --refresh` now also rewrites membership names, so existing databases pick the new names up.
+
 ## 12 September 2026 — package client limits, more sample clients, one-decimal changes
 
 ### What changed

@@ -20,12 +20,12 @@ test('coach assigns, client completes real sets, coach sees the saved workout', 
   try {
     await coach.goto('http://127.0.0.1:3100/coaching');
     await client.goto('http://127.0.0.1:8081/');
-    await expect(coach.getByText('Alex Client', { exact: true })).toBeVisible();
+    await expect(coach.getByText('Abdullah Al-Harbi', { exact: true })).toBeVisible();
     await expect(
       client.getByRole('button', { name: /Preview as coach/ }),
     ).toHaveCount(0);
     const templateName = 'Upper Body Strength — Technique';
-    const title = 'Upper Body Strength — Alex';
+    const title = 'Upper Body Strength — Abdullah';
     await coach
       .getByRole('button', { name: 'Workout templates', exact: true })
       .click();
@@ -73,7 +73,7 @@ test('coach assigns, client completes real sets, coach sees the saved workout', 
       .click();
     await coach
       .locator('.co-client-row')
-      .filter({ hasText: 'Alex Client' })
+      .filter({ hasText: 'Abdullah Al-Harbi' })
       .click();
     await coach
       .getByRole('button', { name: /^(Edit program|Assign program)$/ })
@@ -184,10 +184,10 @@ test('coach assigns, client completes real sets, coach sees the saved workout', 
       client.getByText('Workout saved. Your coach can review your sets.'),
     ).toBeVisible();
     await coach.reload();
-    await expect(coach.getByText('Alex Client', { exact: true })).toBeVisible();
+    await expect(coach.getByText('Abdullah Al-Harbi', { exact: true })).toBeVisible();
     await coach
       .locator('.co-client-row')
-      .filter({ hasText: 'Alex Client' })
+      .filter({ hasText: 'Abdullah Al-Harbi' })
       .click();
     await expect(coach.getByText(title, { exact: true }).first()).toBeVisible();
     const state = await (
