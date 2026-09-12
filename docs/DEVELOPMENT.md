@@ -23,6 +23,8 @@ All roles use one local D1 database and R2 store. The launcher inserts Faisal Al
 
 The backend's port 3102 accepts role requests only from the local proxies using a random capability generated at launch. The proxies discard caller-supplied identity headers and set their own fixed role. Neither role middleware nor the phone-preview HTML is shipped in the Worker. Do not expose these development ports on the LAN or through a tunnel.
 
+Before opening a pull request run `npm run verify` (the same unit, role, access, lint and type checks CI runs) and `npm run test:e2e`.
+
 ## Try the complete flow
 
 1. On the coach website, open **Workout templates → Create template**. Name the day freely, select exercises, and set reps, sets, units and coaching instructions.

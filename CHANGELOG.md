@@ -2,6 +2,13 @@
 
 Newest first. Each entry says what changed, how to run it, and what is still open, so a fresh `git pull` is enough to get going.
 
+## 12 September 2026 — CI fix and local verify script
+
+### What changed
+
+- The access test still expected the old coach name after the rename, which failed CI on the two previous merges; fixed.
+- `npm run verify` runs the unit, role, access, lint and type checks that CI runs, so run it with `npm run test:e2e` before a pull request.
+
 ## 12 September 2026 — dashboard tiles filter properly
 
 ### What changed

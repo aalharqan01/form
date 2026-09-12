@@ -57,7 +57,7 @@ test('Access derives identity only from signed claims and removes fixture header
   );
   assert.equal(
     verified.headers.get('oai-authenticated-user-full-name'),
-    'Sam%20Coach',
+    'Faisal%20Al-Qahtani',
   );
   assert.equal(verified.headers.get('x-form-dev-role'), null);
   assert.equal(verified.headers.get('cf-access-jwt-assertion'), null);
