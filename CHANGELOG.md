@@ -2,6 +2,24 @@
 
 Newest first. Each entry says what changed, how to run it, and what is still open, so a fresh `git pull` is enough to get going.
 
+## 12 September 2026 — coach site on phones, compact client list, sample history
+
+### What changed
+
+- **Program editor works as a full-height sheet on phones.** Sessions are collapsible: only the session you are editing is open, each exercise sits in one compact row (sets, reps, unit, rest), demonstration video controls are tucked behind a disclosure, and the Assign/Save button stays pinned at the bottom with safe-area padding. The one program note replaces per-session notes.
+- **All clients list is denser.** Each row is one line: initials, name, offer and last workout, sessions done this week, weekly weight change, and a badge only when there is something to act on.
+- **Sample history for both local trainees.** Alex (coached) has eight weeks of weigh-ins and program workouts including a missed day and an early finish; Riley (no coach) has ten weeks of weigh-ins and plan workouts. Generated deterministically in `dev/synthetic.ts` and applied by `npm run db:seed`, which only fills empty accounts.
+- Vercel's agent skills (web-design-guidelines, react-best-practices, react-native-skills, composition-patterns) are installed for reviews; the coaching UI was checked against the web interface guidelines (focus clearance under the sticky footer, tabular numbers, hover states, reduced motion).
+
+### How to run
+
+`npm run db:seed -- --refresh` replaces existing fixture history with fresh sample data. Without the flag, accounts that already have workouts or weights are left alone.
+
+### Still open
+
+- The phone sheet has no drag-to-dismiss; use the close button.
+- Sample data is for local fixtures only; nothing changes in production.
+
 ## 12 September 2026 — conversation with attachments, progress photos, weekly change
 
 ### What changed

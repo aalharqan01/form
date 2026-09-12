@@ -59,9 +59,9 @@ test('trainee navigation, independent sets and rest timer survive reopening and 
     await page
       .getByRole('button', { name: 'Skip rest timer', exact: true })
       .click();
-    await expect(page.getByLabel('Rest countdown', { exact: true })).toHaveCount(
-      0,
-    );
+    await expect(
+      page.getByLabel('Rest countdown', { exact: true }),
+    ).toHaveCount(0);
     await page.route('http://127.0.0.1:3101/api/**', (route) => route.abort());
     await page
       .getByRole('button', { name: /Notes and session options/ })
@@ -182,7 +182,7 @@ test('dated weigh-ins show arithmetic weekly change to trainee and coach; coachi
     await page.goto('http://127.0.0.1:3100/coaching');
     await expect(
       page.locator('.co-client-row').filter({ hasText: 'Alex Client' }),
-    ).toContainText('-0.50 kg');
+    ).toContainText('−0.5 kg');
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= window.innerWidth,
@@ -227,7 +227,10 @@ test('trainee finishes early with completed work and skipped sets visible to the
       .click();
     await expect(page.getByRole('dialog')).toHaveCount(0);
     await expect(
-      page.getByRole('button', { name: 'Rest time for Bench press', exact: true }),
+      page.getByRole('button', {
+        name: 'Rest time for Bench press',
+        exact: true,
+      }),
     ).toHaveText('Rest · 1:15');
     await page
       .getByRole('textbox', { name: 'Bench press set 1 weight', exact: true })
@@ -296,10 +299,12 @@ test('trainee finishes early with completed work and skipped sets visible to the
     ).toHaveLength(skipped);
     await page.getByRole('tab', { name: 'History', exact: true }).click();
     await expect(
-      page.getByText(
-        `Finished early · ${skipped} skipped ${skipped === 1 ? 'set' : 'sets'}`,
-        { exact: true },
-      ),
+      page
+        .getByRole('button', { name: /^View Technique practice/ })
+        .getByText(
+          `Finished early · ${skipped} skipped ${skipped === 1 ? 'set' : 'sets'}`,
+          { exact: true },
+        ),
     ).toBeVisible();
   } finally {
     await page.close().catch(() => {});
