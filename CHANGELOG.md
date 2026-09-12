@@ -2,6 +2,13 @@
 
 Newest first. Each entry says what changed, how to run it, and what is still open, so a fresh `git pull` is enough to get going.
 
+## 12 September 2026 — rest timer pause, end a workout without saving
+
+### What changed
+
+- **Rest timer pause.** The rest island has a pause/resume button; a paused countdown keeps its remaining time across app reloads, and ±15 s adjustments apply while paused.
+- **End without saving.** The Finish sheet now offers "End without saving" next to "Save workout", and opens even with no completed sets (then it only offers ending or continuing). The bottom-of-workout link uses the same wording; the confirmation button is "End workout".
+
 ## 12 September 2026 — sample data on the development site, coach named That Guy
 
 ### What changed
