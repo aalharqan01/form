@@ -2,6 +2,21 @@
 
 An installable workout and weight tracker with a coach–trainee Marketplace. Built with React 19, Vinext, Cloudflare D1 and R2.
 
+## The development site
+
+The latest `main` is always deployed to **https://form-dev.al3kbari131.workers.dev**. It sits behind Cloudflare Access: enter your email on the login page, click **Send me a code**, and paste the code from the email. Only addresses on the Access policy get in; ask Hassan to add yours.
+
+| What you want to see | Open |
+| --- | --- |
+| Coach website | `/coaching` |
+| Trainee web tracker | `/` |
+| Trainee app (the Expo app, web build) | `/app/` |
+| Coach website and trainee app side by side at phone size | `/__dev/phones` |
+
+Everything shows the account you signed in with. Hassan's account is the coach **That Guy** with sample clients, and Abdulaziz's account is the coached client with an assigned program and sample history, so the app under `/app/` shows the coached experience (My coach tab, program, messages) for him and the free-tier experience for Hassan. Data lives in the development database only; nothing here touches production.
+
+To refresh the sample data after signing in with Wrangler (`npx wrangler login`), run `npm run db:seed:dev-site -- --coach-id <cf-access id> --client-email <email> --client-name "<name>" --refresh`; see `scripts/seed-dev-site.mjs`.
+
 ## Run on another computer
 
 Install **Git** and **Node.js 22.13 or later** (Node 22 LTS is recommended). npm comes with Node. Sign into the GitHub account that has access to this private repository, then:

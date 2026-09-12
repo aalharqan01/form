@@ -2,6 +2,15 @@
 
 Newest first. Each entry says what changed, how to run it, and what is still open, so a fresh `git pull` is enough to get going.
 
+## 12 September 2026 — sample data on the development site, coach named That Guy
+
+### What changed
+
+- **Development site seeded.** `npm run db:seed:dev-site` writes the same sample coach, packages, templates, program, extra clients and eight to ten weeks of history the local launcher uses, keyed to real Cloudflare Access accounts. Hassan is the coach; Abdulaziz is the coached client; the coach's own account carries the independent-trainee history so `/app/` shows the free tier with data.
+- **Claim by email.** A membership can be created for an email before that person's first visit (no trainee id yet), with their log waiting under `pending:<email>`. On the first sign-in both attach to the real account. This is how the seeded client works and how a coach could add clients ahead of time later.
+- The fixture coach is now **That Guy** everywhere (local launcher, dev site, tests, docs). Shared fixtures live in `dev/fixtures.ts` and the SQL generator in `dev/seed-sql.ts`.
+- README explains how to reach each view of the development site.
+
 ## 12 September 2026 — simulation removed, trainee app and phone preview on the deployed site
 
 ### What changed
