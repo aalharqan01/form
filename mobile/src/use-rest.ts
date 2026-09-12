@@ -8,6 +8,8 @@ type Countdown = {
   name: string;
   seconds: number;
   end: number | null;
+  /** Seconds left when the countdown was paused; absent while running. */
+  paused?: number;
 };
 export function useRest(workoutId: string | undefined) {
   const [clock, setClock] = useState(Date.now());
@@ -51,10 +53,12 @@ export function useRest(workoutId: string | undefined) {
       subscription.remove();
     };
   }, [workoutId]);
-  const remaining = restRemaining(end, clock);
+  const paused = current?.paused ?? null;
+  const remaining = paused ?? restRemaining(end, clock);
   useEffect(() => {
     if (
       end &&
+      paused === null &&
       remaining === 0 &&
       alerted.current !== end &&
       AppState.currentState !== 'background'
@@ -62,7 +66,7 @@ export function useRest(workoutId: string | undefined) {
       Vibration.vibrate(250);
       alerted.current = end;
     }
-  }, [remaining, end, clock]);
+  }, [remaining, end, clock, paused]);
   const save = (value: Countdown | null) => {
     if (!workoutId) return;
     version.current += 1;
@@ -84,6 +88,7 @@ export function useRest(workoutId: string | undefined) {
     clock,
     remaining,
     end,
+    paused: paused !== null,
     name: current?.name ?? '',
     exerciseId: current?.exerciseId ?? '',
     start: (exercise: { id: string; name: string; restSeconds?: number }) => {
@@ -103,8 +108,25 @@ export function useRest(workoutId: string | undefined) {
       }
     },
     skip: () => save(null),
+    pause: () => {
+      if (
+        current &&
+        current.paused === undefined &&
+        restRemaining(current.end, Date.now()) > 0
+      )
+        save({ ...current, paused: restRemaining(current.end, Date.now()) });
+    },
+    resume: () => {
+      if (current && current.paused !== undefined) {
+        const { paused: left, ...rest } = current;
+        save({ ...rest, end: Date.now() + left * 1000 });
+      }
+    },
     adjust: (amount: number) => {
-      if (current)
+      if (!current) return;
+      if (current.paused !== undefined)
+        save({ ...current, paused: Math.max(0, current.paused + amount) });
+      else
         save({
           ...current,
           end: Math.max(Date.now(), current.end ?? Date.now()) + amount * 1000,

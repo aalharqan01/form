@@ -765,12 +765,6 @@ export function WorkoutScreen({
     [workout],
   );
   const requestFinish = () => {
-    if (!done) {
-      setError(
-        'Complete at least one set first, or discard the workout below.',
-      );
-      return;
-    }
     setError('');
     setFinish(true);
   };
@@ -1003,7 +997,7 @@ export function WorkoutScreen({
             onPress={() => setSaveRoutine(true)}
           />
           <TextButton
-            label="Discard workout"
+            label="End without saving"
             danger
             onPress={() => setDiscard(true)}
           />
@@ -1053,17 +1047,24 @@ export function WorkoutScreen({
       <Sheet
         open={finish}
         onClose={() => setFinish(false)}
-        title="Finish workout?"
+        title={done ? 'Finish workout?' : 'End workout?'}
         description={
           <View style={{ gap: 8 }}>
-            <Body size={13}>
-              {done} completed {done === 1 ? 'set' : 'sets'} ·{' '}
-              {volume(workout).toLocaleString(undefined, {
-                maximumFractionDigits: 1,
-              })}{' '}
-              kg total volume.
-            </Body>
-            {unfinished > 0 ? (
+            {done ? (
+              <Body size={13}>
+                {done} completed {done === 1 ? 'set' : 'sets'} ·{' '}
+                {volume(workout).toLocaleString(undefined, {
+                  maximumFractionDigits: 1,
+                })}{' '}
+                kg total volume.
+              </Body>
+            ) : (
+              <Body size={13}>
+                No sets are completed yet, so there is nothing to save. End the
+                workout without saving, or keep training.
+              </Body>
+            )}
+            {!done ? null : unfinished > 0 ? (
               <Body size={13}>
                 {unfinished} unfinished {unfinished === 1 ? 'set' : 'sets'} will
                 be marked as skipped. Your coach can see that you finished
@@ -1076,12 +1077,22 @@ export function WorkoutScreen({
         }
       >
         <View style={{ marginTop: 22, gap: 6 }}>
-          <PrimaryButton
-            full
-            label={unfinished > 0 ? 'Save & finish early' : 'Save workout'}
-            icon={<Check size={19} color={theme.primaryText} />}
-            disabled={busy}
-            onPress={finishNow}
+          {done > 0 && (
+            <PrimaryButton
+              full
+              label={unfinished > 0 ? 'Save & finish early' : 'Save workout'}
+              icon={<Check size={19} color={theme.primaryText} />}
+              disabled={busy}
+              onPress={finishNow}
+            />
+          )}
+          <TextButton
+            label="End without saving"
+            danger
+            onPress={() => {
+              setFinish(false);
+              setDiscard(true);
+            }}
           />
           <TextButton label="Keep training" onPress={() => setFinish(false)} />
         </View>
@@ -1089,12 +1100,12 @@ export function WorkoutScreen({
       <Sheet
         open={discard}
         onClose={() => setDiscard(false)}
-        title="Discard workout?"
-        description="This removes the active workout and its sets. Your saved history stays unchanged."
+        title="End without saving?"
+        description="This ends the active workout and drops its sets. Your saved history stays unchanged."
       >
         <View style={{ marginTop: 18 }}>
           <DangerButton
-            label="Discard"
+            label="End workout"
             onPress={() =>
               act(async () => {
                 await update((d) => ({ ...d, active: null }));

@@ -11,6 +11,8 @@ import {
   Timer,
   Users,
   X,
+  Pause,
+  Play,
 } from 'lucide-react-native';
 import type { Rest } from './use-rest';
 import { useTheme } from './theme';
@@ -41,10 +43,22 @@ export function Topbar({
       }}
     >
       <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-        <T weight={600} size={32} line={34} tracking={-2.4} color={isDark ? theme.ink : '#233b26'}>
+        <T
+          weight={600}
+          size={32}
+          line={34}
+          tracking={-2.4}
+          color={isDark ? theme.ink : '#233b26'}
+        >
           form
         </T>
-        <T weight={500} size={11} line={13} color={isDark ? theme.ink : '#233b26'} style={{ marginTop: 3, marginLeft: 2 }}>
+        <T
+          weight={500}
+          size={11}
+          line={13}
+          color={isDark ? theme.ink : '#233b26'}
+          style={{ marginTop: 3, marginLeft: 2 }}
+        >
           ®
         </T>
       </View>
@@ -53,7 +67,12 @@ export function Topbar({
           accessibilityRole="button"
           accessibilityLabel="Refresh training data"
           onPress={onRefresh}
-          style={{ flexDirection: 'row', alignItems: 'center', gap: 5, minHeight: 36 }}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 5,
+            minHeight: 36,
+          }}
         >
           {error ? (
             <CircleAlert size={15} color={theme.danger} />
@@ -80,7 +99,11 @@ export function Topbar({
             justifyContent: 'center',
           }}
         >
-          <Settings2 size={18} strokeWidth={1.5} color={isDark ? theme.ink : '#485e43'} />
+          <Settings2
+            size={18}
+            strokeWidth={1.5}
+            color={isDark ? theme.ink : '#485e43'}
+          />
         </Press>
       </View>
     </View>
@@ -147,7 +170,11 @@ export function BottomNav({
             }}
           >
             <View>
-              <Icon size={20} strokeWidth={1.5} color={selected ? theme.green : theme.navText} />
+              <Icon
+                size={20}
+                strokeWidth={1.5}
+                color={selected ? theme.green : theme.navText}
+              />
               {key === 'train' && activeWorkout && (
                 <View
                   style={{
@@ -162,7 +189,11 @@ export function BottomNav({
                 />
               )}
             </View>
-            <T size={11} line={13} color={selected ? theme.green : theme.navText}>
+            <T
+              size={11}
+              line={13}
+              color={selected ? theme.green : theme.navText}
+            >
               {label}
             </T>
           </Pressable>
@@ -182,7 +213,12 @@ export function RestIsland({ rest }: { rest: Rest }) {
   useEffect(() => {
     if (active) {
       setShown(true);
-      Animated.timing(progress, { toValue: 1, duration: 260, easing: easeOut, useNativeDriver: native }).start();
+      Animated.timing(progress, {
+        toValue: 1,
+        duration: 260,
+        easing: easeOut,
+        useNativeDriver: native,
+      }).start();
     } else if (shown) {
       Animated.timing(progress, {
         toValue: 0,
@@ -227,8 +263,18 @@ export function RestIsland({ rest }: { rest: Rest }) {
         bottom: navInset(insets.bottom) + 84,
         opacity: progress,
         transform: [
-          { translateY: progress.interpolate({ inputRange: [0, 1], outputRange: [24, 0] }) },
-          { scale: progress.interpolate({ inputRange: [0, 1], outputRange: [0.96, 1] }) },
+          {
+            translateY: progress.interpolate({
+              inputRange: [0, 1],
+              outputRange: [24, 0],
+            }),
+          },
+          {
+            scale: progress.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0.96, 1],
+            }),
+          },
         ],
         flexDirection: 'row',
         alignItems: 'center',
@@ -242,8 +288,18 @@ export function RestIsland({ rest }: { rest: Rest }) {
     >
       <Timer size={18} color={theme.restLabel} />
       <View style={{ flex: 1, minWidth: 0 }}>
-        <T size={11} line={14} tracking={0.4} color={theme.restLabel} numberOfLines={1}>
-          {finished ? 'READY FOR YOUR NEXT SET' : 'REST TIMER'}
+        <T
+          size={11}
+          line={14}
+          tracking={0.4}
+          color={theme.restLabel}
+          numberOfLines={1}
+        >
+          {finished
+            ? 'READY FOR YOUR NEXT SET'
+            : rest.paused
+              ? 'REST PAUSED'
+              : 'REST TIMER'}
           {rest.name && !finished ? ` · ${rest.name.toUpperCase()}` : ''}
         </T>
         <T
@@ -263,12 +319,39 @@ export function RestIsland({ rest }: { rest: Rest }) {
           {adjust('+15s', 15)}
         </View>
       )}
+      {!finished && (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={
+            rest.paused ? 'Resume rest timer' : 'Pause rest timer'
+          }
+          onPress={rest.paused ? rest.resume : rest.pause}
+          hitSlop={8}
+          style={{
+            width: 34,
+            height: 34,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          {rest.paused ? (
+            <Play size={18} color="#fff" />
+          ) : (
+            <Pause size={18} color="#fff" />
+          )}
+        </Pressable>
+      )}
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Skip rest timer"
         onPress={rest.skip}
         hitSlop={8}
-        style={{ width: 34, height: 34, alignItems: 'center', justifyContent: 'center' }}
+        style={{
+          width: 34,
+          height: 34,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
       >
         <X size={18} color="#bfd2b3" />
       </Pressable>
