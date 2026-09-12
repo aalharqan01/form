@@ -7,18 +7,18 @@ export const identities = {
   coach: {
     id: 'local-form-coach',
     email: 'coach@form.test',
-    name: 'Sam Coach',
+    name: 'Faisal Al-Qahtani',
   },
   client: {
     id: 'local-form-client',
     email: 'client@form.test',
-    name: 'Alex Client',
+    name: 'Abdullah Al-Harbi',
   },
   // Independent trainee with no coaching membership: free-tier app view.
   solo: {
     id: 'local-form-solo',
     email: 'solo@form.test',
-    name: 'Riley Solo',
+    name: 'Sara Al-Otaibi',
   },
 } as const;
 export type DevRole = keyof typeof identities;

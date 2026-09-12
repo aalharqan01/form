@@ -13,7 +13,7 @@ const keyset = createLocalJWKSet({
 async function token(overrides = {}) {
   return new SignJWT({
     email: 'coach@example.test',
-    name: 'Sam Coach',
+    name: 'Faisal Al-Qahtani',
     ...overrides,
   })
     .setProtectedHeader({ alg: 'RS256', kid: 'test' })

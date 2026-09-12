@@ -653,7 +653,7 @@ test('simulation completes the coach-trainee workflow in isolated memory', async
   assert.throws(() => store.change(simulatePayment), /accept first/);
   store.request('trainee', '', {
     action: 'request',
-    name: 'Alex',
+    name: 'Abdullah',
     offerId: 'demo-package',
     intake,
     consent: true,

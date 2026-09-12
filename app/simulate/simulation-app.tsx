@@ -130,12 +130,12 @@ export default function SimulationApp() {
   ];
   const instructions = [
     'Browse Sam’s package below and send a request. Or use the sample request to move quickly.',
-    'Switch to Coach, open Alex’s request, and accept it. The coach sees the intake but cannot access workout or weight history yet.',
+    'Switch to Coach, open Abdullah’s request, and accept it. The coach sees the intake but cannot access workout or weight history yet.',
     'Switch to Trainee. The request is accepted, but coaching is still locked. The simulation button below represents a verified payment; it never charges money.',
-    'Switch to Coach, open Alex, and choose Assign program. You can build it yourself or assign the example below.',
+    'Switch to Coach, open Abdullah, and choose Assign program. You can build it yourself or assign the example below.',
     'Switch to Trainee → Workouts. Start a session, enter weights and reps, mark sets done, and finish. The saved workout is immediately visible to the simulated coach.',
     'Open Daily weight to record a weigh-in. Then add four weeks of sample progress and switch to Coach to review the results.',
-    'Switch to Coach, open Alex, and use Overview → Shared progress. Open an exercise to compare weekly load, reps and volume. Weight history shows every daily entry. Try Check-ins and Messages too.',
+    'Switch to Coach, open Abdullah, and use Overview → Shared progress. Open an exercise to compare weekly load, reps and volume. Weight history shows every daily entry. Try Check-ins and Messages too.',
   ];
   return (
     <div className="sim-app">
@@ -161,7 +161,7 @@ export default function SimulationApp() {
               onClick={() => setRole('trainee')}
             >
               <Dumbbell size={17} />
-              Trainee · Alex
+              Trainee · Abdullah
             </button>
             <button
               aria-pressed={role === 'coach'}
@@ -211,7 +211,7 @@ export default function SimulationApp() {
                 action((draft) => {
                   simulationRequest(draft, 'trainee', '', {
                     action: 'request',
-                    name: 'Alex',
+                    name: 'Abdullah',
                     offerId: 'demo-package',
                     consent: true,
                     intake: {
