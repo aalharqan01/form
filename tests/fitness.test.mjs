@@ -310,3 +310,35 @@ test('native training copies routines, preserves video instructions and converts
   assert.equal(restRemaining(null, 15000), 0);
   assert.ok(validateData({ ...EMPTY, active: workout }));
 });
+test('pausing a workout excludes paused time from its duration and validates', async () => {
+  const { pauseWorkout, resumeWorkout, workoutSeconds, pausedSeconds } =
+    await import('../lib/fitness.ts');
+  const start = Date.parse('2026-09-12T10:00:00.000Z');
+  const workout = {
+    id: 'w1',
+    name: 'Push',
+    startedAt: new Date(start).toISOString(),
+    notes: '',
+    exercises: [],
+  };
+  const paused = pauseWorkout(workout, new Date(start + 60000));
+  assert.equal(
+    pauseWorkout(paused, new Date(start + 90000)).pausedAt,
+    paused.pausedAt,
+  );
+  assert.equal(pausedSeconds(paused, start + 90000), 30);
+  assert.equal(workoutSeconds(paused, start + 90000), 60);
+  const resumed = resumeWorkout(paused, new Date(start + 120000));
+  assert.equal(resumed.pausedAt, undefined);
+  assert.equal(resumed.pausedSeconds, 60);
+  assert.equal(workoutSeconds(resumed, start + 300000), 240);
+  assert.equal(resumeWorkout(resumed), resumed);
+  assert.ok(validateData({ ...EMPTY, active: resumed }));
+  assert.ok(validateData({ ...EMPTY, active: paused }));
+  assert.ok(
+    !validateData({ ...EMPTY, active: { ...resumed, pausedSeconds: -1 } }),
+  );
+  assert.ok(
+    !validateData({ ...EMPTY, active: { ...resumed, pausedAt: 'soon' } }),
+  );
+});

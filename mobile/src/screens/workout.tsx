@@ -1,8 +1,33 @@
-import { useEffect, useMemo, useRef, useState, type MutableRefObject } from 'react';
-import { Animated, Easing, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
-import { Bookmark, Check, Dumbbell, Plus, X } from 'lucide-react-native';
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type MutableRefObject,
+} from 'react';
+import {
+  Animated,
+  Easing,
+  Platform,
+  Pressable,
+  ScrollView,
+  TextInput,
+  View,
+} from 'react-native';
+import {
+  Bookmark,
+  Check,
+  Dumbbell,
+  Pause,
+  Play,
+  Plus,
+  X,
+} from 'lucide-react-native';
 import { randomUUID } from 'expo-crypto';
 import {
+  pauseWorkout,
+  resumeWorkout,
+  workoutSeconds,
   completedSets,
   displayWeight,
   lastPerformance,
@@ -12,7 +37,10 @@ import {
   type Workout,
 } from '../../../lib/fitness';
 import { changeExerciseUnit, routineFromWorkout } from '../../../lib/training';
-import { editWorkoutSet, finishAssignedWorkout } from '../../../lib/mobile-workout';
+import {
+  editWorkoutSet,
+  finishAssignedWorkout,
+} from '../../../lib/mobile-workout';
 import type { Training } from '../use-training';
 import type { Rest } from '../use-rest';
 import { font, useTheme } from '../theme';
@@ -99,7 +127,12 @@ function CheckButton({
       aria-checked={done}
       disabled={busy}
       onPress={onPress}
-      style={{ width: 43, height: 52, alignItems: 'center', justifyContent: 'center' }}
+      style={{
+        width: 43,
+        height: 52,
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
     >
       <Animated.View
         style={{
@@ -110,8 +143,18 @@ function CheckButton({
           borderRadius: 15,
           borderWidth: 2,
           borderColor: theme.checkDone,
-          opacity: ring.interpolate({ inputRange: [0, 0.2, 1], outputRange: [0, 0.6, 0] }),
-          transform: [{ scale: ring.interpolate({ inputRange: [0, 1], outputRange: [1, 1.55] }) }],
+          opacity: ring.interpolate({
+            inputRange: [0, 0.2, 1],
+            outputRange: [0, 0.6, 0],
+          }),
+          transform: [
+            {
+              scale: ring.interpolate({
+                inputRange: [0, 1],
+                outputRange: [1, 1.55],
+              }),
+            },
+          ],
         }}
       />
       <Animated.View
@@ -125,7 +168,11 @@ function CheckButton({
           transform: [{ scale }],
         }}
       >
-        <Check size={20} strokeWidth={done ? 2.4 : 2} color={done ? theme.primaryText : theme.checkIdleText} />
+        <Check
+          size={20}
+          strokeWidth={done ? 2.4 : 2}
+          color={done ? theme.primaryText : theme.checkIdleText}
+        />
       </Animated.View>
     </Pressable>
   );
@@ -194,20 +241,35 @@ function Stepper({
           accessibilityRole="button"
           accessibilityLabel={`Decrease ${label}`}
           onPress={() => bump(-Number(step))}
-          style={{ flex: 1, height: 37, alignItems: 'center', justifyContent: 'center' }}
+          style={{
+            flex: 1,
+            height: 37,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
         >
           <T size={20} line={24}>
             −
           </T>
         </Pressable>
-        <T size={11} line={14} color={theme.muted} style={{ flex: 1, textAlign: 'center' }}>
+        <T
+          size={11}
+          line={14}
+          color={theme.muted}
+          style={{ flex: 1, textAlign: 'center' }}
+        >
           {step}
         </T>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={`Increase ${label}`}
           onPress={() => bump(Number(step))}
-          style={{ flex: 1, height: 37, alignItems: 'center', justifyContent: 'center' }}
+          style={{
+            flex: 1,
+            height: 37,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
         >
           <T size={20} line={24}>
             +
@@ -296,7 +358,14 @@ function ExerciseCard({
   return (
     <Bezel tight>
       <Card padding={15} style={{ borderRadius: 19 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 10,
+            flexWrap: 'wrap',
+          }}
+        >
           <Thumbnail name={exercise.name} />
           <View style={{ flex: 1, minWidth: 120 }}>
             <T weight={500} size={23} line={27} tracking={-0.8}>
@@ -315,7 +384,9 @@ function ExerciseCard({
             ]}
             labelFor={(o) => `${exercise.name} ${o.label}`}
             value={unit}
-            onChange={(next) => act(() => change((e) => changeExerciseUnit(e, next)))}
+            onChange={(next) =>
+              act(() => change((e) => changeExerciseUnit(e, next)))
+            }
           />
           <IconButton
             icon={<X size={18} color={theme.muted} />}
@@ -324,7 +395,15 @@ function ExerciseCard({
             onPress={remove}
           />
         </View>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 14, flexWrap: 'wrap' }}>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 8,
+            marginTop: 14,
+            flexWrap: 'wrap',
+          }}
+        >
           <Press
             accessibilityRole="button"
             accessibilityLabel={`Rest time for ${exercise.name}`}
@@ -395,14 +474,26 @@ function ExerciseCard({
             />
           </View>
         ) : null}
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 16, marginBottom: 6 }}>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 10,
+            marginTop: 16,
+            marginBottom: 6,
+          }}
+        >
           {['SET', unit.toUpperCase(), 'REPS', 'DONE'].map((label, i) => (
             <T
               key={label + i}
               size={10}
               line={14}
               color={theme.muted}
-              style={{ width: i === 0 ? 35 : i === 3 ? 43 : undefined, flex: i === 1 || i === 2 ? 1 : undefined, textAlign: 'center' }}
+              style={{
+                width: i === 0 ? 35 : i === 3 ? 43 : undefined,
+                flex: i === 1 || i === 2 ? 1 : undefined,
+                textAlign: 'center',
+              }}
             >
               {label}
             </T>
@@ -411,7 +502,15 @@ function ExerciseCard({
         {exercise.sets.map((set, i) => {
           const warmup = set.kind === 'warmup';
           return (
-            <View key={set.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginVertical: 8 }}>
+            <View
+              key={set.id}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 10,
+                marginVertical: 8,
+              }}
+            >
               <View style={{ width: 35, alignItems: 'center', gap: 4 }}>
                 <Pressable
                   accessibilityRole="button"
@@ -422,7 +521,9 @@ function ExerciseCard({
                       change((e) => ({
                         ...e,
                         sets: e.sets.map((v) =>
-                          v.id === set.id ? { ...v, kind: warmup ? 'working' : 'warmup' } : v,
+                          v.id === set.id
+                            ? { ...v, kind: warmup ? 'working' : 'warmup' }
+                            : v,
                         ),
                       })),
                     )
@@ -436,7 +537,11 @@ function ExerciseCard({
                     justifyContent: 'center',
                   }}
                 >
-                  <T size={13} line={16} color={warmup ? theme.warmupText : theme.ink}>
+                  <T
+                    size={13}
+                    line={16}
+                    color={warmup ? theme.warmupText : theme.ink}
+                  >
                     {warmup ? 'W' : i + 1}
                   </T>
                 </Pressable>
@@ -445,9 +550,20 @@ function ExerciseCard({
                   accessibilityLabel={`Remove set ${i + 1}`}
                   onPress={() => {
                     if (set.done) setConfirmRemove(set);
-                    else act(() => change((e) => ({ ...e, sets: e.sets.filter((v) => v.id !== set.id) })));
+                    else
+                      act(() =>
+                        change((e) => ({
+                          ...e,
+                          sets: e.sets.filter((v) => v.id !== set.id),
+                        })),
+                      );
                   }}
-                  style={{ height: 30, width: 35, alignItems: 'center', justifyContent: 'center' }}
+                  style={{
+                    height: 30,
+                    width: 35,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
                 >
                   <T size={19} line={22} color={theme.muted}>
                     ×
@@ -460,7 +576,9 @@ function ExerciseCard({
                 step={unit === 'kg' ? '2.5' : '5'}
                 done={set.done}
                 keyboard="decimal-pad"
-                onChange={(load) => act(() => editSet(set.id, { load, done: false }))}
+                onChange={(load) =>
+                  act(() => editSet(set.id, { load, done: false }))
+                }
               />
               <Stepper
                 label={`${exercise.name} set ${i + 1} reps`}
@@ -468,7 +586,9 @@ function ExerciseCard({
                 step="1"
                 done={set.done}
                 keyboard="number-pad"
-                onChange={(reps) => act(() => editSet(set.id, { reps, done: false }))}
+                onChange={(reps) =>
+                  act(() => editSet(set.id, { reps, done: false }))
+                }
               />
               <CheckButton
                 done={set.done}
@@ -484,7 +604,11 @@ function ExerciseCard({
             <Press
               key={kind}
               accessibilityRole="button"
-              accessibilityLabel={kind === 'working' ? `Add set to ${exercise.name}` : `Add warm-up set to ${exercise.name}`}
+              accessibilityLabel={
+                kind === 'working'
+                  ? `Add set to ${exercise.name}`
+                  : `Add warm-up set to ${exercise.name}`
+              }
               disabled={busy || exercise.sets.length >= 50}
               onPress={() => addSet(kind)}
               scale={0.98}
@@ -492,7 +616,8 @@ function ExerciseCard({
                 flex: 1,
                 height: 46,
                 borderRadius: 10,
-                backgroundColor: theme.scheme === 'dark' ? theme.soft : '#f5f7f0',
+                backgroundColor:
+                  theme.scheme === 'dark' ? theme.soft : '#f5f7f0',
                 flexDirection: 'row',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -513,7 +638,11 @@ function ExerciseCard({
         title={`Rest for ${exercise.name}`}
         description="Rest after each set of this exercise. 0 turns the countdown off."
       >
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, marginTop: 16 }}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ gap: 6, marginTop: 16 }}
+        >
           {REST_PRESETS.map((seconds) => (
             <Chip
               key={seconds}
@@ -542,7 +671,12 @@ function ExerciseCard({
             onPress={() =>
               act(async () => {
                 const seconds = Number(restDraft);
-                if (!restDraft.trim() || !Number.isInteger(seconds) || seconds < 0 || seconds > 600)
+                if (
+                  !restDraft.trim() ||
+                  !Number.isInteger(seconds) ||
+                  seconds < 0 ||
+                  seconds > 600
+                )
                   throw new Error('Choose a rest time from 0 to 600 seconds.');
                 await change((e) => ({ ...e, restSeconds: seconds }));
                 setRestSheet(false);
@@ -573,7 +707,12 @@ function ExerciseCard({
               const target = confirmRemove;
               setConfirmRemove(null);
               if (target)
-                act(() => change((e) => ({ ...e, sets: e.sets.filter((v) => v.id !== target.id) })));
+                act(() =>
+                  change((e) => ({
+                    ...e,
+                    sets: e.sets.filter((v) => v.id !== target.id),
+                  })),
+                );
             }}
           />
         </View>
@@ -611,19 +750,25 @@ export function WorkoutScreen({
   const change = (fn: (w: Workout) => Workout) =>
     update((d) => ({ ...d, active: d.active ? fn(d.active) : null }));
   const changeExercise = (id: string, fn: (e: Exercise) => Exercise) =>
-    change((w) => ({ ...w, exercises: w.exercises.map((e) => (e.id === id ? fn(e) : e)) }));
+    change((w) => ({
+      ...w,
+      exercises: w.exercises.map((e) => (e.id === id ? fn(e) : e)),
+    }));
   const done = completedSets(workout),
     total = workout.exercises.reduce((n, e) => n + e.sets.length, 0),
     unfinished = total - done,
     index = Math.min(focusIndex, Math.max(0, workout.exercises.length - 1));
-  const elapsed = duration((rest.clock - Date.parse(workout.startedAt)) / 1000);
+  const paused = !!workout.pausedAt;
+  const elapsed = duration(workoutSeconds(workout, rest.clock));
   const routine = useMemo(
     () => routineFromWorkout(workout, randomUUID(), workout.name),
     [workout],
   );
   const requestFinish = () => {
     if (!done) {
-      setError('Complete at least one set first, or discard the workout below.');
+      setError(
+        'Complete at least one set first, or discard the workout below.',
+      );
       return;
     }
     setError('');
@@ -651,7 +796,15 @@ export function WorkoutScreen({
     }, 'Workout saved. Your coach can review your sets.');
   return (
     <View style={{ paddingBottom: 20 }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 18 }}>
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 10,
+          marginBottom: 18,
+        }}
+      >
         <View style={{ flex: 1, minWidth: 0 }}>
           <Eyebrow style={{ marginBottom: 8 }}>ACTIVE WORKOUT</Eyebrow>
           <TextInput
@@ -661,7 +814,13 @@ export function WorkoutScreen({
             onChangeText={(name) => act(() => change((w) => ({ ...w, name })))}
             style={[
               font(500),
-              { fontSize: 31, letterSpacing: -1.9, color: theme.ink, height: 45, padding: 0 },
+              {
+                fontSize: 31,
+                letterSpacing: -1.9,
+                color: theme.ink,
+                height: 45,
+                padding: 0,
+              },
             ]}
           />
         </View>
@@ -674,7 +833,15 @@ export function WorkoutScreen({
           onPress={requestFinish}
         />
       </View>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 18, flexWrap: 'wrap' }}>
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 12,
+          marginBottom: 18,
+          flexWrap: 'wrap',
+        }}
+      >
         <Segmented
           options={[
             { value: 'focus', label: 'Focus' },
@@ -684,14 +851,56 @@ export function WorkoutScreen({
           onChange={(v) => setFocus(v === 'focus')}
           style={{ alignSelf: 'flex-start', minWidth: 190 }}
         />
-        <Body size={12} style={{ marginLeft: 'auto' }}>
-          {done}/{total} sets · {elapsed}
-        </Body>
+        <View
+          style={{
+            marginLeft: 'auto',
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 8,
+          }}
+        >
+          <Body size={12} style={paused ? { color: theme.green } : undefined}>
+            {done}/{total} sets · {elapsed}
+            {paused ? ' · Paused' : ''}
+          </Body>
+          <IconButton
+            size={34}
+            accessibilityLabel={
+              paused ? 'Resume workout timer' : 'Pause workout timer'
+            }
+            icon={
+              paused ? (
+                <Play size={16} color={theme.green} />
+              ) : (
+                <Pause size={16} color={theme.ink} />
+              )
+            }
+            onPress={() =>
+              act(() =>
+                change((w) =>
+                  w.pausedAt ? resumeWorkout(w) : pauseWorkout(w),
+                ),
+              )
+            }
+          />
+        </View>
       </View>
       <ErrorBanner text={error} onDismiss={() => setError('')} />
       {focus && workout.exercises.length > 0 && (
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-          <TextButton label="Previous" size={13} disabled={index === 0} onPress={() => setFocusIndex(index - 1)} />
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: 16,
+          }}
+        >
+          <TextButton
+            label="Previous"
+            size={13}
+            disabled={index === 0}
+            onPress={() => setFocusIndex(index - 1)}
+          />
           <Body size={12}>
             Exercise {index + 1} of {workout.exercises.length}
           </Body>
@@ -707,28 +916,51 @@ export function WorkoutScreen({
         {workout.exercises.map((exercise, i) =>
           focus && i !== index ? null : (
             <Reveal key={exercise.id} delay={Math.min(i, 4) * 45}>
-            <ExerciseCard
-              exercise={exercise}
-              workouts={data.workouts}
-              busy={busy}
-              rest={rest}
-              act={act}
-              change={(fn) => changeExercise(exercise.id, fn)}
-              editSet={(setId, patch) => change((w) => editWorkoutSet(w, exercise.id, setId, patch))}
-              remove={() => {
-                if (exercise.sets.some((s) => s.done)) setRemoving(exercise);
-                else act(() => change((w) => ({ ...w, exercises: w.exercises.filter((v) => v.id !== exercise.id) })));
-              }}
-              onError={setError}
-            />
+              <ExerciseCard
+                exercise={exercise}
+                workouts={data.workouts}
+                busy={busy}
+                rest={rest}
+                act={act}
+                change={(fn) => changeExercise(exercise.id, fn)}
+                editSet={(setId, patch) =>
+                  change((w) => editWorkoutSet(w, exercise.id, setId, patch))
+                }
+                remove={() => {
+                  if (exercise.sets.some((s) => s.done)) setRemoving(exercise);
+                  else
+                    act(() =>
+                      change((w) => ({
+                        ...w,
+                        exercises: w.exercises.filter(
+                          (v) => v.id !== exercise.id,
+                        ),
+                      })),
+                    );
+                }}
+                onError={setError}
+              />
             </Reveal>
           ),
         )}
       </View>
       {!workout.exercises.length && (
-        <View style={{ alignItems: 'center', paddingTop: 55, paddingBottom: 30, gap: 12 }}>
+        <View
+          style={{
+            alignItems: 'center',
+            paddingTop: 55,
+            paddingBottom: 30,
+            gap: 12,
+          }}
+        >
           <Dumbbell size={36} strokeWidth={1.4} color={theme.routineMarkText} />
-          <T weight={500} size={24} line={28} tracking={-0.8} color={theme.secondaryText}>
+          <T
+            weight={500}
+            size={24}
+            line={28}
+            tracking={-0.8}
+            color={theme.secondaryText}
+          >
             No exercises yet
           </T>
         </View>
@@ -751,17 +983,30 @@ export function WorkoutScreen({
             multiline
             maxLength={2000}
             value={workout.notes}
-            onChangeText={(notes) => act(() => change((w) => ({ ...w, notes })))}
+            onChangeText={(notes) =>
+              act(() => change((w) => ({ ...w, notes })))
+            }
           />
         </Field>
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 13 }}>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginTop: 13,
+          }}
+        >
           <TextButton
             label="Save as plan"
             icon={<Bookmark size={16} color={theme.textButton} />}
             disabled={!workout.exercises.length || data.routines.length >= 100}
             onPress={() => setSaveRoutine(true)}
           />
-          <TextButton label="Discard workout" danger onPress={() => setDiscard(true)} />
+          <TextButton
+            label="Discard workout"
+            danger
+            onPress={() => setDiscard(true)}
+          />
         </View>
       </Disclosure>
       <ExercisePicker
@@ -813,12 +1058,16 @@ export function WorkoutScreen({
           <View style={{ gap: 8 }}>
             <Body size={13}>
               {done} completed {done === 1 ? 'set' : 'sets'} ·{' '}
-              {volume(workout).toLocaleString(undefined, { maximumFractionDigits: 1 })} kg total volume.
+              {volume(workout).toLocaleString(undefined, {
+                maximumFractionDigits: 1,
+              })}{' '}
+              kg total volume.
             </Body>
             {unfinished > 0 ? (
               <Body size={13}>
-                {unfinished} unfinished {unfinished === 1 ? 'set' : 'sets'} will be marked as skipped.
-                Your coach can see that you finished early.
+                {unfinished} unfinished {unfinished === 1 ? 'set' : 'sets'} will
+                be marked as skipped. Your coach can see that you finished
+                early.
               </Body>
             ) : (
               <Body size={13}>Every set is complete. Nice work.</Body>
@@ -870,7 +1119,12 @@ export function WorkoutScreen({
               const target = removing;
               setRemoving(null);
               if (target)
-                act(() => change((w) => ({ ...w, exercises: w.exercises.filter((v) => v.id !== target.id) })));
+                act(() =>
+                  change((w) => ({
+                    ...w,
+                    exercises: w.exercises.filter((v) => v.id !== target.id),
+                  })),
+                );
             }}
           />
         </View>
@@ -882,7 +1136,11 @@ export function WorkoutScreen({
           onClose={() => setSaveRoutine(false)}
           onSave={(r) =>
             act(
-              () => update((d) => ({ ...d, routines: [...d.routines, { ...r, id: randomUUID() }] })),
+              () =>
+                update((d) => ({
+                  ...d,
+                  routines: [...d.routines, { ...r, id: randomUUID() }],
+                })),
               'Plan saved.',
             )
           }

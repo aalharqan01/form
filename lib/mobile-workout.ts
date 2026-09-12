@@ -1,6 +1,6 @@
 import type { Program } from './coaching';
 import type { Workout } from './fitness.ts';
-import { toKg } from './fitness.ts';
+import { resumeWorkout, toKg } from './fitness.ts';
 
 export function foundationProgram(
   title = 'Strength A',
@@ -119,7 +119,7 @@ export function finishAssignedWorkout(
   if (!sets.some((set) => set.done))
     throw new Error('Log at least one set, or discard the empty workout.');
   return {
-    ...workout,
+    ...resumeWorkout(workout, now),
     endedEarly: sets.some((set) => !set.done),
     finishedAt: now.toISOString(),
   };

@@ -2,6 +2,14 @@
 
 Newest first. Each entry says what changed, how to run it, and what is still open, so a fresh `git pull` is enough to get going.
 
+## 12 September 2026 — deploy on merge, workout pause, coach nav
+
+### What changed
+
+- **Deploy on merge.** The GitHub Actions workflow now deploys the development build to the Cloudflare Worker `form-dev` after every green merge to `main`. No toggle variable any more; if the secret or variables are missing the job warns and skips instead of failing. Setup commands are in `docs/DEPLOYMENT.md`. Disconnect Cloudflare's own GitHub build integration so there is one deployer.
+- **Workout timer pause** in the trainee app: a pause/resume button next to the elapsed time. Paused time is excluded from the workout duration in the app and web history. New optional `pausedAt` / `pausedSeconds` fields on workouts.
+- The coach website no longer links to My training.
+
 ## 12 September 2026 — CI fix and local verify script
 
 ### What changed
