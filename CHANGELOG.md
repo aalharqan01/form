@@ -2,6 +2,13 @@
 
 Newest first. Each entry says what changed, how to run it, and what is still open, so a fresh `git pull` is enough to get going.
 
+## 12 September 2026 — dashboard tiles filter properly
+
+### What changed
+
+- The three tiles on the coach dashboard (Active clients, Needs attention, New requests) are now one filter: the selected tile is highlighted, the others are plain, and the list below plus the All clients / Needs attention / New requests switch follow it. "Review requests" jumps to the New requests view. Tiles have hover, press and 200 ms colour transitions, disabled under reduced motion.
+- The Weekly average weight card shows the average and the change side by side with their captions beneath, on desktop and phone.
+
 ## 12 September 2026 — Saudi fixture names
 
 ### What changed
