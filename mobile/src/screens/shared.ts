@@ -1,5 +1,6 @@
 import { randomUUID } from 'expo-crypto';
 import {
+  workoutSeconds,
   displayWeight,
   lastPerformance,
   type FitnessData,
@@ -66,9 +67,10 @@ export function minutesOf(workout: Workout) {
   return Math.max(
     1,
     Math.round(
-      (Date.parse(workout.finishedAt ?? workout.startedAt) -
-        Date.parse(workout.startedAt)) /
-        60000,
+      workoutSeconds(
+        workout,
+        Date.parse(workout.finishedAt ?? workout.startedAt),
+      ) / 60,
     ),
   );
 }

@@ -32,6 +32,7 @@ import {
 } from '@/components/ui/dialog';
 import { useFitness } from '@/hooks/use-fitness';
 import {
+  workoutSeconds,
   type FitnessData,
   type Routine,
   type Workout,
@@ -821,9 +822,8 @@ export default function FitnessApp() {
                             {Math.max(
                               1,
                               Math.round(
-                                (Date.parse(w.finishedAt!) -
-                                  Date.parse(w.startedAt)) /
-                                  60000,
+                                workoutSeconds(w, Date.parse(w.finishedAt!)) /
+                                  60,
                               ),
                             )}{' '}
                             min

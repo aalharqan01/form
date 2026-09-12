@@ -17,6 +17,10 @@ export type Exercise = {
   sets: LiftSet[];
 };
 export type Workout = {
+  /** Set while the active workout's timer is paused. */
+  pausedAt?: string;
+  /** Seconds spent paused, excluded from the workout duration. */
+  pausedSeconds?: number;
   endedEarly?: boolean;
   membershipId?: string;
   programSessionId?: string;
@@ -280,6 +284,34 @@ const str = (x: unknown, max = 200): x is string =>
   typeof x === 'string' && x.length <= max;
 const number = (x: unknown, min: number, max: number): x is number =>
   typeof x === 'number' && Number.isFinite(x) && x >= min && x <= max;
+/** Seconds a workout has been paused, including an open pause at `now`. */
+export function pausedSeconds(workout: Workout, now = Date.now()) {
+  const closed = workout.pausedSeconds ?? 0;
+  const open = workout.pausedAt
+    ? Math.max(0, (now - Date.parse(workout.pausedAt)) / 1000)
+    : 0;
+  return closed + open;
+}
+/** Active seconds between start and `end`, excluding pauses. */
+export function workoutSeconds(workout: Workout, end = Date.now()) {
+  return Math.max(
+    0,
+    (end - Date.parse(workout.startedAt)) / 1000 - pausedSeconds(workout, end),
+  );
+}
+export function pauseWorkout(workout: Workout, now = new Date()): Workout {
+  return workout.pausedAt
+    ? workout
+    : { ...workout, pausedAt: now.toISOString() };
+}
+export function resumeWorkout(workout: Workout, now = new Date()): Workout {
+  if (!workout.pausedAt) return workout;
+  const { pausedAt: _open, ...rest } = workout;
+  return {
+    ...rest,
+    pausedSeconds: Math.round(pausedSeconds(workout, now.getTime())),
+  };
+}
 export function validateData(d: unknown): d is FitnessData {
   if (!d || typeof d !== 'object') return false;
   const v = d as FitnessData;
@@ -287,6 +319,9 @@ export function validateData(d: unknown): d is FitnessData {
     w &&
     str(w.id, 100) &&
     (w.endedEarly === undefined || typeof w.endedEarly === 'boolean') &&
+    (w.pausedAt === undefined ||
+      (str(w.pausedAt, 40) && Number.isFinite(Date.parse(w.pausedAt)))) &&
+    (w.pausedSeconds === undefined || number(w.pausedSeconds, 0, 86400 * 7)) &&
     (w.membershipId === undefined || str(w.membershipId, 100)) &&
     (w.programSessionId === undefined || str(w.programSessionId, 100)) &&
     str(w.name, 100) &&

@@ -238,10 +238,6 @@ export default function CoachingWorkspace() {
             <ClipboardList size={20} strokeWidth={1.5} />
             Try a simulation
           </a>
-          <a href="/">
-            <Dumbbell size={20} strokeWidth={1.5} />
-            My training
-          </a>
         </nav>
         <div className="co-sidebar-bottom">
           <ThemeControl />
@@ -260,9 +256,6 @@ export default function CoachingWorkspace() {
               month: 'long',
             })}
           </span>
-          <a href="/">
-            My training <ArrowUpRight size={16} />
-          </a>
         </header>
         <ErrorNote text={c.error} />
         {!state ? (
