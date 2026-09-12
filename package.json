@@ -26,6 +26,7 @@
     "mobile:ios": "node scripts/ios-preview.mjs",
     "typecheck": "tsc --noEmit",
     "test:access": "node --experimental-strip-types --test tests/access.test.mjs",
+    "verify": "npm test && npm run test:roles && npm run test:access && npm run lint && npm run typecheck && npm --prefix mobile run typecheck",
     "cloudflare:configure": "node scripts/configure-cloudflare.mjs",
     "build:cloudflare": "node scripts/build-cloudflare.mjs",
     "cloudflare:check": "node scripts/check-cloudflare.mjs"
