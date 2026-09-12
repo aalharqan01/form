@@ -6,16 +6,17 @@ An installable workout and weight tracker with a coach–trainee Marketplace. Bu
 
 The latest `main` is always deployed to **https://form-dev.al3kbari131.workers.dev**. It sits behind Cloudflare Access: enter your email on the login page, click **Send me a code**, and paste the code from the email. Only addresses on the Access policy get in; ask Hassan to add yours.
 
+Every developer who signs in gets the same setup as the local launcher, created automatically on the first visit: you are the coach **That Guy** with sample clients, and you own two fixture trainees you can open the app as. Nothing is shared between developers.
+
 | What you want to see | Open |
 | --- | --- |
 | Coach website | `/coaching` |
-| Trainee web tracker | `/` |
-| Trainee app (the Expo app, web build) | `/app/` |
-| Coach website and trainee app side by side at phone size | `/__dev/phones` |
+| Trainee app as the coached client (Abdullah, program assigned, 8 weeks of history) | `/app/?role=coached` |
+| Trainee app as the independent trainee (Sara, free tier, 10 weeks of history) | `/app/?role=solo` |
+| All three side by side at phone size | `/__dev/phones` |
+| Trainee web tracker as yourself | `/` |
 
-Everything shows the account you signed in with. Hassan's account is the coach **That Guy** with sample clients, and Abdulaziz's account is the coached client with an assigned program and sample history, so the app under `/app/` shows the coached experience (My coach tab, program, messages) for him and the free-tier experience for Hassan. Data lives in the development database only; nothing here touches production.
-
-To refresh the sample data after signing in with Wrangler (`npx wrangler login`), run `npm run db:seed:dev-site -- --coach-id <cf-access id> --client-email <email> --client-name "<name>" --refresh`; see `scripts/seed-dev-site.mjs`.
+Assign a workout as the coach, complete it as Abdullah, and the coach sees it, exactly like the local preview. Data lives in the development database only; nothing here touches production, and production never enables these preview roles.
 
 ## Run on another computer
 

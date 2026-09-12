@@ -5,8 +5,8 @@ import {
   type FitnessData,
   type Routine,
   type Workout,
-} from '../lib/fitness.ts';
-import type { Program } from '../lib/coaching.ts';
+} from './fitness.ts';
+import type { Program } from './coaching.ts';
 
 // Deterministic sample history for the local fixtures. Every run produces the
 // same log for a given seed, so screenshots and manual checks stay comparable.

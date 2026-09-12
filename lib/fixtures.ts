@@ -1,5 +1,5 @@
-import { STARTERS, type Routine } from '../lib/fitness.ts';
-import type { CoachProfile, Program } from '../lib/coaching.ts';
+import { STARTERS, type Routine } from './fitness.ts';
+import type { CoachProfile, Program } from './coaching.ts';
 import type { CoachedOptions } from './synthetic.ts';
 
 // Sample coach, packages, templates, program and clients shared by the local

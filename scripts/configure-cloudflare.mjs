@@ -33,6 +33,9 @@ await writeFile(
       vars: {
         ACCESS_TEAM_DOMAIN: process.env.FORM_ACCESS_TEAM_DOMAIN,
         ACCESS_AUD: process.env.FORM_ACCESS_AUD,
+        // Developer preview identities: only ever 'true' on development targets.
+        PREVIEW_ROLES:
+          process.env.FORM_PREVIEW_ROLES === 'true' ? 'true' : 'false',
       },
       d1_databases: [
         {

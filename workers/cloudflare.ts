@@ -1,5 +1,9 @@
 import handler from 'vinext/server/fetch-handler';
-import { authenticateAccess, type AccessEnvironment } from './access';
+import {
+  applyPreviewRole,
+  authenticateAccess,
+  type AccessEnvironment,
+} from './access';
 
 type AssetsEnvironment = { ASSETS?: { fetch: typeof fetch } };
 
@@ -9,8 +13,9 @@ const worker = {
     env: Cloudflare.Env & AccessEnvironment & AssetsEnvironment,
     ctx: ExecutionContext,
   ) {
-    const verified = await authenticateAccess(request, env);
-    if (verified instanceof Response) return verified;
+    const authenticated = await authenticateAccess(request, env);
+    if (authenticated instanceof Response) return authenticated;
+    const verified = applyPreviewRole(authenticated, env);
     const url = new URL(verified.url);
     // The Worker runs before static assets so Access guards them too. Serve
     // built files from the assets binding and let the app handle the rest.

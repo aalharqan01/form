@@ -16,6 +16,10 @@ for (const name of [
   'video',
   'video-server',
   'media-server',
+  'synthetic',
+  'fixtures',
+  'seed-sql',
+  'dev-fixtures',
 ]) {
   const source = await readFile(`lib/${name}.ts`, 'utf8');
   const code = ts
@@ -26,7 +30,7 @@ for (const name of [
       },
     })
     .outputText.replace(
-      /from '\.\/(fitness|coaching|video-server)'/g,
+      /from '\.\/(fitness|coaching|video-server|synthetic|fixtures|seed-sql)(\.ts)?'/g,
       "from './$1.mjs'",
     );
   await writeFile(`${temp}/${name}.mjs`, code);
@@ -1240,7 +1244,10 @@ test('shared media is scoped to its membership and progress photos post into the
   );
 });
 
-test('records prepared for an email attach to the account that signs in with it', async () => {
+test('the development site creates each developer their own coach, clients and fixture trainees once', async () => {
+  const { ensureDeveloperFixtures, previewUserId, developerOf } = await import(
+    pathToFileURL(`${temp}/dev-fixtures.mjs`).href
+  );
   const db = memoryDB();
   for (const name of [
     '0000_illegal_bug.sql',
@@ -1251,47 +1258,44 @@ test('records prepared for an email attach to the account that signs in with it'
     '0005_coaching_media.sql',
   ])
     db.sql.exec(await readFile('drizzle/' + name, 'utf8'));
-  const now = new Date().toISOString();
-  const seeded = { ...structuredClone(EMPTY), goal: 70 };
-  db.sql
-    .prepare(
-      'INSERT INTO fitness_accounts (user_id,data,revision,updated_at) VALUES (?,?,0,?)',
-    )
-    .run('pending:' + trainee.email.toLowerCase(), JSON.stringify(seeded), now);
-  db.sql
-    .prepare(
-      "INSERT INTO coaching_memberships (id,coach_id,trainee_id,email,name,status,token_hash,expires_at,offer,intake,program,created_at,accepted_at) VALUES ('m-pending',?,NULL,?,'Trainee','active','t-pending','2099-01-01T00:00:00.000Z',?,?,'null',?,?)",
-    )
-    .run(
-      coach.userId,
-      trainee.email.toUpperCase(),
-      JSON.stringify(profile.offers[0]),
-      '{}',
-      now,
-      now,
-    );
-  const r = await handleCoaching(
-    db,
-    trainee,
-    new Request('https://form.test/api/coaching'),
-  );
-  const state = await r.json();
-  assert.equal(state.memberships[0].id, 'm-pending');
-  assert.equal(state.memberships[0].trainee_id, trainee.userId);
-  const account = db.sql
-    .prepare('SELECT user_id, data FROM fitness_accounts')
-    .all();
-  assert.equal(account.length, 1);
-  assert.equal(account[0].user_id, trainee.userId);
-  assert.equal(JSON.parse(account[0].data).goal, 70);
-  // A second visit changes nothing.
-  await handleCoaching(
-    db,
-    trainee,
-    new Request('https://form.test/api/coaching'),
-  );
+  const dev = { ...coach, userId: 'cf-access:dev-one' };
+  const coachedId = previewUserId(dev.userId, 'coached');
+  assert.equal(developerOf(coachedId), dev.userId);
+  assert.equal(await ensureDeveloperFixtures(db, dev), true);
+  assert.equal(await ensureDeveloperFixtures(db, dev), false);
   assert.equal(
-    db.sql.prepare('SELECT COUNT(*) AS n FROM fitness_accounts').get().n,
-    1,
+    await ensureDeveloperFixtures(db, { ...dev, userId: coachedId }),
+    false,
   );
+  const state = await (
+    await handleCoaching(db, dev, new Request('https://form.test/api/coaching'))
+  ).json();
+  assert.equal(state.profile.name, 'That Guy');
+  assert.equal(state.clients.length, 5);
+  const own = state.clients.find((m) => m.trainee_id === coachedId);
+  assert.ok(own && own.status === 'active' && own.program);
+  const asCoached = await (
+    await handleCoaching(
+      db,
+      { ...dev, userId: coachedId },
+      new Request('https://form.test/api/coaching'),
+    )
+  ).json();
+  assert.equal(asCoached.memberships.length, 1);
+  assert.equal(asCoached.clients.length, 0);
+  const other = { ...coach, userId: 'cf-access:dev-two' };
+  assert.equal(await ensureDeveloperFixtures(db, other), true);
+  const theirs = await (
+    await handleCoaching(
+      db,
+      other,
+      new Request('https://form.test/api/coaching'),
+    )
+  ).json();
+  assert.equal(theirs.clients.length, 5);
+  assert.ok(theirs.clients.every((m) => m.coach_id === other.userId));
+  const solo = db.sql
+    .prepare('SELECT data FROM fitness_accounts WHERE user_id=?')
+    .get(previewUserId(dev.userId, 'solo'));
+  assert.ok(JSON.parse(solo.data).workouts.length > 10);
 });

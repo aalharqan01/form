@@ -85,35 +85,6 @@ function publicMember(r: Row, coachName = ''): Member {
     pending: 0,
   };
 }
-/**
- * Links records prepared for an email address to the account that signs in
- * with it. A coach (or a seed) can create a membership for a client before the
- * client's first visit: the membership carries the verified email and no
- * trainee id, and a fitness log can wait under `pending:<email>`. On the first
- * visit both move to the real account. Cheap no-ops afterwards.
- */
-export async function claimPendingIdentity(db: D1Database, user: ChatGPTUser) {
-  const email = user.email.trim().toLowerCase();
-  if (!email.includes('@')) return;
-  const pending = `pending:${email}`;
-  await db.batch([
-    db
-      .prepare(
-        "DELETE FROM fitness_accounts WHERE user_id=? AND json_array_length(json_extract(data,'$.workouts'))=0 AND json_array_length(json_extract(data,'$.weights'))=0 AND EXISTS (SELECT 1 FROM fitness_accounts WHERE user_id=?)",
-      )
-      .bind(user.userId, pending),
-    db
-      .prepare(
-        'UPDATE OR IGNORE fitness_accounts SET user_id=? WHERE user_id=? AND NOT EXISTS (SELECT 1 FROM fitness_accounts WHERE user_id=?)',
-      )
-      .bind(user.userId, pending, user.userId),
-    db
-      .prepare(
-        'UPDATE coaching_memberships SET trainee_id=? WHERE trainee_id IS NULL AND lower(email)=?',
-      )
-      .bind(user.userId, email),
-  ]);
-}
 export async function handleCoaching(
   db: D1Database,
   user: ChatGPTUser | null,
@@ -362,7 +333,6 @@ export async function handleCoaching(
           ),
         });
       }
-      await claimPendingIdentity(db, user);
       const [p, rows] = await Promise.all([
         profile(),
         db

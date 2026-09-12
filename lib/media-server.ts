@@ -104,11 +104,17 @@ export async function handleMedia(
       return fail('Request origin is not allowed.', 403);
     const m = await member(url.searchParams.get('member') ?? '');
     if (!canWrite(m))
-      return fail('Only the coach and client of an active membership can share media.', 403);
+      return fail(
+        'Only the coach and client of an active membership can share media.',
+        403,
+      );
     const mime = request.headers.get('content-type') ?? '';
     const kind = mediaKind(mime);
     if (!kind)
-      return fail('Choose a JPEG, PNG or WebP photo, or an MP4, WebM or MOV video.', 415);
+      return fail(
+        'Choose a JPEG, PNG or WebP photo, or an MP4, WebM or MOV video.',
+        415,
+      );
     const size = Number(request.headers.get('x-media-size'));
     const limit = MEDIA_LIMITS[kind];
     if (!Number.isSafeInteger(size) || size < 12 || size > limit)

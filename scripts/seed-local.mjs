@@ -1,7 +1,7 @@
 import { mkdir, writeFile, unlink } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
 import { identities } from '../dev/roles.ts';
-import { seedSql } from '../dev/seed-sql.ts';
+import { seedSql } from '../lib/seed-sql.ts';
 
 // Seeds the local database only, with reserved local-form-* fixture records.
 // Sample history is filled in only where a fixture log is still empty, so

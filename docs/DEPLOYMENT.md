@@ -10,7 +10,7 @@ The Worker is a separate target from any older Cloudflare Sites deployment. Noth
 
 `.github/workflows/ci.yml` runs tests, lint, typechecks, both Worker builds, an Expo web export and the browser tests in WebKit. On a push to `main`, the `Deploy development to Cloudflare` job then checks that the secret and variables below are present, generates the Wrangler configuration, applies reviewed D1 migrations and deploys the Worker and assets with the pinned Wrangler from the lockfile. Deployments are serialized per target. The job's environment URL points at the deployed Worker.
 
-The deploy also exports the Expo trainee app for the web and serves it from the same Worker at `/app/`, and `/__dev/phones` shows the coach website and the app side by side at phone size. Both use the signed-in Access identity. The native app is not published by this workflow.
+The deploy also exports the Expo trainee app for the web and serves it from the same Worker at `/app/`, and `/__dev/phones` shows the coach website and the app at phone size. The development target sets the Worker variable `PREVIEW_ROLES=true` (from `FORM_PREVIEW_ROLES` in the workflow): each signed-in developer automatically receives sample fixtures, and `?role=coached` / `?role=solo` on the app maps to that developer's own fixture trainees (`X-Form-Preview` header, `?preview=` on media URLs). Never set it on a production target. The native app is not published by this workflow.
 
 ## One-time account setup
 
