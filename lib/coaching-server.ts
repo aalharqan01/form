@@ -6,6 +6,7 @@ import {
   isNutrition,
   isProgram,
   isIntake,
+  OCCUPYING_STATUSES,
   isPhotoView,
   photoViewLabel,
   text,
@@ -198,11 +199,22 @@ export async function handleCoaching(
           410,
         );
       if (url.searchParams.has('marketplace')) {
-        const rows = await db
-          .prepare(
-            'SELECT user_id,profile,revision FROM coach_profiles ORDER BY updated_at DESC',
-          )
-          .all<{ user_id: string; profile: string; revision: number }>();
+        const [rows, taken] = await Promise.all([
+          db
+            .prepare(
+              'SELECT user_id,profile,revision FROM coach_profiles ORDER BY updated_at DESC',
+            )
+            .all<{ user_id: string; profile: string; revision: number }>(),
+          db
+            .prepare(
+              `SELECT coach_id, json_extract(offer,'$.id') AS offer_id, COUNT(*) AS n FROM coaching_memberships WHERE status IN (${OCCUPYING_STATUSES.map(() => '?').join(',')}) GROUP BY coach_id, offer_id`,
+            )
+            .bind(...OCCUPYING_STATUSES)
+            .all<{ coach_id: string; offer_id: string; n: number }>(),
+        ]);
+        const occupied = new Map(
+          taken.results.map((t) => [`${t.coach_id}\n${t.offer_id}`, t.n]),
+        );
         return json({
           coaches: rows.results.flatMap((r) => {
             const p = JSON.parse(r.profile) as CoachProfile;
@@ -215,7 +227,17 @@ export async function handleCoaching(
                     bio: p.bio,
                     country: p.country,
                     specialties: p.specialties,
-                    offers: p.offers,
+                    offers: p.offers.map((o) => ({
+                      ...o,
+                      spotsLeft:
+                        o.capacity === undefined
+                          ? null
+                          : Math.max(
+                              0,
+                              o.capacity -
+                                (occupied.get(`${r.user_id}\n${o.id}`) ?? 0),
+                            ),
+                    })),
                   },
                 ]
               : [];
@@ -432,6 +454,19 @@ export async function handleCoaching(
       );
       const offer = coach.offers.find((o) => o.id === b.offerId);
       ensure(offer && offer.price > 0, 'Choose an available paid package.');
+      if (offer.capacity !== undefined) {
+        const taken = await db
+          .prepare(
+            `SELECT COUNT(*) AS n FROM coaching_memberships WHERE coach_id=? AND json_extract(offer,'$.id')=? AND status IN (${OCCUPYING_STATUSES.map(() => '?').join(',')})`,
+          )
+          .bind(b.coachId, offer.id, ...OCCUPYING_STATUSES)
+          .first<{ n: number }>();
+        ensure(
+          (taken?.n ?? 0) < offer.capacity,
+          'This package is full. Choose another package or coach.',
+          409,
+        );
+      }
       const existing = await db
         .prepare(
           "SELECT id FROM coaching_memberships WHERE coach_id=? AND trainee_id=? AND status IN ('requested','awaiting_payment','active')",
@@ -587,7 +622,11 @@ export async function handleCoaching(
         )
         .bind(mediaId, r.id, user.userId)
         .first<{ id: string; kind: MediaKind }>();
-      ensure(media, 'That upload is no longer available. Please attach it again.', 404);
+      ensure(
+        media,
+        'That upload is no longer available. Please attach it again.',
+        404,
+      );
       ensure(!kind || media.kind === kind, 'Choose a photo for this view.');
       return media;
     };
@@ -625,7 +664,17 @@ export async function handleCoaching(
           .prepare(
             "INSERT OR IGNORE INTO progress_photos (id,membership_id,owner_id,media_id,view,taken_on,note,created_at) SELECT ?,?,?,?,?,?,?,? WHERE EXISTS (SELECT 1 FROM coaching_memberships WHERE id=? AND status='active')",
           )
-          .bind(b.id, r.id, user.userId, media.id, b.view, b.takenOn, note, now, r.id),
+          .bind(
+            b.id,
+            r.id,
+            user.userId,
+            media.id,
+            b.view,
+            b.takenOn,
+            note,
+            now,
+            r.id,
+          ),
         db
           .prepare(
             "INSERT OR IGNORE INTO coaching_messages (id,membership_id,sender_id,body,created_at,media_id) SELECT ?,?,?,?,?,? WHERE EXISTS (SELECT 1 FROM coaching_memberships WHERE id=? AND status='active')",
@@ -650,7 +699,11 @@ export async function handleCoaching(
         )
         .bind(b.id, r.id, user.userId)
         .run();
-      ensure(result.meta.changes, 'Only the person who added a photo can remove it.', 403);
+      ensure(
+        result.meta.changes,
+        'Only the person who added a photo can remove it.',
+        403,
+      );
       await db
         .prepare('DELETE FROM coaching_messages WHERE id=? AND membership_id=?')
         .bind(`${b.id}-photo`, r.id)

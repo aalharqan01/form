@@ -26,9 +26,66 @@ const profile = {
       currency: 'QAR',
       description: 'Training, nutrition and weekly reviews.',
       responseHours: 24,
+      capacity: 8,
     },
   ],
 };
+// Extra coached clients so the client list and package places have something
+// to show. They have no login of their own; Alex's proxy is the client view.
+const extraClients = [
+  {
+    id: 'local-form-client-jordan',
+    email: 'jordan@form.test',
+    name: 'Jordan Reyes',
+    status: 'active',
+    history: {
+      seed: 17,
+      weeks: 6,
+      goal: 82,
+      startKg: 88.2,
+      perWeek: -0.45,
+      missed: [3, 10, 17],
+      early: [],
+    },
+  },
+  {
+    id: 'local-form-client-priya',
+    email: 'priya@form.test',
+    name: 'Priya Nair',
+    status: 'active',
+    history: {
+      seed: 23,
+      weeks: 10,
+      goal: 60,
+      startKg: 57.4,
+      perWeek: 0.22,
+      missed: [],
+      early: [5],
+    },
+  },
+  {
+    id: 'local-form-client-omar',
+    email: 'omar@form.test',
+    name: 'Omar Haddad',
+    status: 'active',
+    history: {
+      seed: 31,
+      weeks: 3,
+      goal: 90,
+      startKg: 96.1,
+      perWeek: -0.3,
+      missed: [1, 2, 5, 8],
+      early: [],
+    },
+  },
+  {
+    id: 'local-form-client-lina',
+    email: 'lina@form.test',
+    name: 'Lina Karam',
+    status: 'requested',
+    history: null,
+  },
+];
 const templates = [
   {
     ...STARTERS[0],
@@ -89,9 +146,24 @@ ${quote(identities.client.email)},${quote(identities.client.name)},'active','loc
 ${json({ goals: 'Build strength', experience: 'Beginner', equipment: 'Gym', limitations: '', days: 3, country: 'QA' })},
 'null','null',0,${quote(now)},${quote(now)},'local-form-coach:local-form-client');
 ${templates.map((routine) => `INSERT OR IGNORE INTO coach_workout_templates (id,coach_id,routine,revision,updated_at) VALUES (${quote(routine.id)},${quote(identities.coach.id)},${json(withRest(routine))},1,${quote(now)});`).join('\n')}
+${refresh ? `UPDATE coach_profiles SET profile=${json(profile)}, revision=revision+1, updated_at=${quote(now)} WHERE user_id=${quote(identities.coach.id)};` : ''}
 UPDATE coaching_memberships SET program=${json(program)}, revision=revision+1 WHERE id='local-form-membership'${refresh ? '' : " AND program='null'"};
 ${fill(identities.client.id, coached)}
 ${fill(identities.solo.id, solo)}
+${extraClients
+  .map((c) => {
+    const membership = `local-form-membership-${c.id.split('-').at(-1)}`;
+    const active = c.status === 'active';
+    return `INSERT OR IGNORE INTO fitness_accounts (user_id,data,revision,updated_at) VALUES (${quote(c.id)},${json(EMPTY)},0,${quote(now)});
+INSERT OR IGNORE INTO coaching_memberships
+(id,coach_id,trainee_id,email,name,status,token_hash,expires_at,offer,intake,program,nutrition,revision,created_at,accepted_at,open_key)
+VALUES (${quote(membership)},${quote(identities.coach.id)},${quote(c.id)},${quote(c.email)},${quote(c.name)},${quote(c.status)},${quote(`local-form-fixture-${c.id}`)},
+'2099-01-01T00:00:00.000Z',${json(profile.offers[0])},
+${json({ goals: active ? 'Build strength' : 'Lose weight and feel stronger', experience: 'Intermediate', equipment: 'Gym', limitations: '', days: 3, country: 'QA' })},
+${active ? json(program) : "'null'"},'null',0,${quote(now)},${active ? quote(now) : 'NULL'},${quote(`local-form-coach:${c.id}`)});
+${c.history ? fill(c.id, coachedHistory(program, membership, new Date(), c.history)) : ''}`;
+  })
+  .join('\n')}
 `;
 await mkdir('.wrangler', { recursive: true });
 const file = `.wrangler/seed-${process.pid}.sql`;
@@ -117,7 +189,7 @@ try {
   else
     console.log(
       refresh
-        ? 'Local fixtures refreshed with sample history for Alex and Riley.'
+        ? 'Local fixtures refreshed with sample history for Alex, Riley and the extra clients.'
         : 'Local coach/client fixtures are ready. Existing fixture progress was preserved; empty logs received sample history.',
     );
 } finally {

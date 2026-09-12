@@ -195,7 +195,7 @@ test('coach assigns, client completes real sets, coach sees the saved workout', 
     ).json();
     const detail = await (
       await request.get(
-        `http://127.0.0.1:3100/api/coaching?member=${state.clients[0].id}`,
+        `http://127.0.0.1:3100/api/coaching?member=${state.clients.find((m: { id: string }) => m.id === 'local-form-membership').id}`,
       )
     ).json();
     expect(
