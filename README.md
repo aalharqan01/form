@@ -19,9 +19,7 @@ Open the **localhost URL printed in your terminal**; Vite may choose another por
 
 - `/` — personal tracker, assigned workouts, nutrition targets, Marketplace and My coach.
 - `/coaching` — coach workspace, packages, client progress and program editor.
-- `/simulate` — complete coach–trainee demo, including simulated payment, workout assignment, daily weights, video attachment and nutrition targets.
-
-The simulation is the quickest way to explore coaching without a payment provider or real memberships. Its fictional data and attached videos stay in the current tab and disappear on refresh/reset.
+- `/__dev/phones` — coach website and trainee app side by side at phone size (local launcher and the deployed development site).
 
 To get later code changes, stop the development server and run:
 
@@ -74,7 +72,7 @@ npm run typecheck
 npm run build
 ```
 
-The tests cover the coaching lifecycle, permissions, nutrition, weights, mixed units, offline reconciliation, video access/ranges and simulation isolation. The build creates `dist/server` and `dist/client`, including the offline shell.
+The tests cover the coaching lifecycle, permissions, nutrition, weights, mixed units, offline reconciliation, video access/ranges and media isolation. The build creates `dist/server` and `dist/client`, including the offline shell.
 
 With the development server running, the persistence API check can be pointed at its printed URL. For example, in macOS/Linux:
 
@@ -105,8 +103,8 @@ Keep deployment secrets in the hosting platform or ignored local environment fil
 
 | Path | Purpose |
 | --- | --- |
-| `app/` | Tracker, coaching, simulation and API routes |
-| `lib/` | Data models, validation, coaching logic, simulation and video streaming |
+| `app/` | Tracker, coaching and API routes |
+| `lib/` | Data models, validation, coaching logic and video streaming |
 | `hooks/use-fitness.ts` | Offline-aware persistence and synchronization |
 | `db/`, `drizzle/` | Database schema, bindings and migrations |
 | `public/` | PWA resources, exercise illustrations and their license notices |

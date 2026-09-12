@@ -63,7 +63,7 @@ try {
     body: bytes,
   });
   assert.equal(wrong.status, 400, await wrong.clone().text());
-  for (const path of ['/', '/coaching', '/simulate'])
+  for (const path of ['/', '/coaching'])
     assert.equal((await fetch(base + path, { headers })).status, 200, path);
   console.log(
     'Local video upload, byte-range playback, HEAD, size enforcement, authentication and app routes passed.',

@@ -55,10 +55,13 @@ function uploadMedia(
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable) onProgress(e.loaded / e.total);
     };
-    xhr.onerror = () => reject(new Error('Upload failed. Check your connection and retry.'));
+    xhr.onerror = () =>
+      reject(new Error('Upload failed. Check your connection and retry.'));
     xhr.onload = () => {
       try {
-        const data = JSON.parse(xhr.responseText) as MediaRef & { error?: string };
+        const data = JSON.parse(xhr.responseText) as MediaRef & {
+          error?: string;
+        };
         if (xhr.status >= 200 && xhr.status < 300) resolve(data);
         else reject(new Error(data.error || 'Upload failed. Please retry.'));
       } catch {
@@ -70,12 +73,16 @@ function uploadMedia(
 }
 function checkFile(file: File, imagesOnly = false) {
   const kind = file.type.startsWith('image/') ? 'image' : 'video';
-  if (!(imagesOnly ? ACCEPT_IMAGE : ACCEPT_MEDIA).split(',').includes(file.type))
+  if (
+    !(imagesOnly ? ACCEPT_IMAGE : ACCEPT_MEDIA).split(',').includes(file.type)
+  )
     return imagesOnly
       ? 'Choose a JPEG, PNG or WebP photo.'
       : 'Choose a JPEG, PNG or WebP photo, or an MP4, WebM or MOV video.';
   if (file.size > MEDIA_LIMITS[kind])
-    return kind === 'image' ? 'Photos can be up to 12 MB.' : 'Videos can be up to 25 MB.';
+    return kind === 'image'
+      ? 'Photos can be up to 12 MB.'
+      : 'Videos can be up to 25 MB.';
   if (file.size < 12) return 'This file looks empty.';
   return '';
 }
@@ -90,7 +97,8 @@ function dayHeading(iso: string) {
   const date = new Date(iso),
     now = new Date();
   const diff = Math.round(
-    (new Date(now.toDateString()).getTime() - new Date(date.toDateString()).getTime()) /
+    (new Date(now.toDateString()).getTime() -
+      new Date(date.toDateString()).getTime()) /
       86400000,
   );
   if (diff === 0) return 'Today';
@@ -103,7 +111,10 @@ function dayHeading(iso: string) {
   });
 }
 const timeOf = (iso: string) =>
-  new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  new Date(iso).toLocaleTimeString('en-GB', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 
 function Lightbox({
   items,
@@ -121,7 +132,8 @@ function Lightbox({
     if (index === null) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'ArrowLeft' && index > 0) onIndex(index - 1);
-      if (e.key === 'ArrowRight' && index < items.length - 1) onIndex(index + 1);
+      if (e.key === 'ArrowRight' && index < items.length - 1)
+        onIndex(index + 1);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -134,7 +146,9 @@ function Lightbox({
       }}
     >
       <DialogContent className="co-lightbox" showCloseButton={false}>
-        <DialogTitle className="sr-only">{item?.caption ?? 'Media'}</DialogTitle>
+        <DialogTitle className="sr-only">
+          {item?.caption ?? 'Media'}
+        </DialogTitle>
         <DialogDescription className="sr-only">
           Use the arrow keys to move between attachments.
         </DialogDescription>
@@ -143,12 +157,22 @@ function Lightbox({
             {item.media.kind === 'image' ? (
               <img src={mediaUrl(item.media.id)} alt={item.caption} />
             ) : (
-              <video src={mediaUrl(item.media.id)} controls autoPlay playsInline />
+              <video
+                src={mediaUrl(item.media.id)}
+                controls
+                autoPlay
+                playsInline
+              />
             )}
             <figcaption>{item.caption}</figcaption>
           </figure>
         )}
-        <button type="button" className="co-lightbox-close" aria-label="Close" onClick={onClose}>
+        <button
+          type="button"
+          className="co-lightbox-close"
+          aria-label="Close"
+          onClick={onClose}
+        >
           <X size={20} />
         </button>
         {index !== null && index > 0 && (
@@ -196,7 +220,11 @@ function Attachment({
       />
     );
   return (
-    <button type="button" className="co-bubble-media co-bubble-image" onClick={onOpen}>
+    <button
+      type="button"
+      className="co-bubble-media co-bubble-image"
+      onClick={onOpen}
+    >
       <img src={mediaUrl(media.id)} alt={alt} loading="lazy" decoding="async" />
     </button>
   );
@@ -224,7 +252,9 @@ export function Conversation({
   const network = useIsNetworkTransport();
   const [view, setView] = useState<'messages' | 'photos'>('messages');
   const [body, setBody] = useState('');
-  const [staged, setStaged] = useState<{ file: File; preview: string } | null>(null);
+  const [staged, setStaged] = useState<{ file: File; preview: string } | null>(
+    null,
+  );
   const [progress, setProgress] = useState<number | null>(null);
   const [error, setError] = useState('');
   const [open, setOpen] = useState<number | null>(null);
@@ -249,9 +279,12 @@ export function Conversation({
     if (!el || view !== 'messages') return;
     el.scrollTop = el.scrollHeight;
   }, [lastId, view]);
-  useEffect(() => () => {
-    if (staged) URL.revokeObjectURL(staged.preview);
-  }, [staged]);
+  useEffect(
+    () => () => {
+      if (staged) URL.revokeObjectURL(staged.preview);
+    },
+    [staged],
+  );
   const stage = (file?: File) => {
     if (!file) return;
     const problem = checkFile(file);
@@ -310,15 +343,28 @@ export function Conversation({
               : 'Front, side and back photos by date. Both of you can add and compare them.'}
           </p>
         </div>
-        <fieldset className="range-switch co-chat-switch" aria-label="Conversation view">
-          <button type="button" aria-pressed={view === 'messages'} onClick={() => setView('messages')}>
+        <fieldset
+          className="range-switch co-chat-switch"
+          aria-label="Conversation view"
+        >
+          <button
+            type="button"
+            aria-pressed={view === 'messages'}
+            onClick={() => setView('messages')}
+          >
             <MessageCircle size={15} />
             Messages
           </button>
-          <button type="button" aria-pressed={view === 'photos'} onClick={() => setView('photos')}>
+          <button
+            type="button"
+            aria-pressed={view === 'photos'}
+            onClick={() => setView('photos')}
+          >
             <Images size={15} />
             Progress photos
-            {photos.length > 0 && <span className="co-chat-count">{photos.length}</span>}
+            {photos.length > 0 && (
+              <span className="co-chat-count">{photos.length}</span>
+            )}
           </button>
         </fieldset>
       </header>
@@ -338,7 +384,10 @@ export function Conversation({
             {!messages.length && (
               <div className="co-chat-empty">
                 <MessageCircle size={28} strokeWidth={1.4} />
-                <p>Say hello. Ask about a set, share a form check, or send a progress photo.</p>
+                <p>
+                  Say hello. Ask about a set, share a form check, or send a
+                  progress photo.
+                </p>
               </div>
             )}
             {groups.map((group) => (
@@ -350,8 +399,11 @@ export function Conversation({
                   const tail =
                     !next ||
                     next.sender_id !== m.sender_id ||
-                    Date.parse(next.created_at) - Date.parse(m.created_at) > 5 * 60000;
-                  const photoLabel = m.body.startsWith('Progress photo ·') ? m.body : '';
+                    Date.parse(next.created_at) - Date.parse(m.created_at) >
+                      5 * 60000;
+                  const photoLabel = m.body.startsWith('Progress photo ·')
+                    ? m.body
+                    : '';
                   return (
                     <div
                       key={m.id}
@@ -367,11 +419,17 @@ export function Conversation({
                         <Attachment
                           media={m.media}
                           alt={`${mine ? 'Your' : partnerName + '’s'} attachment`}
-                          onOpen={() => setOpen(gallery.findIndex((g) => g.id === m.id))}
+                          onOpen={() =>
+                            setOpen(gallery.findIndex((g) => g.id === m.id))
+                          }
                         />
                       )}
                       {m.body && !photoLabel && <p>{m.body}</p>}
-                      {tail && <time dateTime={m.created_at}>{timeOf(m.created_at)}</time>}
+                      {tail && (
+                        <time dateTime={m.created_at}>
+                          {timeOf(m.created_at)}
+                        </time>
+                      )}
                     </div>
                   );
                 })}
@@ -435,7 +493,11 @@ export function Conversation({
                 className="co-composer-icon"
                 aria-label="Attach a photo or video"
                 disabled={!network || sending}
-                title={network ? 'Photo or video up to 25 MB' : 'Attachments are unavailable in the simulation'}
+                title={
+                  network
+                    ? 'Photo or video up to 25 MB'
+                    : 'Attachments are unavailable right now'
+                }
                 onClick={() => fileInput.current?.click()}
               >
                 <Paperclip size={19} />
@@ -450,7 +512,11 @@ export function Conversation({
                 disabled={sending}
                 onChange={(e) => setBody(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+                  if (
+                    e.key === 'Enter' &&
+                    !e.shiftKey &&
+                    !e.nativeEvent.isComposing
+                  ) {
                     e.preventDefault();
                     void send();
                   }
@@ -468,7 +534,12 @@ export function Conversation({
           </form>
         </>
       )}
-      <Lightbox items={gallery} index={open} onClose={() => setOpen(null)} onIndex={setOpen} />
+      <Lightbox
+        items={gallery}
+        index={open}
+        onClose={() => setOpen(null)}
+        onIndex={setOpen}
+      />
     </section>
   );
 }
@@ -506,7 +577,12 @@ function PhotoTile({
       onClick={onOpen}
       aria-label={`${photoViewLabel(view)} view, ${dateLabel(photo.taken_on, true)}`}
     >
-      <img src={mediaUrl(photo.media.id)} alt="" loading="lazy" decoding="async" />
+      <img
+        src={mediaUrl(photo.media.id)}
+        alt=""
+        loading="lazy"
+        decoding="async"
+      />
       <span>{photoViewLabel(view)}</span>
     </button>
   );
@@ -530,7 +606,10 @@ export function ProgressPhotos({
   canUpload: boolean;
 }) {
   const sets = useMemo(() => photoSets(photos), [photos]);
-  const [adding, setAdding] = useState<{ view: PhotoView; date: string } | null>(null);
+  const [adding, setAdding] = useState<{
+    view: PhotoView;
+    date: string;
+  } | null>(null);
   const [compare, setCompare] = useState(false);
   const [left, setLeft] = useState(''),
     [right, setRight] = useState('');
@@ -578,14 +657,15 @@ export function ProgressPhotos({
         )}
       </div>
       {!canUpload && (
-        <p className="co-muted">Photo uploads are unavailable in the simulation.</p>
+        <p className="co-muted">Photo uploads are unavailable right now.</p>
       )}
       {!sets.length ? (
         <div className="co-photo-set">
           <div className="co-photo-set-head">
             <strong>No progress photos yet</strong>
             <span className="co-muted">
-              Take the three views in the same light and stance each time so changes are easy to see.
+              Take the three views in the same light and stance each time so
+              changes are easy to see.
             </span>
           </div>
           <div className="co-photo-grid">
@@ -605,7 +685,10 @@ export function ProgressPhotos({
           <div className="co-photo-compare-heads">
             <label>
               Before
-              <select value={leftSet.date} onChange={(e) => setLeft(e.target.value)}>
+              <select
+                value={leftSet.date}
+                onChange={(e) => setLeft(e.target.value)}
+              >
                 {dates.map((d) => (
                   <option key={d} value={d}>
                     {dateLabel(d, true)}
@@ -615,7 +698,10 @@ export function ProgressPhotos({
             </label>
             <label>
               After
-              <select value={rightSet.date} onChange={(e) => setRight(e.target.value)}>
+              <select
+                value={rightSet.date}
+                onChange={(e) => setRight(e.target.value)}
+              >
                 {dates.map((d) => (
                   <option key={d} value={d}>
                     {dateLabel(d, true)}
@@ -626,7 +712,9 @@ export function ProgressPhotos({
           </div>
           {PHOTO_VIEWS.map((v) => (
             <div key={v} className="co-photo-compare-row">
-              <span className="co-photo-compare-label">{photoViewLabel(v)}</span>
+              <span className="co-photo-compare-label">
+                {photoViewLabel(v)}
+              </span>
               <PhotoTile
                 view={v}
                 photo={leftSet.views[v]}
@@ -646,14 +734,20 @@ export function ProgressPhotos({
         </div>
       ) : (
         sets.map((set, i) => {
-          const owner = PHOTO_VIEWS.map((v) => set.views[v]?.owner_id).find(Boolean);
+          const owner = PHOTO_VIEWS.map((v) => set.views[v]?.owner_id).find(
+            Boolean,
+          );
           return (
             <div key={set.date} className="co-photo-set">
               <div className="co-photo-set-head">
                 <strong>{dateLabel(set.date, true)}</strong>
                 <span className="co-muted">
-                  {i === 0 ? 'Latest' : `${Math.round((Date.parse(sets[0].date) - Date.parse(set.date)) / 86400000)} days earlier`}
-                  {owner ? ` · added by ${owner === userId ? 'you' : partnerName}` : ''}
+                  {i === 0
+                    ? 'Latest'
+                    : `${Math.round((Date.parse(sets[0].date) - Date.parse(set.date)) / 86400000)} days earlier`}
+                  {owner
+                    ? ` · added by ${owner === userId ? 'you' : partnerName}`
+                    : ''}
                 </span>
                 {PHOTO_VIEWS.some((v) => set.views[v]?.owner_id === userId) && (
                   <button
@@ -661,7 +755,11 @@ export function ProgressPhotos({
                     className="co-photo-remove"
                     aria-label={`Remove photos from ${dateLabel(set.date, true)}`}
                     onClick={() =>
-                      setConfirm(PHOTO_VIEWS.map((v) => set.views[v]).find((p) => p?.owner_id === userId) ?? null)
+                      setConfirm(
+                        PHOTO_VIEWS.map((v) => set.views[v]).find(
+                          (p) => p?.owner_id === userId,
+                        ) ?? null,
+                      )
                     }
                   >
                     <Trash2 size={15} />
@@ -719,15 +817,22 @@ export function ProgressPhotos({
       />
       <Dialog open={!!confirm} onOpenChange={(o) => !o && setConfirm(null)}>
         <DialogContent className="form-dialog co-dialog">
-          <DialogTitle>Remove this {confirm ? photoViewLabel(confirm.view).toLowerCase() : ''} photo?</DialogTitle>
+          <DialogTitle>
+            Remove this{' '}
+            {confirm ? photoViewLabel(confirm.view).toLowerCase() : ''} photo?
+          </DialogTitle>
           <DialogDescription>
-            It disappears from the conversation and from progress photos for both of you.
+            It disappears from the conversation and from progress photos for
+            both of you.
           </DialogDescription>
           <Button
             className="danger-button"
             disabled={busy}
             onClick={async () => {
-              if (confirm && (await act({ action: 'photo-delete', id: confirm.id })))
+              if (
+                confirm &&
+                (await act({ action: 'photo-delete', id: confirm.id }))
+              )
                 setConfirm(null);
             }}
           >
@@ -748,18 +853,28 @@ function PhotoUploader({
   memberId: string;
   initial: { view: PhotoView; date: string };
   onClose: () => void;
-  onSave: (media: MediaRef, view: PhotoView, takenOn: string, note: string) => Promise<boolean>;
+  onSave: (
+    media: MediaRef,
+    view: PhotoView,
+    takenOn: string,
+    note: string,
+  ) => Promise<boolean>;
 }) {
   const [view, setView] = useState<PhotoView>(initial.view);
   const [date, setDate] = useState(initial.date);
   const [note, setNote] = useState('');
-  const [file, setFile] = useState<{ file: File; preview: string } | null>(null);
+  const [file, setFile] = useState<{ file: File; preview: string } | null>(
+    null,
+  );
   const [progress, setProgress] = useState<number | null>(null);
   const [error, setError] = useState('');
   const input = useRef<HTMLInputElement>(null);
-  useEffect(() => () => {
-    if (file) URL.revokeObjectURL(file.preview);
-  }, [file]);
+  useEffect(
+    () => () => {
+      if (file) URL.revokeObjectURL(file.preview);
+    },
+    [file],
+  );
   const uploading = progress !== null;
   return (
     <Dialog
@@ -771,7 +886,8 @@ function PhotoUploader({
       <DialogContent className="form-dialog co-dialog co-photo-dialog">
         <DialogTitle>Add progress photo</DialogTitle>
         <DialogDescription>
-          Same light, same distance, same stance. That is what makes the comparison honest.
+          Same light, same distance, same stance. That is what makes the
+          comparison honest.
         </DialogDescription>
         <form
           onSubmit={async (e) => {
@@ -785,7 +901,10 @@ function PhotoUploader({
               setProgress(0);
               const media = await uploadMedia(memberId, file.file, setProgress);
               const ok = await onSave(media, view, date, note.trim());
-              if (!ok) setError('The photo uploaded but could not be saved. Please retry.');
+              if (!ok)
+                setError(
+                  'The photo uploaded but could not be saved. Please retry.',
+                );
             } catch (err) {
               setError((err as Error).message);
             } finally {
@@ -793,9 +912,17 @@ function PhotoUploader({
             }
           }}
         >
-          <fieldset className="range-switch co-photo-views" aria-label="Photo view">
+          <fieldset
+            className="range-switch co-photo-views"
+            aria-label="Photo view"
+          >
             {PHOTO_VIEWS.map((v) => (
-              <button key={v} type="button" aria-pressed={view === v} onClick={() => setView(v)}>
+              <button
+                key={v}
+                type="button"
+                aria-pressed={view === v}
+                onClick={() => setView(v)}
+              >
                 {photoViewLabel(v)}
               </button>
             ))}
@@ -839,14 +966,24 @@ function PhotoUploader({
             )}
           </button>
           {file && !uploading && (
-            <button type="button" className="text-button co-photo-change" onClick={() => input.current?.click()}>
+            <button
+              type="button"
+              className="text-button co-photo-change"
+              onClick={() => input.current?.click()}
+            >
               Choose a different photo
             </button>
           )}
           <div className="co-form-grid">
             <label>
               Taken on
-              <Input type="date" required max={today()} value={date} onChange={(e) => setDate(e.target.value)} />
+              <Input
+                type="date"
+                required
+                max={today()}
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+              />
             </label>
             <label>
               Note <span className="co-muted">optional</span>
@@ -863,7 +1000,11 @@ function PhotoUploader({
               {error}
             </p>
           )}
-          <Button className="primary full" type="submit" disabled={uploading || !file}>
+          <Button
+            className="primary full"
+            type="submit"
+            disabled={uploading || !file}
+          >
             {uploading ? 'Uploading…' : 'Save photo'}
           </Button>
         </form>

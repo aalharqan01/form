@@ -12,7 +12,7 @@ npx playwright install chromium
 
 In one terminal run `npm run dev:roles`. In another run `npm run mobile:web`. Open:
 
-- All iPhone-size previews: http://127.0.0.1:3100/__dev/phones
+- All iPhone-size previews: http://127.0.0.1:3100/__dev/phones (on the deployed site, `/__dev/phones` shows the coach website and the app at `/app/` for your own account)
 - Coach web workspace: http://127.0.0.1:3100/coaching
 - Trainee Expo app, coached (browser fallback): http://127.0.0.1:8081/
 - Trainee Expo app, no coach: http://127.0.0.1:8081/?role=solo

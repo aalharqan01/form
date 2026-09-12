@@ -7,7 +7,7 @@ import type { CoachingState, MemberDetail } from '../../lib/coaching';
 import { request, type FitnessResponse } from './api';
 import { USER_KEY } from './account';
 
-const CACHE = `form-trainee:${USER_KEY}:v1`;
+const CACHE = `form-trainee:${USER_KEY || 'hosted'}:v1`;
 export function useTraining() {
   const [data, setData] = useState<FitnessData>(EMPTY);
   const [loaded, setLoaded] = useState(false);
@@ -42,7 +42,7 @@ export function useTraining() {
     busy.current = true;
     try {
       const remote = await request<FitnessResponse>('/api/data');
-      if (remote.userKey !== USER_KEY)
+      if (USER_KEY && remote.userKey !== USER_KEY)
         throw new Error(
           'The signed-in account changed. Reopen the app before editing.',
         );
@@ -111,7 +111,7 @@ export function useTraining() {
     coachingBusy.current = true;
     try {
       const state = await request<CoachingState>('/api/coaching');
-      if (state.userId !== USER_KEY)
+      if (USER_KEY && state.userId !== USER_KEY)
         throw new Error('The coaching account changed. Reopen the app.');
       const member = state.memberships.find((m) => m.status === 'active');
       const next = member
@@ -138,7 +138,8 @@ export function useTraining() {
         const saved = raw ? (JSON.parse(raw) as Envelope) : null;
         if (
           alive &&
-          saved?.userKey === USER_KEY &&
+          saved &&
+          (!USER_KEY || saved.userKey === USER_KEY) &&
           validateData(saved.data) &&
           validateData(saved.base) &&
           Number.isInteger(saved.revision)
@@ -155,7 +156,8 @@ export function useTraining() {
         const saved = raw ? (JSON.parse(raw) as MemberDetail) : null;
         if (
           alive &&
-          saved?.member?.trainee_id === USER_KEY &&
+          saved &&
+          (!USER_KEY || saved.member?.trainee_id === USER_KEY) &&
           Array.isArray(saved.messages) &&
           Array.isArray(saved.checkins)
         )
