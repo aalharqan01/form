@@ -255,6 +255,7 @@ export function simulationRequest(
       fitness: m.status === 'active' ? structuredClone(s.fitness) : null,
       messages: m.status === 'active' ? structuredClone(s.messages) : [],
       checkins: m.status === 'active' ? structuredClone(s.checkins) : [],
+      photos: [],
     };
   };
   if (!body) {

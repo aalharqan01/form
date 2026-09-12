@@ -149,12 +149,51 @@ export type Checkin = {
   created_at: string;
   reviewed_at: string | null;
 };
+export type MediaKind = 'image' | 'video';
+export const MEDIA_LIMITS: Record<MediaKind, number> = {
+  image: 12 * 1024 * 1024,
+  video: 25 * 1024 * 1024,
+};
+export type MediaRef = { id: string; kind: MediaKind; contentType: string };
+export const mediaUrl = (id: string) => '/api/media?id=' + id;
 export type Message = {
   id: string;
   sender_id: string;
   body: string;
   created_at: string;
+  media?: MediaRef | null;
 };
+export const PHOTO_VIEWS = ['front', 'side', 'back'] as const;
+export type PhotoView = (typeof PHOTO_VIEWS)[number];
+export const photoViewLabel = (view: PhotoView) =>
+  ({ front: 'Front', side: 'Side', back: 'Back' })[view];
+export type ProgressPhoto = {
+  id: string;
+  owner_id: string;
+  media: MediaRef;
+  view: PhotoView;
+  taken_on: string;
+  note: string;
+  created_at: string;
+};
+export function isPhotoView(value: unknown): value is PhotoView {
+  return (PHOTO_VIEWS as readonly string[]).includes(value as string);
+}
+/** Group photos into dated sets so front, side and back views sit together. */
+export function photoSets(photos: ProgressPhoto[]) {
+  const map = new Map<string, Partial<Record<PhotoView, ProgressPhoto>>>();
+  for (const photo of [...photos].sort((a, b) =>
+    b.created_at.localeCompare(a.created_at),
+  )) {
+    const set = map.get(photo.taken_on) ?? {};
+    // Keep the newest upload for each view on a given day.
+    if (!set[photo.view]) set[photo.view] = photo;
+    map.set(photo.taken_on, set);
+  }
+  return [...map]
+    .sort((a, b) => b[0].localeCompare(a[0]))
+    .map(([date, views]) => ({ date, views }));
+}
 export type CoachingState = {
   userId: string;
   profile: CoachProfile | null;
@@ -167,6 +206,7 @@ export type MemberDetail = {
   member: Member;
   messages: Message[];
   checkins: Checkin[];
+  photos: ProgressPhoto[];
   fitness: FitnessData | null;
 };
 export function text(

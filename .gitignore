@@ -46,3 +46,6 @@ test-results/
 mobile/node_modules/
 mobile/.expo/
 mobile/dist/
+
+# Desktop app launch config (machine-local)
+/.claude/launch.json

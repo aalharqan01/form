@@ -2,6 +2,27 @@
 
 Newest first. Each entry says what changed, how to run it, and what is still open, so a fresh `git pull` is enough to get going.
 
+## 12 September 2026 — conversation with attachments, progress photos, weekly change
+
+### What changed
+
+- **Conversation rebuilt** on the coach website and in the trainee app: day-grouped thread, tight bubbles, a composer that sends on Enter, and attachments. Both people can send JPEG/PNG/WebP photos up to 12 MB and MP4/WebM/MOV videos up to 25 MB. Images open in a lightbox with keyboard and swipe-style navigation.
+- **Progress photos**: front, side and back views grouped by date, with a compare mode for two dates. Either person can add photos; only the person who added one can remove it. Each saved photo also posts into the conversation so the coach sees it in context.
+- **Storage and API**: new `coaching_media` and `progress_photos` tables (migration `0005_coaching_media.sql`) and a `/api/media` route backed by the same R2 bucket as demonstration videos. Every read and write is checked against the membership; media can only be attached by its uploader.
+- **Weekly average weight** now shows the change against last week's average as a signed number next to the average, on the coach client overview and in the trainee app's My coach overview.
+- **Coach program editor**: saved templates are now cards; adding one scrolls to and highlights the new session. The per-exercise coaching instructions field is gone (existing notes still display where they were saved).
+- Local dev proxies allow the `X-Media-Size` header so uploads work from the Expo web app.
+
+### How to run
+
+Same as before; `npm run dev:roles` applies migration 0005 automatically. The mobile app gained `expo-image-picker`, so run `npm --prefix mobile ci` after pulling.
+
+### Still open
+
+- Media stays in R2 when a photo or message is removed; a cleanup job for orphaned objects is future work.
+- Upload progress is a real percentage on the web and an indeterminate bar in the app.
+- Video thumbnails are not generated; videos show the player's own poster.
+
 ## 10 September 2026 — trainee app rebuilt in the original design, coach templates, rest timers
 
 ### What changed

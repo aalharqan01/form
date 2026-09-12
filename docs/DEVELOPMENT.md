@@ -41,6 +41,8 @@ The workout elapsed timer stays visible throughout an active session. Each exerc
 
 A workout with at least one logged set can be finished early after confirmation. Unfinished sets remain skipped, the session is labelled “Finished early” in trainee and coach history, and it does not count as a fully completed assigned day. A session with no logged sets can be discarded.
 
+Messages on both sides support photo and short video attachments through `/api/media`, and the Progress photos view groups front, side and back photos by date with a two-date compare. The route reuses the R2 `VIDEOS` binding locally; uploads and access are scoped to the membership, and only the uploader can attach or remove their media. Migration `0005_coaching_media.sql` adds the tables.
+
 Daily weigh-ins, editable dated entries, weight goals, weekly arithmetic averages and a separate smoothed trend are available in Weight. Both coach and trainee can see the difference between consecutive Monday–Sunday (UTC) averages. A missing adjacent week displays no comparison; the current week uses only readings so far. Nutrition, messages, weekly check-ins and coach feedback are in My coach.
 
 Fitness changes are stored on device before syncing and reconcile through the shared three-way merge. Conflicting edits require an explicit choice and retain a device backup. Cached coaching content can be read offline; sending messages/check-ins requires a connection. Native authentication and store distribution remain pending; this is a local development app using the existing backend.

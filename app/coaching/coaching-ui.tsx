@@ -6,7 +6,6 @@ import {
   Users,
   Plus,
   Check,
-  MessageCircle,
   ClipboardList,
   ChevronRight,
   X,
@@ -54,6 +53,7 @@ import {
 } from '@/lib/fitness';
 import ExerciseThumbnail, { ExerciseCredits } from '../exercise-thumbnail';
 import Nutrition from './nutrition';
+import { Conversation } from './conversation';
 import WeightComparison, { weightChange } from './weight-comparison';
 import VideoUpload from '../video-upload';
 import { ExercisePicker } from '../workout-panel';
@@ -120,6 +120,24 @@ function useCoaching() {
     }
   };
   return { state, error, busy, reload, mutate };
+}
+function WeeklyChange({ value }: { value: number | null | undefined }) {
+  if (value == null)
+    return (
+      <strong className="co-metric-change flat" title="No previous week to compare">
+        —
+      </strong>
+    );
+  const flat = Math.abs(value) < 0.05;
+  return (
+    <strong
+      className={`co-metric-change ${flat ? 'flat' : value > 0 ? 'up' : 'down'}`}
+      aria-label={weightChange(value)}
+    >
+      {flat ? '0.0' : `${value > 0 ? '+' : '−'}${Math.abs(value).toFixed(1)}`}
+      <em> kg</em>
+    </strong>
+  );
 }
 function ErrorNote({ text: message }: { text: string }) {
   return message ? (
@@ -1101,15 +1119,21 @@ function ClientDetail({
                   onClick={() => setWeightHistory(true)}
                 >
                   <span>Weekly average weight</span>
-                  <strong>
-                    {m.stats?.averageKg?.toFixed(1) ?? '—'}
-                    <em> kg</em>
-                  </strong>
-                  <small>
-                    {m.stats?.weightCount ?? 0} weigh-ins · this week, Mon–Sun
-                    (UTC)
-                  </small>
-                  <small>{weightChange(m.stats?.averageChangeKg)}</small>
+                  <div className="co-metric-pair">
+                    <div>
+                      <strong>
+                        {m.stats?.averageKg?.toFixed(1) ?? '—'}
+                        <em> kg</em>
+                      </strong>
+                      <span>
+                        {m.stats?.weightCount ?? 0} weigh-ins this week
+                      </span>
+                    </div>
+                    <div>
+                      <WeeklyChange value={m.stats?.averageChangeKg} />
+                      <span>vs last week’s average</span>
+                    </div>
+                  </div>
                   <small className="co-weight-action">
                     View all entries <ChevronRight size={14} />
                   </small>
@@ -1197,9 +1221,12 @@ function ClientDetail({
             />
           )}{' '}
           {tab === 'messages' && (
-            <Messages
+            <Conversation
+              memberId={m.id}
               messages={detail.messages}
+              photos={detail.photos ?? []}
               userId={userId}
+              partnerName={isCoach ? m.name : m.coachName}
               busy={busy}
               responseHours={m.offer.responseHours}
               act={act}
@@ -1779,59 +1806,68 @@ function ProgramEditor({
                   className="co-template-picker"
                   aria-label="Add a saved template"
                 >
-                  <label>
-                    Saved workout template
-                    <select
-                      aria-label="Saved workout template"
-                      value={templateId}
-                      onChange={(e) => setTemplateId(e.target.value)}
+                  <div className="co-section-line" style={{ width: '100%' }}>
+                    <strong>Add a saved workout day</strong>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => void loadTemplates()}
                     >
-                      <option value="">Choose a template</option>
-                      {templates.map((template) => (
-                        <option key={template.id} value={template.id}>
-                          {template.routine.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <Button
-                    type="button"
-                    className="secondary"
-                    disabled={!templateId || p.sessions.length >= 14}
-                    onClick={() => {
-                      const template = templates.find(
-                        (item) => item.id === templateId,
-                      );
-                      if (!template) return;
-                      const copy = sessionFromTemplate(template.routine, id());
-                      setP({
-                        ...p,
-                        sessions:
-                          p.sessions.length === 1 &&
-                          !p.sessions[0].exercises.length
-                            ? [copy]
-                            : [...p.sessions, copy],
-                      });
-                      setTemplateNotice(
-                        `Added ${template.routine.name}. Edit this copy for your client, then assign the program.`,
-                      );
-                    }}
-                  >
-                    <Plus size={16} />
-                    Add template
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => void loadTemplates()}
-                  >
-                    Refresh templates
-                  </Button>
-                  <p className="co-muted">
-                    Add any saved workout day to this program. Edit the copied
-                    exercises, targets and rest times for this client; your
-                    original template stays saved.
-                  </p>
+                      Refresh
+                    </Button>
+                  </div>
+                  {templates.length ? (
+                    <div className="co-template-choices">
+                      {templates.map((template) => {
+                        const sets = template.routine.exercises.reduce(
+                          (n, e) => n + e.sets,
+                          0,
+                        );
+                        return (
+                          <button
+                            type="button"
+                            key={template.id}
+                            className="co-template-choice"
+                            disabled={p.sessions.length >= 14}
+                            aria-label={`Add template ${template.routine.name}`}
+                            onClick={() => {
+                              const copy = sessionFromTemplate(
+                                template.routine,
+                                id(),
+                              );
+                              const replacing =
+                                p.sessions.length === 1 &&
+                                !p.sessions[0].exercises.length;
+                              setP({
+                                ...p,
+                                sessions: replacing
+                                  ? [copy]
+                                  : [...p.sessions, copy],
+                              });
+                              setTemplateId(copy.id);
+                              setTemplateNotice(
+                                `${template.routine.name} added as session ${replacing ? 1 : p.sessions.length + 1}. Edit this copy for your client; the template stays as it is.`,
+                              );
+                            }}
+                          >
+                            <strong>{template.routine.name}</strong>
+                            <small>
+                              {template.routine.exercises.length} exercises ·{' '}
+                              {sets} sets
+                            </small>
+                            <em>
+                              <Plus size={13} /> Add to program
+                            </em>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="co-muted">
+                      No saved templates yet. Save any session below as a
+                      template to reuse it.
+                    </p>
+                  )}
                 </section>
                 <ErrorNote text={templateError} />
                 {templateNotice && (
@@ -1842,7 +1878,20 @@ function ProgramEditor({
               </>
             )}
             {p.sessions.map((s, i) => (
-              <div key={s.id} className="co-session-editor">
+              <div
+                key={s.id}
+                className={`co-session-editor ${s.id === templateId ? 'co-session-new' : ''}`}
+                ref={
+                  s.id === templateId
+                    ? (node) => {
+                        node?.scrollIntoView({
+                          behavior: 'smooth',
+                          block: 'start',
+                        });
+                      }
+                    : undefined
+                }
+              >
                 <div className="co-section-line">
                   <h3>{templateMode ? 'Workout day' : `Session ${i + 1}`}</h3>
                   {!templateMode && (
@@ -1981,17 +2030,6 @@ function ProgramEditor({
                       <small className="co-muted">
                         Applies to this exercise. Set 0 for no rest countdown.
                       </small>
-                    </label>
-                    <label>
-                      Coaching instructions
-                      <Input
-                        maxLength={1000}
-                        value={e.instructions ?? ''}
-                        onChange={(v) =>
-                          exercise(i, j, { instructions: v.target.value })
-                        }
-                        placeholder="Tempo, effort or target load"
-                      />
                     </label>
                     {templateMode ? (
                       <label>
@@ -2309,87 +2347,6 @@ function CheckinCard({
       ) : (
         <p className="co-muted">Your coach will review this update.</p>
       )}
-    </section>
-  );
-}
-function Messages({
-  messages,
-  userId,
-  busy,
-  responseHours,
-  act,
-}: {
-  messages: MemberDetail['messages'];
-  userId: string;
-  busy: boolean;
-  responseHours: number;
-  act: (b: Record<string, unknown>) => Promise<boolean>;
-}) {
-  const [body, setBody] = useState('');
-  const pendingId = useRef(id());
-  return (
-    <section className="co-card co-messages">
-      <div className="co-section-line">
-        <div>
-          <h2>Conversation</h2>
-          <p className="co-muted">
-            Coach replies within {responseHours} hours. Updates refresh while
-            this page is open.
-          </p>
-        </div>
-        <MessageCircle size={25} strokeWidth={1.5} />
-      </div>
-      <div className="co-message-list" aria-live="polite">
-        {!messages.length && (
-          <p className="co-muted">
-            Start a conversation about the training program.
-          </p>
-        )}
-        {messages.map((m) => (
-          <div
-            key={m.id}
-            className={'co-message ' + (m.sender_id === userId ? 'mine' : '')}
-          >
-            <p>{m.body}</p>
-            <small>
-              {m.sender_id === userId ? 'You' : 'Coaching partner'} ·{' '}
-              {new Date(m.created_at).toLocaleString('en-GB', {
-                month: 'short',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-              })}
-            </small>
-          </div>
-        ))}
-      </div>
-      <form
-        onSubmit={async (e) => {
-          e.preventDefault();
-          if (await act({ action: 'message', id: pendingId.current, body })) {
-            setBody('');
-            pendingId.current = id();
-          }
-        }}
-      >
-        <label htmlFor="co-message-input">Message</label>
-        <Textarea
-          id="co-message-input"
-          required
-          maxLength={4000}
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
-          placeholder="Write a message…"
-        />
-        <Button
-          className="primary"
-          type="submit"
-          disabled={busy || !body.trim()}
-        >
-          {busy ? 'Sending…' : 'Send message'}
-          <ArrowUpRight size={17} />
-        </Button>
-      </form>
     </section>
   );
 }

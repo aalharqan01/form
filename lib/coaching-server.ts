@@ -6,9 +6,12 @@ import {
   isNutrition,
   isProgram,
   isIntake,
+  isPhotoView,
+  photoViewLabel,
   text,
   memberStats,
   weekOf,
+  type MediaKind,
 } from './coaching';
 import { EMPTY, type FitnessData } from './fitness';
 
@@ -224,14 +227,40 @@ export async function handleCoaching(
         const r = await member(id),
           { m, fitness } = await enrich(r, true);
         if (r.status !== 'active')
-          return json({ member: m, fitness: null, messages: [], checkins: [] });
-        const [messages, checkins] = await Promise.all([
+          return json({
+            member: m,
+            fitness: null,
+            messages: [],
+            checkins: [],
+            photos: [],
+          });
+        type MediaRow = {
+          media_id: string | null;
+          media_kind: MediaKind | null;
+          media_type: string | null;
+        };
+        const mediaOf = (row: MediaRow) =>
+          row.media_id && row.media_kind && row.media_type
+            ? {
+                id: row.media_id,
+                kind: row.media_kind,
+                contentType: row.media_type,
+              }
+            : null;
+        const [messages, checkins, photos] = await Promise.all([
           db
             .prepare(
-              'SELECT id,sender_id,body,created_at FROM (SELECT * FROM coaching_messages WHERE membership_id=? ORDER BY created_at DESC LIMIT 200) ORDER BY created_at',
+              'SELECT x.id,x.sender_id,x.body,x.created_at,x.media_id,md.kind AS media_kind,md.content_type AS media_type FROM (SELECT * FROM coaching_messages WHERE membership_id=? ORDER BY created_at DESC LIMIT 200) x LEFT JOIN coaching_media md ON md.id=x.media_id ORDER BY x.created_at',
             )
             .bind(r.id)
-            .all(),
+            .all<
+              {
+                id: string;
+                sender_id: string;
+                body: string;
+                created_at: string;
+              } & MediaRow
+            >(),
           db
             .prepare(
               'SELECT id,week,answers,feedback,created_at,reviewed_at FROM coaching_checkins WHERE membership_id=? ORDER BY week DESC LIMIT 104',
@@ -245,15 +274,41 @@ export async function handleCoaching(
               created_at: string;
               reviewed_at: string | null;
             }>(),
+          db
+            .prepare(
+              'SELECT p.id,p.owner_id,p.view,p.taken_on,p.note,p.created_at,p.media_id,md.kind AS media_kind,md.content_type AS media_type FROM progress_photos p JOIN coaching_media md ON md.id=p.media_id WHERE p.membership_id=? ORDER BY p.taken_on DESC, p.created_at DESC LIMIT 300',
+            )
+            .bind(r.id)
+            .all<
+              {
+                id: string;
+                owner_id: string;
+                view: string;
+                taken_on: string;
+                note: string;
+                created_at: string;
+              } & MediaRow
+            >(),
         ]);
         return json({
           member: m,
           fitness,
-          messages: messages.results,
+          messages: messages.results.map(
+            ({ media_id, media_kind, media_type, ...msg }) => ({
+              ...msg,
+              media: mediaOf({ media_id, media_kind, media_type }),
+            }),
+          ),
           checkins: checkins.results.map((c) => ({
             ...c,
             answers: JSON.parse(c.answers),
           })),
+          photos: photos.results.map(
+            ({ media_id, media_kind, media_type, ...photo }) => ({
+              ...photo,
+              media: mediaOf({ media_id, media_kind, media_type }),
+            }),
+          ),
         });
       }
       const [p, rows] = await Promise.all([
@@ -522,14 +577,83 @@ export async function handleCoaching(
       );
       return json({ ok: true });
     }
+    // Media may only be attached by the person who uploaded it, inside the
+    // same membership, so a stolen identifier cannot expose another client.
+    const ownMedia = async (mediaId: unknown, kind?: MediaKind) => {
+      ensure(text(mediaId, 100), 'Choose a photo or video to attach.');
+      const media = await db
+        .prepare(
+          'SELECT id, kind FROM coaching_media WHERE id=? AND membership_id=? AND owner_id=?',
+        )
+        .bind(mediaId, r.id, user.userId)
+        .first<{ id: string; kind: MediaKind }>();
+      ensure(media, 'That upload is no longer available. Please attach it again.', 404);
+      ensure(!kind || media.kind === kind, 'Choose a photo for this view.');
+      return media;
+    };
     if (b.action === 'message') {
-      ensure(text(b.body, 4000), 'Write a message of up to 4,000 characters.');
+      const body = typeof b.body === 'string' ? b.body.trim() : '';
+      const media = b.mediaId ? await ownMedia(b.mediaId) : null;
+      ensure(
+        text(body, 4000, false) && (body || media),
+        'Write a message of up to 4,000 characters, or attach a photo or video.',
+      );
       ensure(text(b.id, 100), 'Missing message identifier.');
       await db
         .prepare(
-          "INSERT OR IGNORE INTO coaching_messages (id,membership_id,sender_id,body,created_at) SELECT ?,?,?,?,? WHERE EXISTS (SELECT 1 FROM coaching_memberships WHERE id=? AND status='active')",
+          "INSERT OR IGNORE INTO coaching_messages (id,membership_id,sender_id,body,created_at,media_id) SELECT ?,?,?,?,?,? WHERE EXISTS (SELECT 1 FROM coaching_memberships WHERE id=? AND status='active')",
         )
-        .bind(b.id, r.id, user.userId, b.body.trim(), now, r.id)
+        .bind(b.id, r.id, user.userId, body, now, media?.id ?? null, r.id)
+        .run();
+      return json({ ok: true });
+    }
+    if (b.action === 'photo') {
+      ensure(text(b.id, 100), 'Missing photo identifier.');
+      ensure(isPhotoView(b.view), 'Choose front, side or back view.');
+      ensure(
+        typeof b.takenOn === 'string' &&
+          /^\d{4}-\d{2}-\d{2}$/.test(b.takenOn) &&
+          Number.isFinite(Date.parse(b.takenOn)) &&
+          b.takenOn <= now.slice(0, 10),
+        'Choose the date the photo was taken, up to today.',
+      );
+      ensure(text(b.note, 500, false), 'Keep the note under 500 characters.');
+      const media = await ownMedia(b.mediaId, 'image');
+      const note = typeof b.note === 'string' ? b.note.trim() : '';
+      await db.batch([
+        db
+          .prepare(
+            "INSERT OR IGNORE INTO progress_photos (id,membership_id,owner_id,media_id,view,taken_on,note,created_at) SELECT ?,?,?,?,?,?,?,? WHERE EXISTS (SELECT 1 FROM coaching_memberships WHERE id=? AND status='active')",
+          )
+          .bind(b.id, r.id, user.userId, media.id, b.view, b.takenOn, note, now, r.id),
+        db
+          .prepare(
+            "INSERT OR IGNORE INTO coaching_messages (id,membership_id,sender_id,body,created_at,media_id) SELECT ?,?,?,?,?,? WHERE EXISTS (SELECT 1 FROM coaching_memberships WHERE id=? AND status='active')",
+          )
+          .bind(
+            `${b.id}-photo`,
+            r.id,
+            user.userId,
+            `Progress photo · ${photoViewLabel(b.view)} view${note ? ' · ' + note : ''}`,
+            now,
+            media.id,
+            r.id,
+          ),
+      ]);
+      return json({ ok: true });
+    }
+    if (b.action === 'photo-delete') {
+      ensure(text(b.id, 100), 'Choose a photo to remove.');
+      const result = await db
+        .prepare(
+          'DELETE FROM progress_photos WHERE id=? AND membership_id=? AND owner_id=?',
+        )
+        .bind(b.id, r.id, user.userId)
+        .run();
+      ensure(result.meta.changes, 'Only the person who added a photo can remove it.', 403);
+      await db
+        .prepare('DELETE FROM coaching_messages WHERE id=? AND membership_id=?')
+        .bind(`${b.id}-photo`, r.id)
         .run();
       return json({ ok: true });
     }

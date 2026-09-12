@@ -25,3 +25,7 @@ async function network<T>(query = '', body?: unknown): Promise<T> {
 export function useCoachingTransport() {
   return useContext(CoachingTransportContext) ?? network;
 }
+/** True when talking to the real API, where uploads and media are available. */
+export function useIsNetworkTransport() {
+  return useContext(CoachingTransportContext) === null;
+}
