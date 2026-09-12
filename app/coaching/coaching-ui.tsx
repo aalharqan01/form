@@ -173,7 +173,7 @@ export default function CoachingWorkspace() {
     ),
     [selected, setSelected] = useState<string | null>(null),
     [filter, setFilter] = useState(''),
-    [attention, setAttention] = useState(false);
+    [view, setView] = useState<'all' | 'attention' | 'requests'>('all');
   const state = c.state,
     clients = state?.clients ?? [],
     active = clients.filter((m) => m.status === 'active'),
@@ -189,7 +189,11 @@ export default function CoachingWorkspace() {
       (m.stats?.due ?? 0) > (m.stats?.completed ?? 0);
   const visible = clients.filter(
     (m) =>
-      (!attention || needs(m)) &&
+      (view === 'all'
+        ? true
+        : view === 'attention'
+          ? needs(m)
+          : m.status === 'requested') &&
       (m.name + ' ' + m.email).toLowerCase().includes(filter.toLowerCase()),
   );
   return (
@@ -374,23 +378,24 @@ export default function CoachingWorkspace() {
                 </div>
                 <Button
                   className="secondary"
-                  onClick={() => {
-                    setAttention(true);
-                  }}
+                  onClick={() => setView('requests')}
                 >
                   Review requests
                 </Button>
               </div>
             )}
             <div className="co-metrics">
-              <button onClick={() => setAttention(false)}>
+              <button
+                aria-pressed={view === 'all'}
+                onClick={() => setView('all')}
+              >
                 <span>Active clients</span>
                 <strong>{active.length.toString().padStart(2, '0')}</strong>
                 <small>{placesNote ?? 'Current coaching relationships'}</small>
               </button>
               <button
-                className="co-metric-accent"
-                onClick={() => setAttention(true)}
+                aria-pressed={view === 'attention'}
+                onClick={() => setView('attention')}
               >
                 <span>Needs attention</span>
                 <strong>
@@ -398,7 +403,10 @@ export default function CoachingWorkspace() {
                 </strong>
                 <small>Check-ins, messages & missed sessions</small>
               </button>
-              <button onClick={() => setAttention(false)}>
+              <button
+                aria-pressed={view === 'requests'}
+                onClick={() => setView('requests')}
+              >
                 <span>New requests</span>
                 <strong>
                   {clients
@@ -412,16 +420,22 @@ export default function CoachingWorkspace() {
             <div className="co-list-toolbar">
               <div className="range-switch">
                 <button
-                  aria-pressed={!attention}
-                  onClick={() => setAttention(false)}
+                  aria-pressed={view === 'all'}
+                  onClick={() => setView('all')}
                 >
                   All clients
                 </button>
                 <button
-                  aria-pressed={attention}
-                  onClick={() => setAttention(true)}
+                  aria-pressed={view === 'attention'}
+                  onClick={() => setView('attention')}
                 >
                   Needs attention
+                </button>
+                <button
+                  aria-pressed={view === 'requests'}
+                  onClick={() => setView('requests')}
+                >
+                  New requests
                 </button>
               </div>
               <label className="co-search">
