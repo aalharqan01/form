@@ -7,7 +7,7 @@ export const identities = {
   coach: {
     id: 'local-form-coach',
     email: 'coach@form.test',
-    name: 'Faisal Al-Qahtani',
+    name: 'That Guy',
   },
   client: {
     id: 'local-form-client',

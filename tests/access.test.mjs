@@ -13,7 +13,7 @@ const keyset = createLocalJWKSet({
 async function token(overrides = {}) {
   return new SignJWT({
     email: 'coach@example.test',
-    name: 'Faisal Al-Qahtani',
+    name: 'That Guy',
     ...overrides,
   })
     .setProtectedHeader({ alg: 'RS256', kid: 'test' })
@@ -57,7 +57,7 @@ test('Access derives identity only from signed claims and removes fixture header
   );
   assert.equal(
     verified.headers.get('oai-authenticated-user-full-name'),
-    'Faisal%20Al-Qahtani',
+    'That%20Guy',
   );
   assert.equal(verified.headers.get('x-form-dev-role'), null);
   assert.equal(verified.headers.get('cf-access-jwt-assertion'), null);

@@ -19,6 +19,7 @@
     "setup": "npm ci && npm run db:local",
     "db:local": "wrangler d1 migrations apply DB --local --config wrangler.local.json",
     "db:seed": "node --experimental-strip-types scripts/seed-local.mjs",
+    "db:seed:dev-site": "node --experimental-strip-types scripts/seed-dev-site.mjs",
     "test:roles": "node --experimental-strip-types --test tests/local-roles.test.mjs",
     "test:e2e": "playwright test",
     "mobile:setup": "npm --prefix mobile ci",
