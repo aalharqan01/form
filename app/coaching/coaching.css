@@ -2308,3 +2308,9 @@ html[data-theme='dark'] .co-attach-progress {
     transition: none;
   }
 }
+
+/* Marketplace: package places */
+.co-full {
+  color: #8d620f;
+  font-weight: 500;
+}

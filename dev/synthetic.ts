@@ -127,38 +127,59 @@ function weights(
   return out;
 }
 
-/** Eight weeks of a coached client following their program. */
+export type CoachedOptions = {
+  seed?: number;
+  weeks?: number;
+  goal?: number;
+  startKg?: number;
+  perWeek?: number;
+  /** Days ago that were skipped entirely. */
+  missed?: number[];
+  /** Days ago that ended early. */
+  early?: number[];
+};
+
+/** Weeks of a coached client following their program. */
 export function coachedHistory(
   program: Program,
   membershipId: string,
   now = new Date(),
+  options: CoachedOptions = {},
 ): FitnessData {
-  const random = rng(11);
+  const {
+    seed = 11,
+    weeks = 8,
+    goal = 74,
+    startKg = 78.6,
+    perWeek = -0.38,
+    missed = [24],
+    early = [12],
+  } = options;
+  const random = rng(seed);
   const today = startOfUtcDay(now);
   const workouts: Workout[] = [];
-  const weeks = 8;
   for (let day = weeks * 7 - 1; day >= 1; day--) {
     const date = new Date(today);
     date.setUTCDate(date.getUTCDate() - day);
     const session = program.sessions.find((s) => s.day === date.getUTCDay());
     if (!session) continue;
     const week = weeks - 1 - Math.floor(day / 7);
-    // One missed day and one early finish keep the record honest.
-    if (day === 24) continue;
+    // Missed days and early finishes keep the record honest.
+    if (missed.includes(day)) continue;
     const start = new Date(
       date.getTime() + 15 * 3600000 + Math.floor(random() * 40) * 60000,
     );
     workouts.push(
       workoutFor(random, session, start, week, {
         membershipId,
-        endedEarly: day === 12,
+        endedEarly: early.includes(day),
       }),
     );
   }
   const data: FitnessData = {
     ...EMPTY,
-    goal: 74,
-    weights: weights(random, weeks, 78.6, -0.38, [0, 6], now),
+    goal,
+    weights: weights(random, weeks, startKg, perWeek, [0, 6], now),
     workouts,
   };
   if (!validateData(data))

@@ -6,7 +6,11 @@ export type Offer = {
   currency: 'QAR' | 'SAR';
   description: string;
   responseHours: number;
+  /** Maximum clients on this package at once; undefined means unlimited. */
+  capacity?: number;
 };
+/** Marketplace copy of an offer with the coach's remaining places. */
+export type MarketplaceOffer = Offer & { spotsLeft: number | null };
 export type CoachProfile = {
   listed?: boolean;
   name: string;
@@ -233,7 +237,9 @@ export function isOffer(v: unknown): v is Offer {
     o.price <= 100000 &&
     Number.isInteger(o.responseHours) &&
     o.responseHours >= 1 &&
-    o.responseHours <= 168
+    o.responseHours <= 168 &&
+    (o.capacity === undefined ||
+      (Number.isInteger(o.capacity) && o.capacity >= 1 && o.capacity <= 500))
   );
 }
 export function isProfile(v: unknown): v is CoachProfile {
@@ -395,10 +401,17 @@ export const DAYS = [
   'Saturday',
 ];
 
-export type MarketplaceCoach = CoachProfile & {
+export type MarketplaceCoach = Omit<CoachProfile, 'offers'> & {
   coachId: string;
   revision: number;
+  offers: MarketplaceOffer[];
 };
+/** Memberships that occupy a place on a package. */
+export const OCCUPYING_STATUSES = [
+  'requested',
+  'awaiting_payment',
+  'active',
+] as const;
 export const memberStatus = (s: Member['status']) =>
   ({
     invited: 'Invitation retired',

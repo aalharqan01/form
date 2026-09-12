@@ -223,6 +223,68 @@ test('coach-client lifecycle enforces identity, consent, ownership, persistence 
     (await call(trainee, { ...request, profileRevision: 1 })).status,
     409,
   );
+  // A package with a client limit refuses requests once it is full.
+  assert.equal(
+    (
+      await call(coach, {
+        action: 'profile',
+        profile: {
+          ...profile,
+          listed: true,
+          offers: [{ ...profile.offers[0], capacity: 0 }],
+        },
+        revision: 2,
+      })
+    ).status,
+    400,
+  );
+  const limited = {
+    ...profile,
+    listed: true,
+    offers: [{ ...profile.offers[0], capacity: 1 }],
+  };
+  assert.equal(
+    (await call(coach, { action: 'profile', profile: limited, revision: 2 }))
+      .status,
+    200,
+  );
+  assert.equal(
+    (await call(stranger, null, '?marketplace=1')).body.coaches[0].offers[0]
+      .spotsLeft,
+    1,
+  );
+  const first = await call(stranger, { ...request, profileRevision: 3 });
+  assert.equal(first.status, 200);
+  assert.equal(
+    (await call(stranger, null, '?marketplace=1')).body.coaches[0].offers[0]
+      .spotsLeft,
+    0,
+  );
+  assert.equal(
+    (await call(trainee, { ...request, profileRevision: 3 })).status,
+    409,
+  );
+  assert.equal(
+    (
+      await call(coach, {
+        action: 'decision',
+        memberId: first.body.id,
+        decision: 'reject',
+      })
+    ).status,
+    200,
+  );
+  assert.equal(
+    (
+      await call(coach, {
+        action: 'profile',
+        profile: { ...profile, listed: true },
+        revision: 3,
+      })
+    ).status,
+    200,
+  );
+  request.profileRevision = 4;
   const sent = await call(trainee, request);
   assert.equal(sent.status, 200);
   const memberId = sent.body.id;
@@ -310,7 +372,9 @@ test('coach-client lifecycle enforces identity, consent, ownership, persistence 
     )
     .run(new Date().toISOString(), memberId);
   const list = (await call(coach)).body;
-  assert.equal(list.clients.length, 1);
+  // The declined request from the full-package check is still listed.
+  assert.equal(list.clients.length, 2);
+  assert.equal(list.clients.filter((m) => m.status === 'active').length, 1);
   assert.equal(list.clients[0].intake.country, 'SA');
   assert.equal(list.billing.enabled, false);
   assert.equal('token_hash' in list.clients[0], false);
@@ -1063,12 +1127,36 @@ test('shared media is scoped to its membership and progress photos post into the
     .prepare(
       "INSERT INTO coaching_memberships (id,coach_id,trainee_id,email,name,status,token_hash,expires_at,offer,intake,program,created_at,accepted_at) VALUES (?,?,?,?,?,'active',?,?,?,?,'null',?,?)",
     )
-    .run('m', 'coach', 'trainee', 't@example.com', 'Trainee', 'hash-m', '2099-01-01', '{}', '{}', now, now);
+    .run(
+      'm',
+      'coach',
+      'trainee',
+      't@example.com',
+      'Trainee',
+      'hash-m',
+      '2099-01-01',
+      '{}',
+      '{}',
+      now,
+      now,
+    );
   db.sql
     .prepare(
       "INSERT INTO coaching_memberships (id,coach_id,trainee_id,email,name,status,token_hash,expires_at,offer,intake,program,created_at,accepted_at) VALUES (?,?,?,?,?,'active',?,?,?,?,'null',?,?)",
     )
-    .run('other', 'coach', 'someone', 's@example.com', 'Someone', 'hash-o', '2099-01-01', '{}', '{}', now, now);
+    .run(
+      'other',
+      'coach',
+      'someone',
+      's@example.com',
+      'Someone',
+      'hash-o',
+      '2099-01-01',
+      '{}',
+      '{}',
+      now,
+      now,
+    );
   const objects = new Map();
   const bucket = {
     async put(key, stream, options) {
@@ -1177,8 +1265,14 @@ test('shared media is scoped to its membership and progress photos post into the
     404,
   );
   assert.equal(
-    (await call(coach, { action: 'message', memberId: 'm', id: 'msg-empty', body: '' }))
-      .status,
+    (
+      await call(coach, {
+        action: 'message',
+        memberId: 'm',
+        id: 'msg-empty',
+        body: '',
+      })
+    ).status,
     400,
   );
   const today = now.slice(0, 10);
@@ -1215,16 +1309,35 @@ test('shared media is scoped to its membership and progress photos post into the
   assert.equal(detail.photos[0].media.id, media.id);
   assert.equal(detail.messages.length, 2);
   assert.equal(detail.messages[0].media.kind, 'image');
-  assert.match(detail.messages[1].body, /Progress photo · Front view · Week one/);
+  assert.match(
+    detail.messages[1].body,
+    /Progress photo · Front view · Week one/,
+  );
   assert.equal(
-    (await call(coach, { action: 'photo-delete', memberId: 'm', id: 'photo-1' })).status,
+    (
+      await call(coach, {
+        action: 'photo-delete',
+        memberId: 'm',
+        id: 'photo-1',
+      })
+    ).status,
     403,
   );
   assert.equal(
-    (await call(trainee, { action: 'photo-delete', memberId: 'm', id: 'photo-1' })).status,
+    (
+      await call(trainee, {
+        action: 'photo-delete',
+        memberId: 'm',
+        id: 'photo-1',
+      })
+    ).status,
     200,
   );
   const after = (await call(coach, null, '?member=m')).data;
   assert.equal(after.photos.length, 0);
-  assert.equal(after.messages.length, 1, 'the photo message goes with the photo');
+  assert.equal(
+    after.messages.length,
+    1,
+    'the photo message goes with the photo',
+  );
 });

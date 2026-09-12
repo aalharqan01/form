@@ -135,7 +135,7 @@ test('dated weigh-ins show arithmetic weekly change to trainee and coach; coachi
       .getByRole('button', { name: 'Save weigh-in', exact: true })
       .click();
     await expect(
-      page.getByText('-0.50 kg', { exact: true }).first(),
+      page.getByText('-0.5 kg', { exact: true }).first(),
     ).toBeVisible();
     await expect
       .poll(

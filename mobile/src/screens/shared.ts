@@ -55,7 +55,7 @@ export const kgText = (kg: number, unit: 'kg' | 'lb', digits = 1) =>
 export function signedKg(
   kg: number | null | undefined,
   unit: 'kg' | 'lb',
-  digits = 2,
+  digits = 1,
 ) {
   if (kg == null) return '—';
   const value = displayWeight(kg, unit);

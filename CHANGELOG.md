@@ -2,6 +2,23 @@
 
 Newest first. Each entry says what changed, how to run it, and what is still open, so a fresh `git pull` is enough to get going.
 
+## 12 September 2026 — package client limits, more sample clients, one-decimal changes
+
+### What changed
+
+- **Client limit per package.** In Profile & packages a coach can set a client limit on each package (blank means unlimited). Requested, accepted-awaiting-payment and active memberships count toward it. The Marketplace shows "N of M places left" and disables the request button when a package is full; the API refuses requests for a full package. The coach dashboard's Active clients tile shows "X of Y places taken" when any package has a limit.
+- **Client row labels** now read "2 of 3 sessions · 7 days" and "−0.5 kg weight · this week" instead of "3/3".
+- **More local clients.** The seed adds Jordan Reyes, Priya Nair and Omar Haddad (active, with sample history) and Lina Karam (a pending request) to Sam Coach's list; the fixture package has a limit of 8. Run `npm run db:seed -- --refresh` to pick them up on an existing database.
+- **Trainee app** weekly average change is shown to one decimal place everywhere.
+
+### How to run
+
+`npm run db:seed -- --refresh` (the launcher seeds new databases automatically).
+
+### Still open
+
+- The extra clients have no login of their own; only Alex has a proxy port.
+
 ## 12 September 2026 — coach site on phones, compact client list, sample history
 
 ### What changed

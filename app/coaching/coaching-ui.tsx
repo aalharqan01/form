@@ -177,6 +177,11 @@ export default function CoachingWorkspace() {
   const state = c.state,
     clients = state?.clients ?? [],
     active = clients.filter((m) => m.status === 'active'),
+    // Total places across packages with a client limit, if the coach set any.
+    limited = (state?.profile?.offers ?? []).filter((o) => o.capacity),
+    placesNote = limited.length
+      ? `${clients.filter((m) => limited.some((o) => o.id === m.offer.id) && ['requested', 'awaiting_payment', 'active'].includes(m.status)).length} of ${limited.reduce((n, o) => n + (o.capacity ?? 0), 0)} places taken`
+      : null,
     needs = (m: Member) =>
       m.status === 'requested' ||
       m.unread > 0 ||
@@ -381,7 +386,7 @@ export default function CoachingWorkspace() {
               <button onClick={() => setAttention(false)}>
                 <span>Active clients</span>
                 <strong>{active.length.toString().padStart(2, '0')}</strong>
-                <small>Current coaching relationships</small>
+                <small>{placesNote ?? 'Current coaching relationships'}</small>
               </button>
               <button
                 className="co-metric-accent"
@@ -482,9 +487,9 @@ export default function CoachingWorkspace() {
                         <span>
                           <strong>
                             {m.stats?.completed ?? 0}
-                            <em>/{m.stats?.due ?? 0}</em>
+                            <em> of {m.stats?.due ?? 0}</em>
                           </strong>
-                          <small>sessions</small>
+                          <small>sessions · 7 days</small>
                         </span>
                         <span>
                           <strong
@@ -503,7 +508,7 @@ export default function CoachingWorkspace() {
                               : `${m.stats.averageChangeKg > 0 ? '+' : '−'}${Math.abs(m.stats.averageChangeKg).toFixed(1)}`}
                             {m.stats?.averageChangeKg != null && <em> kg</em>}
                           </strong>
-                          <small>this week</small>
+                          <small>weight · this week</small>
                         </span>
                       </span>
                     )}
@@ -759,6 +764,31 @@ function ProfileEditor({
                   )
                 }
               />
+            </label>
+            <label>
+              Client limit
+              <Input
+                type="number"
+                min={1}
+                max={500}
+                placeholder="Unlimited"
+                value={o.capacity ?? ''}
+                onChange={(e) =>
+                  field(
+                    'offers',
+                    p.offers.map((v) => {
+                      if (v.id !== o.id) return v;
+                      const { capacity: _drop, ...rest } = v;
+                      return e.target.value
+                        ? { ...rest, capacity: Number(e.target.value) }
+                        : rest;
+                    }),
+                  )
+                }
+              />
+              <small className="co-muted">
+                Requests close once this many clients are on the package.
+              </small>
             </label>
           </div>
         ))}
@@ -2738,15 +2768,26 @@ export function Marketplace({ onRequests }: { onRequests: () => void }) {
                     <p className="co-preserve">{o.description}</p>
                     <p className="co-muted">
                       Coach responds within {o.responseHours} hours.
+                      {o.spotsLeft !== null && (
+                        <>
+                          {' · '}
+                          <span className={o.spotsLeft ? '' : 'co-full'}>
+                            {o.spotsLeft
+                              ? `${o.spotsLeft} of ${o.capacity} ${o.capacity === 1 ? 'place' : 'places'} left`
+                              : 'Full'}
+                          </span>
+                        </>
+                      )}
                     </p>
                     <Button
                       className="primary full"
+                      disabled={o.spotsLeft === 0}
                       onClick={() => {
                         setSuccess(false);
                         setSelected({ coach: c, offer: o });
                       }}
                     >
-                      Request package
+                      {o.spotsLeft === 0 ? 'Package full' : 'Request package'}
                       <ArrowUpRight size={17} />
                     </Button>
                   </div>
