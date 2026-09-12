@@ -7,7 +7,7 @@ export type FitnessResponse = {
   userKey: string;
   name: string;
 };
-import { API_ORIGIN as origin } from './account';
+import { API_ORIGIN as origin, HOSTED } from './account';
 export async function request<T>(
   path: string,
   body?: unknown,
@@ -32,7 +32,9 @@ export async function request<T>(
       (error instanceof Error && error.name === 'AbortError')
     ) {
       throw new Error(
-        'The local backend is unavailable. Start npm run dev:roles on your Mac, then retry.',
+        HOSTED
+          ? 'The server is unreachable. Check your connection and retry.'
+          : 'The local backend is unavailable. Start npm run dev:roles on your Mac, then retry.',
       );
     }
     throw error;
@@ -79,7 +81,8 @@ export async function uploadMedia(
     throw new Error('Upload failed. Check your connection and retry.');
   });
   const data = (await response.json()) as UploadedMedia & { error?: string };
-  if (!response.ok) throw new Error(data.error || 'Upload failed. Please retry.');
+  if (!response.ok)
+    throw new Error(data.error || 'Upload failed. Please retry.');
   return data;
 }
 export const mediaUri = (id: string) => origin + '/api/media?id=' + id;

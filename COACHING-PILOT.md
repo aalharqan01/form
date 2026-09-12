@@ -20,8 +20,3 @@ Current authentication is ChatGPT sign-in inherited from Form. The Sites audienc
 
 `npm test` covers Marketplace draft/listed visibility, server-owned pricing, request consent, duplicate prevention, accept/decline authorization, stale decisions, payment gating, disabled legacy invitations, request withdrawal and re-requesting. A separate isolated active-membership fixture retains tests for programs, progress, messaging, check-ins and revocation; it is never created in the live application. `npm run lint`, `npx tsc --noEmit` and `npm run build` validate the implementation. No browser UI QA was performed, per Sites skill policy.
 
-## Interactive simulation
-
-`/simulate` reuses the actual coaching screens via an explicitly provided in-memory transport. It also reuses WorkoutPanel and WeightPanel against a separate simulation store. Every instance owns its store; it never writes the coaching API or the fitness API. Leaving/refeshing/resetting clears the scenario. The simulated rest timer uses a separate sessionStorage key. Simulated payment exists only as a client-side action on this store and cannot activate a real membership.
-
-The guided flow covers request, approval, simulated payment, assignment, manual workout/weight logging, four weeks of fictional history, coach progress review, check-ins and messaging. Existing network behavior is the default when no simulation transport is provided. Automated tests check isolation between simulator instances, lifecycle, the same logged workout being visible to the coach, 28 daily weigh-ins, mixed-unit progress, feedback and reset.

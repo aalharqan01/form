@@ -23,16 +23,15 @@ jobs:
             package-lock.json
             mobile/package-lock.json
       - run: npm ci
+      - run: npm --prefix mobile ci
       - run: npm test
       - run: npm run test:roles
       - run: npm run test:access
       - run: npm run lint
       - run: npm run typecheck
+      - run: npm --prefix mobile run typecheck
       - run: npm run build
       - run: npm run cloudflare:check
-      - run: npm --prefix mobile ci
-      - run: npm --prefix mobile run typecheck
-      - run: npm --prefix mobile run export:web
       - run: npx playwright install --with-deps webkit
       - run: npm run test:e2e
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -92,6 +91,8 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
+        if: steps.config.outputs.ready == 'true'
+      - run: npm --prefix mobile ci
         if: steps.config.outputs.ready == 'true'
       - run: npm run cloudflare:configure
         if: steps.config.outputs.ready == 'true'

@@ -234,10 +234,6 @@ export default function CoachingWorkspace() {
             <ClipboardList size={20} strokeWidth={1.5} />
             Workout templates
           </button>
-          <a href="/simulate">
-            <ClipboardList size={20} strokeWidth={1.5} />
-            Try a simulation
-          </a>
         </nav>
         <div className="co-sidebar-bottom">
           <ThemeControl />

@@ -2,6 +2,15 @@
 
 Newest first. Each entry says what changed, how to run it, and what is still open, so a fresh `git pull` is enough to get going.
 
+## 12 September 2026 — simulation removed, trainee app and phone preview on the deployed site
+
+### What changed
+
+- **Simulation removed.** The `/simulate` page, its in-memory store, the coach sidebar link, the simulation-only video contexts and its unit test are gone. Local fixtures and the deployed development site replace it.
+- **Trainee app on the website.** `npm run build:cloudflare` now exports the Expo app for the web under `/app/` and ships it in the same Worker. When the app runs on a non-local host it talks to the same origin and trusts the server's identity (Cloudflare Access) instead of a fixture account.
+- **`/__dev/phones` on the deployed site** shows the coach website and the trainee app side by side at iPhone size for the signed-in account. Locally the three-role preview is unchanged.
+- CI installs the app's dependencies before the checks so `cloudflare:check` covers the export; the deploy job does the same.
+
 ## 12 September 2026 — first Cloudflare deployment fixes
 
 ### What changed

@@ -1,10 +1,9 @@
 'use client';
-import { useContext, useState } from 'react';
+import { useState } from 'react';
 import { Upload, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import ExerciseVideo from './exercise-video';
-import { VideoUploadContext } from './video-transport';
 export default function VideoUpload({
   memberId,
   name,
@@ -18,7 +17,6 @@ export default function VideoUpload({
   onChange: (url: string) => void;
   onBusy?: (busy: boolean) => void;
 }) {
-  const simulate = useContext(VideoUploadContext);
   const [busy, setBusy] = useState(false),
     [error, setError] = useState('');
   async function upload(file?: File) {
@@ -35,8 +33,7 @@ export default function VideoUpload({
     onBusy?.(true);
     setError('');
     try {
-      if (simulate) onChange(await simulate(file, memberId));
-      else {
+      {
         const response = await fetch(
           '/api/videos?member=' + encodeURIComponent(memberId),
           {

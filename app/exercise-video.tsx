@@ -1,8 +1,7 @@
 'use client';
-import { useContext, useState } from 'react';
+import { useState } from 'react';
 import { exerciseVideo } from '@/lib/video';
 import './exercise-video.css';
-import { VideoSourcesContext } from './video-transport';
 export default function ExerciseVideo({
   url,
   name,
@@ -10,10 +9,7 @@ export default function ExerciseVideo({
   url: string;
   name: string;
 }) {
-  const uploadedSources = useContext(VideoSourcesContext);
-  const source = uploadedSources[url]
-    ? { kind: 'file', src: uploadedSources[url] }
-    : exerciseVideo(url);
+  const source = exerciseVideo(url);
   const [failedUrl, setFailedUrl] = useState('');
   if (!source)
     return (

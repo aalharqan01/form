@@ -13,7 +13,6 @@ for (const name of [
   'fitness',
   'coaching',
   'coaching-server',
-  'simulation',
   'video',
   'video-server',
   'media-server',
@@ -637,107 +636,6 @@ test('program validation and adherence use actual session links, not matching wo
     ).completed,
     1,
   );
-});
-
-test('simulation completes the coach-trainee workflow in isolated memory', async () => {
-  const {
-    createSimulationStore,
-    simulatePayment,
-    exampleProgram,
-    startSimulationWorkout,
-    addSimulationHistory,
-  } = await import(pathToFileURL(`${temp}/simulation.mjs`).href);
-  const store = createSimulationStore(),
-    independent = createSimulationStore();
-  const before = structuredClone(independent.getSnapshot());
-  assert.throws(() => store.change(simulatePayment), /accept first/);
-  store.request('trainee', '', {
-    action: 'request',
-    name: 'Abdullah',
-    offerId: 'demo-package',
-    intake,
-    consent: true,
-  });
-  assert.equal(store.request('coach').clients[0].status, 'requested');
-  store.request('coach', '', { action: 'decision', decision: 'accept' });
-  assert.equal(store.request('coach', '?member=demo-membership').fitness, null);
-  store.change(simulatePayment);
-  store.request('coach', '', { action: 'program', program: exampleProgram() });
-  const assigned = store.request('trainee', '?member=demo-membership').member
-    .program;
-  assert.equal(assigned.sessions[0].exercises[1].unit, 'lb');
-  store.change((s) => startSimulationWorkout(s, assigned.sessions[0]));
-  store.change((s) => {
-    const workout = s.fitness.active;
-    workout.exercises[0].sets[0] = {
-      ...workout.exercises[0].sets[0],
-      kg: '45',
-      reps: '8',
-      done: true,
-    };
-    s.fitness.workouts.push({
-      ...workout,
-      finishedAt: new Date().toISOString(),
-    });
-    s.fitness.active = null;
-  });
-  assert.equal(
-    store.request('coach', '?member=demo-membership').fitness.workouts[0]
-      .exercises[0].sets[0].kg,
-    '45',
-  );
-  store.request('coach', '', {
-    action: 'nutrition',
-    nutrition: { calories: 2200, protein: 160, carbs: 250, fat: 62, notes: '' },
-  });
-  assert.equal(
-    store.request('trainee', '?member=demo-membership').member.nutrition
-      .protein,
-    160,
-  );
-  assert.throws(() =>
-    store.request('trainee', '', { action: 'nutrition', nutrition: null }),
-  );
-  store.change(addSimulationHistory);
-  const result = store.request('coach', '?member=demo-membership');
-  assert.equal(result.fitness.weights.length, 28);
-  assert.ok(result.fitness.workouts.length >= 10);
-  const { exerciseHistory, validateData } = await import(
-    pathToFileURL(`${temp}/fitness.mjs`).href
-  );
-  assert.ok(validateData(result.fitness));
-  assert.ok(
-    exerciseHistory(result.fitness.workouts, 'Seated cable row').some(
-      (p) => p.record,
-    ),
-  );
-  store.request('trainee', '', {
-    action: 'checkin',
-    answers: { energy: 4, sleep: 7, wins: 'Consistent', challenges: '' },
-  });
-  const checkin = store.request('coach', '?member=demo-membership').checkins[0];
-  store.request('coach', '', {
-    action: 'feedback',
-    checkinId: checkin.id,
-    feedback: 'Increase by 2.5 kg next week.',
-  });
-  assert.equal(
-    store.request('trainee', '?member=demo-membership').checkins[0].feedback,
-    'Increase by 2.5 kg next week.',
-  );
-  store.request('trainee', '', {
-    action: 'message',
-    id: 'demo-msg',
-    body: 'Thank you',
-  });
-  assert.equal(
-    store.request('coach', '?member=demo-membership').messages[0].body,
-    'Thank you',
-  );
-  assert.deepEqual(independent.getSnapshot(), before);
-  store.reset();
-  assert.equal(store.getSnapshot().member, null);
-  assert.equal(store.getSnapshot().fitness.weights.length, 0);
 });
 
 test('weekly weight average uses only recorded days in the current UTC week', () => {
