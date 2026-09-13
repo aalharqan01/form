@@ -10,7 +10,8 @@ Newest first. Each entry says what changed, how to run it, and what is still ope
 - **Share a workout** from its detail sheet: a share card image (name, date, sets, volume, minutes, exercises) through the phone's share sheet; on the web the share sheet where available, otherwise the summary text is copied.
 - **Exercise library** grew from 98 to 739 entries by merging free-exercise-db (public domain): every strength, powerlifting, Olympic and strongman movement with muscles, equipment, level and step-by-step instructions. Pickers on the app and website filter the merged list; entries without a FORM illustration show the library photo. Regenerate with `node scripts/build-exercise-library.mjs`.
 - **How to** on each exercise in an active workout opens a guide: the two photo frames of the movement played back and forth, muscles worked, and the steps. Free for everyone now; `GUIDES_FREE` in `lib/exercises.ts` is the switch if this becomes premium. The Gym Visual animations used by openGym need a licence from Gym Visual, so they are not used.
-- **Next session card** on the Train tab shows a loaded-barbell mark instead of the dumbbell, the estimated duration, and the muscle groups of the session.
+- **Next session card** on the Train tab shows the first three exercises of the session as illustrations instead of an icon, plus the estimated duration and the muscle groups.
+- **How to** is also reachable from the exercise picker (the info button on each row), not only inside an active workout.
 
 ## 13 September 2026 — shared step goal, Outfit typeface, new tab bar
 

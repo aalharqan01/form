@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { ScrollView, View } from 'react-native';
-import { Plus, Search } from 'lucide-react-native';
+import { Info, Plus, Search } from 'lucide-react-native';
 import {
   ALL_EXERCISES,
   EQUIPMENT_OPTIONS,
   EXERCISE_SOURCE,
+  exerciseDetail,
 } from '../../../lib/exercises';
+import { ExerciseGuideSheet } from './exercise-guide';
 import { useTheme } from '../theme';
 import { Body, Chip, Input, Press, Sheet, T, Thumbnail } from '../ui';
 
@@ -29,7 +31,8 @@ export function PickerBody({
   const { theme } = useTheme();
   const [query, setQuery] = useState(''),
     [muscle, setMuscle] = useState('All'),
-    [equipment, setEquipment] = useState('All');
+    [equipment, setEquipment] = useState('All'),
+    [guide, setGuide] = useState<string | null>(null);
   const list = ALL_EXERCISES.filter(
     ([n, m, eq]) =>
       `${n} ${m} ${eq}`.toLowerCase().includes(query.trim().toLowerCase()) &&
@@ -122,6 +125,22 @@ export function PickerBody({
                 {m} · {eq}
               </T>
             </View>
+            {exerciseDetail(name) && (
+              <Press
+                accessibilityRole="button"
+                accessibilityLabel={`How to do ${name}`}
+                onPress={() => setGuide(name)}
+                scale={0.9}
+                style={{
+                  width: 36,
+                  height: 36,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Info size={18} color={theme.muted} />
+              </Press>
+            )}
             <Plus size={19} color={theme.textButton} />
           </Press>
         ))}
@@ -169,6 +188,7 @@ export function PickerBody({
           </Press>
         ) : null}
       </View>
+      <ExerciseGuideSheet name={guide} onClose={() => setGuide(null)} />
       <Body size={11} style={{ marginTop: 6 }}>
         Exercise data and photos: {EXERCISE_SOURCE.name},{' '}
         {EXERCISE_SOURCE.license.toLowerCase()}. Illustrations: Everkinetic, CC

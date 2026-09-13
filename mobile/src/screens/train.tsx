@@ -43,51 +43,13 @@ import {
   Sheet,
   T,
   TextButton,
+  Thumbnail,
 } from '../ui';
 import { AssignedWorkouts } from './assigned';
 import { StepsCard } from './steps';
 import { RoutineEditor } from './routine-editor';
 import { WorkoutDetailSheet } from './history';
 import type { Act } from './shared';
-
-/** Loaded barbell sleeve: three plates on a bar, the strength mark of the next-session card. */
-function PlateStack({ color }: { color: string }) {
-  return (
-    <Svg
-      width={92}
-      height={64}
-      viewBox="0 0 92 64"
-      accessibilityLabel="Loaded barbell"
-    >
-      <Path
-        d="M0 32h14M78 32h14"
-        stroke={color}
-        strokeWidth={5}
-        strokeLinecap="round"
-      />
-      <Path d="M14 30h8v4h-8z" fill={color} opacity={0.9} />
-      <Path d="M70 30h8v4h-8z" fill={color} opacity={0.9} />
-      <Path
-        d="M22 8h12a3 3 0 0 1 3 3v42a3 3 0 0 1-3 3H22a3 3 0 0 1-3-3V11a3 3 0 0 1 3-3z"
-        fill={color}
-      />
-      <Path
-        d="M38 16h10a3 3 0 0 1 3 3v26a3 3 0 0 1-3 3H38a3 3 0 0 1-3-3V19a3 3 0 0 1 3-3z"
-        fill={color}
-        opacity={0.72}
-      />
-      <Path
-        d="M58 8h12a3 3 0 0 1 3 3v42a3 3 0 0 1-3 3H58a3 3 0 0 1-3-3V11a3 3 0 0 1 3-3z"
-        fill={color}
-      />
-      <Path
-        d="M44 16h10a3 3 0 0 1 3 3v26a3 3 0 0 1-3 3H44a3 3 0 0 1-3-3V19a3 3 0 0 1 3-3z"
-        fill={color}
-        opacity={0.72}
-      />
-    </Svg>
-  );
-}
 
 export function TrainScreen({
   training,
@@ -196,7 +158,27 @@ export function TrainScreen({
               >
                 {next ? next.name : 'Start a workout.'}
               </T>
-              <PlateStack color={theme.featureSymbol} />
+              {next && next.exercises.length > 0 && (
+                <View
+                  accessibilityLabel={`${Math.min(3, next.exercises.length)} of the session's exercises`}
+                  style={{ flexDirection: 'row', alignItems: 'center' }}
+                >
+                  {next.exercises.slice(0, 3).map((e, i) => (
+                    <View
+                      key={e.name + i}
+                      style={{
+                        marginLeft: i ? -14 : 0,
+                        borderRadius: 14,
+                        borderWidth: 2,
+                        borderColor: theme.feature,
+                        zIndex: 3 - i,
+                      }}
+                    >
+                      <Thumbnail name={e.name} size={46} />
+                    </View>
+                  ))}
+                </View>
+              )}
             </View>
             <Body size={14} color={theme.featureText} style={{ marginTop: 14 }}>
               {next
