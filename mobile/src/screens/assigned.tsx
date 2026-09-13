@@ -12,6 +12,7 @@ import {
 } from '../../../lib/coaching';
 import type { Training } from '../use-training';
 import { useTheme } from '../theme';
+import { useI18n } from '../i18n';
 import {
   Body,
   Card,
@@ -26,6 +27,7 @@ import {
 
 export function ProgramNote({ text }: { text: string }) {
   const { theme } = useTheme();
+  const { t } = useI18n();
   if (!text) return null;
   return (
     <View
@@ -47,12 +49,13 @@ export function NutritionCard({
   targets: NutritionTargets | null | undefined;
 }) {
   const { theme } = useTheme();
+  const { t } = useI18n();
   return (
     <Card style={{ marginTop: 14 }}>
       <Eyebrow size={12} color={theme.muted} style={{ marginBottom: 12 }}>
-        DAILY NUTRITION
+        {t('assigned.nutritionEyebrow')}
       </Eyebrow>
-      <H2 size={22}>Calorie & macro targets</H2>
+      <H2 size={22}>{t('assigned.nutritionTitle')}</H2>
       {targets ? (
         <>
           <View
@@ -65,10 +68,10 @@ export function NutritionCard({
           >
             {(
               [
-                [targets.calories, 'kcal', 'Calories'],
-                [targets.protein, 'g', 'Protein'],
-                [targets.carbs, 'g', 'Carbs'],
-                [targets.fat, 'g', 'Fat'],
+                [targets.calories, 'kcal', t('assigned.calories')],
+                [targets.protein, 'g', t('assigned.protein')],
+                [targets.carbs, 'g', t('assigned.carbs')],
+                [targets.fat, 'g', t('assigned.fat')],
               ] as const
             ).map(([value, unit, label]) => (
               <View key={label} style={{ minWidth: '40%', flex: 1 }}>
@@ -87,7 +90,7 @@ export function NutritionCard({
         </>
       ) : (
         <Body size={14} style={{ marginTop: 10 }}>
-          Your coach hasn’t set nutrition targets yet.
+          {t('assigned.noNutrition')}
         </Body>
       )}
     </Card>
@@ -110,6 +113,7 @@ export function SessionCard({
   onStart: (routine: Routine, membershipId: string) => void;
 }) {
   const { theme } = useTheme();
+  const { t } = useI18n();
   const today = new Date().toISOString().slice(0, 10);
   const completed = fitness.workouts.filter(
     (w) =>
@@ -124,7 +128,7 @@ export function SessionCard({
       <View style={{ gap: 6 }}>
         <Eyebrow size={12} color={theme.muted}>
           {DAYS[session.day].toUpperCase()}
-          {completed ? ' · COMPLETED THIS WEEK' : ''}
+          {completed ? ` · ${t('assigned.completedThisWeek')}` : ''}
         </Eyebrow>
         <H3 size={18}>{session.name}</H3>
         <Body size={13}>
@@ -137,12 +141,14 @@ export function SessionCard({
           small
           label={
             upcoming
-              ? 'Starts ' + dateLabel(program.startDate)
+              ? t('assigned.starts', { date: dateLabel(program.startDate) })
               : completed
-                ? 'Train again'
-                : 'Start workout'
+                ? t('assigned.trainAgain')
+                : t('assigned.startWorkout')
           }
-          accessibilityLabel={`Start workout: ${session.name}`}
+          accessibilityLabel={t('assigned.startSession', {
+            name: session.name,
+          })}
           disabled={upcoming || busy}
           onPress={() => onStart(session, membershipId)}
         />
@@ -179,14 +185,15 @@ export function AssignedWorkouts({
   onStart: (routine: Routine, membershipId: string) => void;
 }) {
   const { theme } = useTheme();
+  const { t } = useI18n();
   const detail = training.detail;
   if (!detail) return null;
   const member = detail.member;
   return (
     <View style={{ marginBottom: 28 }}>
       <Row style={{ justifyContent: 'space-between' }}>
-        <H2 size={22}>Your assigned workouts</H2>
-        <Body size={13}>This week</Body>
+        <H2 size={22}>{t('assigned.title')}</H2>
+        <Body size={13}>{t('assigned.thisWeek')}</Body>
       </Row>
       <Eyebrow size={12} color={theme.muted} style={{ marginTop: 18 }}>
         {member.coachName.toUpperCase()}
@@ -199,7 +206,7 @@ export function AssignedWorkouts({
       <NutritionCard targets={member.nutrition} />
       {!member.program ? (
         <Body size={14} style={{ marginTop: 16 }}>
-          Your coach is preparing your program.
+          {t('assigned.preparing')}
         </Body>
       ) : (
         <>

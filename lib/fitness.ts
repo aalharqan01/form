@@ -326,24 +326,24 @@ export function resumeWorkout(workout: Workout, now = new Date()): Workout {
   };
 }
 /**
- * The plan to suggest next: the one trained least recently, with plans never
- * trained first, so a two-plan split alternates and a three-day split rotates.
- * Ties keep the user's plan order.
+ * The plan to suggest next: the one after the plan of the most recent
+ * workout, in the user's plan order, wrapping around. With no matching
+ * workout yet, the first plan.
  */
 export function nextRoutine(
   routines: Routine[],
   workouts: Pick<Workout, 'name' | 'startedAt'>[],
 ) {
   if (!routines.length) return null;
-  const last = new Map<string, string>();
-  for (const w of workouts) {
-    const key = w.name.trim().toLowerCase();
-    if (!last.has(key) || last.get(key)! < w.startedAt)
-      last.set(key, w.startedAt);
+  const latest = [...workouts].sort((a, b) =>
+    b.startedAt.localeCompare(a.startedAt),
+  );
+  const key = (name: string) => name.trim().toLowerCase();
+  for (const w of latest) {
+    const index = routines.findIndex((r) => key(r.name) === key(w.name));
+    if (index !== -1) return routines[(index + 1) % routines.length];
   }
-  return routines
-    .map((r, i) => ({ r, i, at: last.get(r.name.trim().toLowerCase()) ?? '' }))
-    .sort((a, b) => (a.at === b.at ? a.i - b.i : a.at < b.at ? -1 : 1))[0].r;
+  return routines[0];
 }
 /** Local calendar date key for a Date. */
 function localKey(d: Date) {

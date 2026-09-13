@@ -181,14 +181,26 @@ const families: Record<Weight, string> = {
   600: 'Outfit_600SemiBold',
   700: 'Outfit_700Bold',
 };
+// Outfit has no Arabic glyphs; IBM Plex Sans Arabic carries the same weights.
+const arabicFamilies: Record<Weight, string> = {
+  400: 'IBMPlexSansArabic_400Regular',
+  500: 'IBMPlexSansArabic_500Medium',
+  600: 'IBMPlexSansArabic_600SemiBold',
+  700: 'IBMPlexSansArabic_700Bold',
+};
 let fontsReady = false;
+let arabic = false;
 export function markFontsReady(ready: boolean) {
   fontsReady = ready;
+}
+/** Set by the locale provider so text styles pick the Arabic family. */
+export function markArabic(value: boolean) {
+  arabic = value;
 }
 // Custom families carry their own weight; the system fallback needs fontWeight.
 export function font(weight: Weight = 400): TextStyle {
   return fontsReady
-    ? { fontFamily: families[weight] }
+    ? { fontFamily: (arabic ? arabicFamilies : families)[weight] }
     : { fontWeight: String(weight) as TextStyle['fontWeight'] };
 }
 

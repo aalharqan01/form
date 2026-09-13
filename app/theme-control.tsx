@@ -1,7 +1,9 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { useI18n } from './i18n';
 export default function ThemeControl() {
   const [theme, setTheme] = useState('system');
+  const { t } = useI18n();
   useEffect(() => {
     const t = setTimeout(
       () => setTheme(localStorage.getItem('form-theme') || 'system'),
@@ -22,24 +24,30 @@ export default function ThemeControl() {
   }, []);
   return (
     <div className="theme-control">
-      <span>Appearance</span>
+      <span>{t('prefs.appearance')}</span>
       <div>
-        {['light', 'dark', 'system'].map((t) => (
+        {(['light', 'dark', 'system'] as const).map((value) => (
           <button
-            key={t}
-            aria-pressed={theme === t}
+            key={value}
+            aria-pressed={theme === value}
             onClick={() => {
-              setTheme(t);
-              localStorage.setItem('form-theme', t);
+              setTheme(value);
+              localStorage.setItem('form-theme', value);
               document.documentElement.dataset.theme =
-                t === 'system'
+                value === 'system'
                   ? matchMedia('(prefers-color-scheme: dark)').matches
                     ? 'dark'
                     : 'light'
-                  : t;
+                  : value;
             }}
           >
-            {t[0].toUpperCase() + t.slice(1)}
+            {t(
+              value === 'light'
+                ? 'prefs.light'
+                : value === 'dark'
+                  ? 'prefs.dark'
+                  : 'prefs.system',
+            )}
           </button>
         ))}
       </div>

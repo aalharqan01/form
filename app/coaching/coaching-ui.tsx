@@ -62,6 +62,8 @@ import ExerciseVideo from '../exercise-video';
 import { exerciseVideo } from '@/lib/video';
 import ProgressPanel from '../progress-panel';
 import ThemeControl from '../theme-control';
+import LanguageControl from '../language-control';
+import { useI18n } from '../i18n';
 import { useCoachingTransport } from './transport';
 import { Wordmark } from '../wordmark';
 import './coaching.css';
@@ -169,6 +171,7 @@ function Empty({
   );
 }
 export default function CoachingWorkspace() {
+  const { t } = useI18n();
   const c = useCoaching();
   const [section, setSection] = useState<'clients' | 'offering' | 'templates'>(
       'clients',
@@ -201,10 +204,10 @@ export default function CoachingWorkspace() {
   return (
     <div className="co-shell">
       <aside className="co-sidebar">
-        <a className="co-logo" href="/" aria-label="FORM home">
+        <a className="co-logo" href="/" aria-label={t('coach.home')}>
           <Wordmark height={22} />
         </a>
-        <span className="co-overline">COACH WORKSPACE</span>
+        <span className="co-overline">{t('coach.workspace')}</span>
         <nav>
           <button
             aria-current={section === 'clients' ? 'page' : undefined}
@@ -214,7 +217,7 @@ export default function CoachingWorkspace() {
             }}
           >
             <Users size={20} strokeWidth={1.5} />
-            Clients & requests
+            {t('coach.clients')}
           </button>
           <button
             aria-current={section === 'offering' ? 'page' : undefined}
@@ -224,7 +227,7 @@ export default function CoachingWorkspace() {
             }}
           >
             <Wallet size={20} strokeWidth={1.5} />
-            Profile & packages
+            {t('coach.profile')}
           </button>
           <button
             aria-current={section === 'templates' ? 'page' : undefined}
@@ -234,17 +237,18 @@ export default function CoachingWorkspace() {
             }}
           >
             <ClipboardList size={20} strokeWidth={1.5} />
-            Workout templates
+            {t('coach.templates')}
           </button>
         </nav>
         <div className="co-sidebar-bottom">
           <ThemeControl />
-          <span className="co-pilot">Private coaching pilot</span>
+          <LanguageControl />
+          <span className="co-pilot">{t('coach.pilot')}</span>
         </div>
       </aside>
       <main className="co-main">
         <header className="co-topbar">
-          <a href="/" className="co-mobile-brand" aria-label="FORM home">
+          <a href="/" className="co-mobile-brand" aria-label={t('coach.home')}>
             <Wordmark height={18} />
           </a>
           <span>

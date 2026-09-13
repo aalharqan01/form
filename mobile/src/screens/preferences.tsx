@@ -3,6 +3,8 @@ import { ChevronRight, Download, RefreshCw } from 'lucide-react-native';
 import { today } from '../../../lib/fitness';
 import type { Training } from '../use-training';
 import { useTheme, type ThemePreference } from '../theme';
+import { useI18n } from '../i18n';
+import type { LanguagePreference } from '../../../lib/i18n';
 import { Body, Credits, Press, Segmented, Sheet, T } from '../ui';
 import type { Act } from './shared';
 
@@ -18,6 +20,7 @@ export function PreferencesSheet({
   act: Act;
 }) {
   const { theme, preference, setPreference } = useTheme();
+  const { t, preference: language, setPreference: setLanguage } = useI18n();
   const item = (
     icon: React.ReactNode,
     title: string,
@@ -58,17 +61,30 @@ export function PreferencesSheet({
     <Sheet
       open={open}
       onClose={onClose}
-      title="Preferences"
-      description="Choose kg or lb for each exercise. Body weight has its own unit setting."
+      title={t('prefs.title')}
+      description={t('prefs.description')}
     >
       <View style={{ marginTop: 18, gap: 12 }}>
-        <Body size={14}>Appearance</Body>
-        <Segmented<ThemePreference>
-          accessibilityLabel="Appearance"
+        <Body size={14}>{t('prefs.language')}</Body>
+        <Segmented<LanguagePreference>
+          accessibilityLabel={t('prefs.language')}
           options={[
-            { value: 'light', label: 'Light' },
-            { value: 'dark', label: 'Dark' },
-            { value: 'system', label: 'System' },
+            { value: 'system', label: t('prefs.languageSystem') },
+            { value: 'en', label: t('prefs.english') },
+            { value: 'ar', label: t('prefs.arabic') },
+          ]}
+          value={language}
+          onChange={setLanguage}
+        />
+      </View>
+      <View style={{ marginTop: 18, gap: 12 }}>
+        <Body size={14}>{t('prefs.appearance')}</Body>
+        <Segmented<ThemePreference>
+          accessibilityLabel={t('prefs.appearance')}
+          options={[
+            { value: 'light', label: t('prefs.light') },
+            { value: 'dark', label: t('prefs.dark') },
+            { value: 'system', label: t('prefs.system') },
           ]}
           value={preference}
           onChange={setPreference}
@@ -77,8 +93,8 @@ export function PreferencesSheet({
       <View style={{ gap: 8, marginTop: 18 }}>
         {item(
           <Download size={21} color={theme.secondaryText} />,
-          'Export your data',
-          'Share a complete backup',
+          t('prefs.export'),
+          t('prefs.exportHint'),
           () =>
             act(async () => {
               await Share.share({
@@ -90,14 +106,13 @@ export function PreferencesSheet({
         )}
         {item(
           <RefreshCw size={21} color={theme.secondaryText} />,
-          'Sync now',
+          t('prefs.sync'),
           training.status,
-          () => act(training.refresh, 'Refreshed.'),
+          () => act(training.refresh, t('prefs.refreshed')),
         )}
       </View>
       <Body size={13} style={{ marginTop: 18 }}>
-        Changes save on this device and sync automatically when Form is open and connected. Marketplace,
-        packages and coaching payments live on the Form website.
+        {t('prefs.note')}
       </Body>
       <Credits />
     </Sheet>
