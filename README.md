@@ -116,6 +116,10 @@ Production identity currently comes from the trusted Sites gateway. `app/chatgpt
 
 Keep deployment secrets in the hosting platform or ignored local environment files. Cloning or building this repository does not deploy or alter the existing live app.
 
+## Brand
+
+The wordmark masters live in `public/brand/` (`form-wordmark.svg` on light, `form-wordmark-dark.svg` on dark). In code use `Wordmark` from `app/wordmark.tsx` (web) or `mobile/src/wordmark.tsx` (app); it takes a `height` and follows the current text colour. Brand green is `#70c37b`, ink `#081a0d`, app green `#245b3e`, page background `#f6f7f4`.
+
 ## Project map
 
 | Path | Purpose |

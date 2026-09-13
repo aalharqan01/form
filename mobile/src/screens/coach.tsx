@@ -1,6 +1,13 @@
 import { useEffect, useState } from 'react';
 import { ScrollView, View } from 'react-native';
-import { ArrowDownRight, ArrowUpRight, Check, ChevronRight, ClipboardList, Minus } from 'lucide-react-native';
+import {
+  ArrowDownRight,
+  ArrowUpRight,
+  Check,
+  ChevronRight,
+  ClipboardList,
+  Minus,
+} from 'lucide-react-native';
 import { dateLabel, type Routine } from '../../../lib/fitness';
 import { memberStatus, weekOf, type Checkin } from '../../../lib/coaching';
 import { request } from '../api';
@@ -9,7 +16,6 @@ import { useTheme } from '../theme';
 import {
   Body,
   Card,
-
   Eyebrow,
   Field,
   Divider,
@@ -33,7 +39,14 @@ function WeeklyChange({ value }: { value: number | null | undefined }) {
   const { theme } = useTheme();
   if (value == null)
     return (
-      <T weight={500} size={26} line={34} tracking={-1} color={theme.muted} accessibilityLabel="No previous week to compare">
+      <T
+        weight={500}
+        size={26}
+        line={34}
+        tracking={-1}
+        color={theme.muted}
+        accessibilityLabel="No previous week to compare"
+      >
         —
       </T>
     );
@@ -102,7 +115,14 @@ function Metric({
   return (
     <View
       style={[
-        { flex: 1, minWidth: '45%', backgroundColor: accent ? theme.primaryButton : theme.surface, borderRadius: 22, padding: 18, gap: 8 },
+        {
+          flex: 1,
+          minWidth: '45%',
+          backgroundColor: accent ? theme.primaryButton : theme.surface,
+          borderRadius: 22,
+          padding: 18,
+          gap: 8,
+        },
         style,
       ]}
     >
@@ -129,9 +149,19 @@ function CheckinCard({ item }: { item: Checkin }) {
   const { theme } = useTheme();
   return (
     <Card style={{ gap: 6 }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 12,
+        }}
+      >
         <H2 size={20}>Week of {dateLabel(item.week)}</H2>
-        <Badge text={item.reviewed_at ? 'Reviewed' : 'Awaiting review'} amber={!item.reviewed_at} />
+        <Badge
+          text={item.reviewed_at ? 'Reviewed' : 'Awaiting review'}
+          amber={!item.reviewed_at}
+        />
       </View>
       <View style={{ flexDirection: 'row', gap: 32, marginTop: 14 }}>
         <View>
@@ -160,7 +190,15 @@ function CheckinCard({ item }: { item: Checkin }) {
         {item.answers.challenges || 'No notes'}
       </Body>
       {item.reviewed_at ? (
-        <View style={{ backgroundColor: theme.soft, borderRadius: 14, padding: 16, marginTop: 14, gap: 6 }}>
+        <View
+          style={{
+            backgroundColor: theme.soft,
+            borderRadius: 14,
+            padding: 16,
+            marginTop: 14,
+            gap: 6,
+          }}
+        >
           <T weight={500} size={14} line={18}>
             Coach feedback
           </T>
@@ -201,7 +239,11 @@ export function CoachScreen({
   const lastMessage = detail?.messages.at(-1)?.created_at;
   useEffect(() => {
     if (tab === 'messages' && memberId && lastMessage)
-      void request('/api/coaching', { action: 'read', memberId, through: lastMessage }).catch(() => {});
+      void request('/api/coaching', {
+        action: 'read',
+        memberId,
+        through: lastMessage,
+      }).catch(() => {});
   }, [tab, memberId, lastMessage]);
   if (!detail) {
     return (
@@ -209,7 +251,13 @@ export function CoachScreen({
         <Eyebrow size={12} color={theme.muted} style={{ marginBottom: 18 }}>
           YOUR COACHING
         </Eyebrow>
-        <T weight={500} size={34} line={38} tracking={-1.9} style={{ marginBottom: 14 }}>
+        <T
+          weight={500}
+          size={34}
+          line={38}
+          tracking={-1.9}
+          style={{ marginBottom: 14 }}
+        >
           My coach.
         </T>
         <Body size={16} style={{ marginBottom: 28 }}>
@@ -223,7 +271,10 @@ export function CoachScreen({
               'Browse coaches and packages on the Form website. An active membership appears here with your program, check-ins and messages.'}
           </Body>
           {!!training.coachError && (
-            <SecondaryButton label="Retry" onPress={() => act(training.refreshCoach)} />
+            <SecondaryButton
+              label="Retry"
+              onPress={() => act(training.refreshCoach)}
+            />
           )}
         </Card>
       </>
@@ -235,7 +286,10 @@ export function CoachScreen({
     { value: 'overview', label: 'Overview' },
     { value: 'program', label: 'Program' },
     { value: 'checkins', label: 'Check-ins' },
-    { value: 'messages', label: m.unread ? `Messages · ${m.unread}` : 'Messages' },
+    {
+      value: 'messages',
+      label: m.unread ? `Messages · ${m.unread}` : 'Messages',
+    },
   ];
   return (
     <>
@@ -246,7 +300,14 @@ export function CoachScreen({
         <T weight={500} size={34} line={38} tracking={-1.9}>
           {m.coachName}
         </T>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 10,
+            flexWrap: 'wrap',
+          }}
+        >
           <Body size={16}>{m.offer.name}</Body>
           <Badge text={memberStatus(m.status)} />
         </View>
@@ -256,7 +317,11 @@ export function CoachScreen({
           {training.coachError}
         </Body>
       )}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 24 }}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={{ marginBottom: 24 }}
+      >
         <Segmented scroll options={tabs} value={tab} onChange={setTab} />
       </ScrollView>
       {tab === 'overview' && (
@@ -265,7 +330,11 @@ export function CoachScreen({
             <Metric
               label="Workouts · last 7 days"
               value={String(m.stats?.workouts ?? 0)}
-              small={m.stats?.lastWorkout ? 'Last session ' + dateLabel(m.stats.lastWorkout) : 'No completed workouts yet'}
+              small={
+                m.stats?.lastWorkout
+                  ? 'Last session ' + dateLabel(m.stats.lastWorkout)
+                  : 'No completed workouts yet'
+              }
             />
             <Metric
               accent
@@ -274,11 +343,39 @@ export function CoachScreen({
               suffix={`/${m.stats?.due ?? 0}`}
               small="Completed · last 7 calendar days (UTC)"
             />
-            <View style={{ minWidth: '100%', backgroundColor: theme.surface, borderRadius: 22, padding: 18, gap: 14 }}>
+            <Metric
+              label="Steps · daily average"
+              value={
+                m.stats?.stepsAverage == null
+                  ? '—'
+                  : m.stats.stepsAverage.toLocaleString()
+              }
+              small={
+                m.stats?.stepsDays
+                  ? `${m.stats.stepsDays} of the last 7 days logged${m.nutrition?.steps ? ` · goal ${m.nutrition.steps.toLocaleString()}` : ''}`
+                  : 'No steps logged in the last 7 days'
+              }
+            />
+            <View
+              style={{
+                minWidth: '100%',
+                backgroundColor: theme.surface,
+                borderRadius: 22,
+                padding: 18,
+                gap: 14,
+              }}
+            >
               <T size={13} line={17} color={theme.muted}>
                 Weekly average weight
               </T>
-              <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 22, flexWrap: 'wrap' }}>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'flex-end',
+                  gap: 22,
+                  flexWrap: 'wrap',
+                }}
+              >
                 <View style={{ gap: 2 }}>
                   <T weight={500} size={30} line={34} tracking={-1.4}>
                     {m.stats?.averageKg?.toFixed(1) ?? '—'}
@@ -302,12 +399,20 @@ export function CoachScreen({
           </View>
           <NutritionCard targets={m.nutrition} />
           <Card style={{ marginTop: 14 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
               <H2 size={22}>Weekly check-in</H2>
               <ClipboardList size={21} strokeWidth={1.5} color={theme.muted} />
             </View>
             <Body size={15} style={{ marginTop: 12, marginBottom: 18 }}>
-              {thisWeek ? 'This week’s check-in has been submitted.' : 'Share how training has felt this week.'}
+              {thisWeek
+                ? 'This week’s check-in has been submitted.'
+                : 'Share how training has felt this week.'}
             </Body>
             <SecondaryButton
               label="Open check-in"
@@ -334,7 +439,10 @@ export function CoachScreen({
                   ['Training experience', m.intake.experience],
                   ['Equipment', m.intake.equipment],
                   ['Considerations', m.intake.limitations || 'None shared'],
-                  ['Availability', `${m.intake.days} days/week · ${m.intake.country === 'QA' ? 'Qatar' : 'Saudi Arabia'}`],
+                  [
+                    'Availability',
+                    `${m.intake.days} days/week · ${m.intake.country === 'QA' ? 'Qatar' : 'Saudi Arabia'}`,
+                  ],
                 ] as const
               ).map(([label, value]) => (
                 <View key={label} style={{ marginTop: 16 }}>
@@ -353,15 +461,18 @@ export function CoachScreen({
           <Card>
             <H2 size={22}>Your program</H2>
             <Body size={15} style={{ marginTop: 10 }}>
-              Your coach is preparing your program. Assigned sessions also appear in Train.
+              Your coach is preparing your program. Assigned sessions also
+              appear in Train.
             </Body>
           </Card>
         ) : (
           <>
             <H2 size={24}>{m.program.title}</H2>
             <Body size={13} style={{ marginTop: 6 }}>
-              Starts {dateLabel(m.program.startDate, true)} · {m.program.sessions.length}{' '}
-              {m.program.sessions.length === 1 ? 'session' : 'sessions'} per week
+              Starts {dateLabel(m.program.startDate, true)} ·{' '}
+              {m.program.sessions.length}{' '}
+              {m.program.sessions.length === 1 ? 'session' : 'sessions'} per
+              week
             </Body>
             <ProgramNote text={m.program.notes} />
             {m.program.sessions.map((session) => (
@@ -381,28 +492,55 @@ export function CoachScreen({
         <View style={{ gap: 20 }}>
           {!thisWeek && (
             <Card>
-              <Eyebrow size={12} color={theme.muted} style={{ marginBottom: 12 }}>
+              <Eyebrow
+                size={12}
+                color={theme.muted}
+                style={{ marginBottom: 12 }}
+              >
                 WEEK OF {dateLabel(weekOf()).toUpperCase()}
               </Eyebrow>
               <H2 size={22}>Your weekly check-in</H2>
               <Field label="Energy this week">
                 <Segmented
                   accessibilityLabel="Energy this week"
-                  options={['Very low', 'Low', 'Okay', 'Good', 'Great'].map((label, i) => ({ value: i + 1, label: String(i + 1) }))}
+                  options={['Very low', 'Low', 'Okay', 'Good', 'Great'].map(
+                    (label, i) => ({ value: i + 1, label: String(i + 1) }),
+                  )}
                   labelFor={(o) => `Energy ${o.value} of 5`}
                   value={energy}
                   onChange={setEnergy}
                 />
-                <Body size={12}>{['Very low', 'Low', 'Okay', 'Good', 'Great'][energy - 1]}</Body>
+                <Body size={12}>
+                  {['Very low', 'Low', 'Okay', 'Good', 'Great'][energy - 1]}
+                </Body>
               </Field>
               <Field label="Average sleep (hours)">
-                <Input accessibilityLabel="Average sleep (hours)" keyboardType="decimal-pad" inputMode="decimal" value={sleep} onChangeText={setSleep} maxLength={4} />
+                <Input
+                  accessibilityLabel="Average sleep (hours)"
+                  keyboardType="decimal-pad"
+                  inputMode="decimal"
+                  value={sleep}
+                  onChangeText={setSleep}
+                  maxLength={4}
+                />
               </Field>
               <Field label="What went well?">
-                <Input accessibilityLabel="What went well?" multiline maxLength={2000} value={wins} onChangeText={setWins} />
+                <Input
+                  accessibilityLabel="What went well?"
+                  multiline
+                  maxLength={2000}
+                  value={wins}
+                  onChangeText={setWins}
+                />
               </Field>
               <Field label="Challenges or questions for your coach">
-                <Input accessibilityLabel="Challenges or questions for your coach" multiline maxLength={2000} value={challenges} onChangeText={setChallenges} />
+                <Input
+                  accessibilityLabel="Challenges or questions for your coach"
+                  multiline
+                  maxLength={2000}
+                  value={challenges}
+                  onChangeText={setChallenges}
+                />
               </Field>
               <View style={{ marginTop: 22 }}>
                 <PrimaryButton
@@ -414,7 +552,9 @@ export function CoachScreen({
                     act(async () => {
                       const hours = Number(sleep);
                       if (!Number.isFinite(hours) || hours < 0 || hours > 24)
-                        throw new Error('Enter average sleep between 0 and 24 hours.');
+                        throw new Error(
+                          'Enter average sleep between 0 and 24 hours.',
+                        );
                       await request('/api/coaching', {
                         action: 'checkin',
                         memberId: m.id,
@@ -432,7 +572,9 @@ export function CoachScreen({
           {detail.checkins.map((c) => (
             <CheckinCard key={c.id} item={c} />
           ))}
-          {!detail.checkins.length && thisWeek && <Body size={14}>Your check-ins will be collected here.</Body>}
+          {!detail.checkins.length && thisWeek && (
+            <Body size={14}>Your check-ins will be collected here.</Body>
+          )}
         </View>
       )}
       {tab === 'messages' && (

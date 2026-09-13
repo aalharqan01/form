@@ -23,7 +23,13 @@ export const metadata: Metadata = {
   title: 'Form — Training & Weight',
   description: 'Your personal workout log and weight trend tracker.',
   manifest: '/manifest.webmanifest',
-  icons: { icon: '/icon-192.png', apple: '/icon-192.png' },
+  icons: {
+    icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+      { url: '/icon-192.png', sizes: '192x192' },
+    ],
+    apple: '/icon-192.png',
+  },
   appleWebApp: { capable: true, title: 'Form', statusBarStyle: 'default' },
 };
 

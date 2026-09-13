@@ -45,6 +45,7 @@ import {
   TextButton,
 } from '../ui';
 import { AssignedWorkouts } from './assigned';
+import { StepsCard } from './steps';
 import { RoutineEditor } from './routine-editor';
 import { WorkoutDetailSheet } from './history';
 import type { Act } from './shared';
@@ -66,7 +67,9 @@ export function TrainScreen({
 }) {
   const { theme } = useTheme();
   const { data, update } = training;
-  const [editor, setEditor] = useState<{ routine: Routine | null } | null>(null),
+  const [editor, setEditor] = useState<{ routine: Routine | null } | null>(
+      null,
+    ),
     [remove, setRemove] = useState<Routine | null>(null),
     [detail, setDetail] = useState<Workout | null>(null);
   const stats = trendStats(data.weights, data.goal);
@@ -74,7 +77,9 @@ export function TrainScreen({
   const weekStart = new Date();
   weekStart.setHours(0, 0, 0, 0);
   weekStart.setDate(weekStart.getDate() - ((weekStart.getDay() + 6) % 7));
-  const weekly = data.workouts.filter((w) => new Date(w.startedAt) >= weekStart);
+  const weekly = data.workouts.filter(
+    (w) => new Date(w.startedAt) >= weekStart,
+  );
   const weekDays = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(weekStart);
     d.setDate(d.getDate() + i);
@@ -108,7 +113,13 @@ export function TrainScreen({
                     backgroundColor: theme.featurePill,
                   }}
                 >
-                  <T weight={600} size={10} line={12} tracking={0.8} color={theme.featureLabel}>
+                  <T
+                    weight={600}
+                    size={10}
+                    line={12}
+                    tracking={0.8}
+                    color={theme.featureLabel}
+                  >
                     STRENGTH
                   </T>
                 </View>
@@ -116,12 +127,30 @@ export function TrainScreen({
             >
               YOUR NEXT SESSION
             </SectionLabel>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 20 }}>
-              <T weight={500} size={30} line={33} tracking={-1.65} style={{ flex: 1 }}>
+            <View
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 20 }}
+            >
+              <T
+                weight={500}
+                size={30}
+                line={33}
+                tracking={-1.65}
+                style={{ flex: 1 }}
+              >
                 {next ? next.name : 'Start a workout.'}
               </T>
-              <View style={{ transform: [{ rotate: '-30deg' }], opacity: 0.55, paddingRight: 10 }}>
-                <Dumbbell size={68} strokeWidth={0.8} color={theme.featureSymbol} />
+              <View
+                style={{
+                  transform: [{ rotate: '-30deg' }],
+                  opacity: 0.55,
+                  paddingRight: 10,
+                }}
+              >
+                <Dumbbell
+                  size={68}
+                  strokeWidth={0.8}
+                  color={theme.featureSymbol}
+                />
               </View>
             </View>
             <Body size={14} color={theme.featureText} style={{ marginTop: 18 }}>
@@ -133,7 +162,13 @@ export function TrainScreen({
               <PrimaryButton
                 full
                 label="Start workout"
-                icon={<ArrowUpRight size={22} strokeWidth={1.6} color={theme.primaryText} />}
+                icon={
+                  <ArrowUpRight
+                    size={22}
+                    strokeWidth={1.6}
+                    color={theme.primaryText}
+                  />
+                }
                 disabled={busy}
                 onPress={() => onStart(next ?? null)}
               />
@@ -144,14 +179,28 @@ export function TrainScreen({
           <Card>
             <SectionLabel
               style={{ marginBottom: 16 }}
-              right={<ChartNoAxesCombined size={18} strokeWidth={1.4} color={theme.featureLabel} />}
+              right={
+                <ChartNoAxesCombined
+                  size={18}
+                  strokeWidth={1.4}
+                  color={theme.featureLabel}
+                />
+              }
             >
               BODY WEIGHT
             </SectionLabel>
             {stats.latest ? (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+              <View
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}
+              >
                 <View style={{ flex: 1 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 9 }}>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'baseline',
+                      gap: 9,
+                    }}
+                  >
                     <T weight={500} size={45} line={48} tracking={-3.4}>
                       {displayWeight(stats.latest.trend, data.unit).toFixed(1)}
                     </T>
@@ -161,8 +210,19 @@ export function TrainScreen({
                   </View>
                   <Body size={12}>Smoothed weight</Body>
                 </View>
-                <Svg width={120} height={58} viewBox="0 0 240 65" accessibilityLabel="Smoothed weight trend">
-                  <Path d={sparkPath} fill="none" stroke={theme.sparkline} strokeWidth={2.5} strokeLinecap="round" />
+                <Svg
+                  width={120}
+                  height={58}
+                  viewBox="0 0 240 65"
+                  accessibilityLabel="Smoothed weight trend"
+                >
+                  <Path
+                    d={sparkPath}
+                    fill="none"
+                    stroke={theme.sparkline}
+                    strokeWidth={2.5}
+                    strokeLinecap="round"
+                  />
                 </Svg>
               </View>
             ) : (
@@ -175,23 +235,51 @@ export function TrainScreen({
                 </Body>
               </View>
             )}
-            <View style={{ borderTopWidth: 1, borderColor: theme.line, marginTop: 12, paddingTop: 4 }}>
+            <View
+              style={{
+                borderTopWidth: 1,
+                borderColor: theme.line,
+                marginTop: 12,
+                paddingTop: 4,
+              }}
+            >
               <TextButton
                 label={stats.latest ? 'See your progress' : 'Log your weight'}
                 size={13}
                 onPress={() => navigate('weight')}
-                style={{ alignSelf: 'stretch', justifyContent: 'space-between', minHeight: 38 }}
+                style={{
+                  alignSelf: 'stretch',
+                  justifyContent: 'space-between',
+                  minHeight: 38,
+                }}
                 icon={undefined}
               />
-              <View style={{ position: 'absolute', right: 0, top: 12, pointerEvents: 'none' }}>
+              <View
+                style={{
+                  position: 'absolute',
+                  right: 0,
+                  top: 12,
+                  pointerEvents: 'none',
+                }}
+              >
                 <ArrowUpRight size={18} color={theme.textButton} />
               </View>
             </View>
           </Card>
         </Bezel>
+        <Bezel>
+          <StepsCard training={training} act={act} busy={busy} />
+        </Bezel>
       </View>
       <View style={{ paddingVertical: 24, paddingHorizontal: 4, gap: 18 }}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
+        <View
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: 10,
+          }}
+        >
           <Eyebrow size={9}>THIS WEEK</Eyebrow>
           <T weight={500} size={16} line={20} tracking={-0.5}>
             {weekly.length} {weekly.length === 1 ? 'session' : 'sessions'}{' '}
@@ -200,15 +288,27 @@ export function TrainScreen({
             </T>
           </T>
         </View>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 7 }}>
+        <View
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            gap: 7,
+          }}
+        >
           {weekDays.map((date, i) => {
             const has = data.workouts.some(
-                (w) => new Date(w.startedAt).toDateString() === date.toDateString(),
+                (w) =>
+                  new Date(w.startedAt).toDateString() === date.toDateString(),
               ),
               isToday = date.toDateString() === new Date().toDateString();
             return (
               <View key={i} style={{ alignItems: 'center', gap: 8 }}>
-                <T weight={isToday ? 700 : 400} size={11} line={14} color={isToday ? theme.green : theme.chipText}>
+                <T
+                  weight={isToday ? 700 : 400}
+                  size={11}
+                  line={14}
+                  color={isToday ? theme.green : theme.chipText}
+                >
                   {['M', 'T', 'W', 'T', 'F', 'S', 'S'][i]}
                 </T>
                 <View
@@ -234,7 +334,12 @@ export function TrainScreen({
                     }}
                   >
                     {has ? (
-                      <Check size={15} color={theme.scheme === 'dark' ? theme.background : '#fff'} />
+                      <Check
+                        size={15}
+                        color={
+                          theme.scheme === 'dark' ? theme.background : '#fff'
+                        }
+                      />
                     ) : (
                       <T size={12} line={14} color={theme.chipText}>
                         {date.getDate()}
@@ -291,7 +396,8 @@ export function TrainScreen({
             <View style={{ flex: 1, minWidth: 0 }}>
               <H3 size={16}>{r.name}</H3>
               <Body size={12} style={{ marginTop: 3 }}>
-                {r.exercises.length} exercises · {r.exercises.reduce((a, e) => a + e.sets, 0)} sets
+                {r.exercises.length} exercises ·{' '}
+                {r.exercises.reduce((a, e) => a + e.sets, 0)} sets
               </Body>
             </View>
             <IconButton
@@ -316,12 +422,17 @@ export function TrainScreen({
                 width: 38,
                 height: 38,
                 borderRadius: 19,
-                backgroundColor: theme.scheme === 'dark' ? theme.soft : '#edf2e4',
+                backgroundColor:
+                  theme.scheme === 'dark' ? theme.soft : '#edf2e4',
                 alignItems: 'center',
                 justifyContent: 'center',
               }}
             >
-              <Play size={17} color={theme.scheme === 'dark' ? theme.green : '#496738'} fill={theme.scheme === 'dark' ? theme.green : '#496738'} />
+              <Play
+                size={17}
+                color={theme.scheme === 'dark' ? theme.green : '#496738'}
+                fill={theme.scheme === 'dark' ? theme.green : '#496738'}
+              />
             </Press>
           </View>
         ))}
@@ -346,7 +457,11 @@ export function TrainScreen({
                 justifyContent: 'center',
               }}
             >
-              <Bookmark size={25} strokeWidth={1.3} color={theme.routineMarkText} />
+              <Bookmark
+                size={25}
+                strokeWidth={1.3}
+                color={theme.routineMarkText}
+              />
             </View>
             <View style={{ flex: 1 }}>
               <H3>No plans yet</H3>
@@ -373,17 +488,27 @@ export function TrainScreen({
                 flexDirection: 'row',
                 alignItems: 'center',
                 gap: 15,
-                backgroundColor: theme.scheme === 'dark' ? theme.soft : '#ecefe6',
+                backgroundColor:
+                  theme.scheme === 'dark' ? theme.soft : '#ecefe6',
                 padding: 19,
                 borderRadius: 18,
               }}
             >
-              <Dumbbell size={20} strokeWidth={1.4} color={theme.secondaryText} />
+              <Dumbbell
+                size={20}
+                strokeWidth={1.4}
+                color={theme.secondaryText}
+              />
               <View style={{ flex: 1 }}>
                 <T weight={500} size={14} line={18} color={theme.secondaryText}>
                   {r.name}
                 </T>
-                <T size={12} line={16} color={theme.muted} style={{ marginTop: 3 }}>
+                <T
+                  size={12}
+                  line={16}
+                  color={theme.muted}
+                  style={{ marginTop: 3 }}
+                >
                   {r.exercises.length} exercises
                 </T>
               </View>
@@ -411,7 +536,8 @@ export function TrainScreen({
             </Eyebrow>
             <H3>{lastWorkout.name}</H3>
             <Body size={12} style={{ marginTop: 4 }}>
-              {dateLabel(lastWorkout.startedAt, true)} · {completedSets(lastWorkout)} sets ·{' '}
+              {dateLabel(lastWorkout.startedAt, true)} ·{' '}
+              {completedSets(lastWorkout)} sets ·{' '}
               {volume(lastWorkout).toLocaleString()} kg
               {lastWorkout.endedEarly ? ' · Finished early' : ''}
             </Body>
@@ -477,7 +603,10 @@ export function TrainScreen({
         onDelete={(w) =>
           act(() => {
             setDetail(null);
-            return update((d) => ({ ...d, workouts: d.workouts.filter((v) => v.id !== w.id) }));
+            return update((d) => ({
+              ...d,
+              workouts: d.workouts.filter((v) => v.id !== w.id),
+            }));
           }, 'Workout deleted.')
         }
       />

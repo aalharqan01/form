@@ -2,6 +2,15 @@
 
 Newest first. Each entry says what changed, how to run it, and what is still open, so a fresh `git pull` is enough to get going.
 
+## 13 September 2026 — FORM wordmark, daily steps
+
+### What changed
+
+- **Brand.** The FORM wordmark from the brand master (`public/brand/form-wordmark.svg`, dark variant alongside) replaces the text logo in the trainee app's top bar, the web tracker sidebar and top bar, and the coach website. It's vector (`app/wordmark.tsx`, `mobile/src/wordmark.tsx`), so it's crisp at any size, and the letters follow the theme ink while the bar stays brand green `#70c37b`. `public/favicon.svg` is the rounded app icon.
+- **Daily steps.** The trainee app's Train tab has a Steps card: today's count against the goal with a progress bar, a "Log steps" sheet (count + date; on iPhones the sheet offers today's count from the phone via the pedometer), and a personal daily goal for independent trainees. Data lives in the log as `steps` (one entry per day) and `stepGoal`.
+- **Coach step target.** The coach's daily targets dialog (formerly "Calorie & macro targets", now "Nutrition & steps") gains an optional daily step goal, which the trainee sees and which takes precedence over their own goal. The client overview shows the daily average over the last 7 days and how many days were logged, on the website and in the app's My coach tab.
+- Local and dev-site fixtures include eight to ten weeks of step counts.
+
 ## 12 September 2026 — every developer gets the full preview on the dev site
 
 ### What changed

@@ -1,4 +1,5 @@
 import type { Routine, FitnessData, WeighIn } from './fitness';
+import { stepsAverage } from './fitness';
 export type Offer = {
   id: string;
   name: string;
@@ -90,6 +91,8 @@ export type NutritionTargets = {
   protein: number;
   carbs: number;
   fat: number;
+  /** Daily step target set by the coach, if any. */
+  steps?: number;
   notes: string;
 };
 export function isNutrition(v: unknown): v is NutritionTargets {
@@ -102,6 +105,8 @@ export function isNutrition(v: unknown): v is NutritionTargets {
     [n.protein, n.carbs, n.fat].every(
       (x) => Number.isFinite(x) && x >= 0 && x <= 1500,
     ) &&
+    (n.steps === undefined ||
+      (Number.isInteger(n.steps) && n.steps >= 500 && n.steps <= 100000)) &&
     text(n.notes, 2000, false)
   );
 }
@@ -143,6 +148,9 @@ export type Member = {
     averageChangeKg: number | null;
     due: number;
     completed: number;
+    /** Average daily steps over the last 7 days, logged days only. */
+    stepsAverage: number | null;
+    stepsDays: number;
   };
 };
 export type Checkin = {
@@ -382,6 +390,8 @@ export function memberStats(
     averageChangeKg: current?.changeKg ?? null,
     due,
     completed,
+    stepsAverage: stepsAverage(fitness?.steps, 7, now).average,
+    stepsDays: stepsAverage(fitness?.steps, 7, now).days,
   };
 }
 export function weekOf(date = new Date()) {
