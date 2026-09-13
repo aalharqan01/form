@@ -39,7 +39,7 @@ import { BottomNav, RestIsland, Topbar } from './src/shell';
 import { TrainScreen } from './src/screens/train';
 import { WorkoutScreen } from './src/screens/workout';
 import { WeightScreen } from './src/screens/weight';
-import { HistoryScreen } from './src/screens/history';
+import { YouScreen } from './src/screens/you';
 import { CoachScreen } from './src/screens/coach';
 import { PreferencesSheet } from './src/screens/preferences';
 import {
@@ -227,8 +227,8 @@ function AppContent() {
                 />
               ) : tab === 'weight' ? (
                 <WeightScreen training={training} act={act} busy={busy} />
-              ) : tab === 'history' ? (
-                <HistoryScreen
+              ) : tab === 'you' ? (
+                <YouScreen
                   training={training}
                   act={act}
                   busy={busy}

@@ -10,6 +10,7 @@
     "expo-font": "~57.0.3",
     "expo-image-picker": "~57.0.17",
     "expo-sensors": "~57.0.3",
+    "expo-sharing": "~57.0.19",
     "expo-status-bar": "~57.0.1",
     "expo-video": "~57.0.3",
     "lucide-react-native": "^1.43.0",
@@ -18,6 +19,7 @@
     "react-native": "0.86.3",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-svg": "15.15.4",
+    "react-native-view-shot": "5.1.0",
     "react-native-web": "^0.21.2",
     "react-native-webview": "13.16.1"
   },

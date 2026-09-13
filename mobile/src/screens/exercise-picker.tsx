@@ -1,7 +1,11 @@
 import { useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { Plus, Search } from 'lucide-react-native';
-import { EXERCISES } from '../../../lib/fitness';
+import {
+  ALL_EXERCISES,
+  EQUIPMENT_OPTIONS,
+  EXERCISE_SOURCE,
+} from '../../../lib/exercises';
 import { useTheme } from '../theme';
 import { Body, Chip, Input, Press, Sheet, T, Thumbnail } from '../ui';
 
@@ -15,7 +19,7 @@ const MUSCLES = [
   'Core',
   'Full body',
 ];
-const EQUIPMENT = ['All', ...new Set(EXERCISES.map((e) => e[2]))];
+const EQUIPMENT = ['All', ...EQUIPMENT_OPTIONS];
 
 export function PickerBody({
   onPick,
@@ -26,7 +30,7 @@ export function PickerBody({
   const [query, setQuery] = useState(''),
     [muscle, setMuscle] = useState('All'),
     [equipment, setEquipment] = useState('All');
-  const list = EXERCISES.filter(
+  const list = ALL_EXERCISES.filter(
     ([n, m, eq]) =>
       `${n} ${m} ${eq}`.toLowerCase().includes(query.trim().toLowerCase()) &&
       (muscle === 'All' || m === muscle) &&
@@ -34,7 +38,9 @@ export function PickerBody({
   );
   const custom =
     query.trim() &&
-    !EXERCISES.some(([n]) => n.toLowerCase() === query.trim().toLowerCase());
+    !ALL_EXERCISES.some(
+      ([n]) => n.toLowerCase() === query.trim().toLowerCase(),
+    );
   return (
     <View style={{ gap: 12, marginTop: 16 }}>
       <View style={{ justifyContent: 'center' }}>
@@ -51,12 +57,25 @@ export function PickerBody({
           <Search size={18} color={theme.muted} />
         </View>
       </View>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ gap: 6 }}
+      >
         {MUSCLES.map((m) => (
-          <Chip key={m} label={m} selected={muscle === m} onPress={() => setMuscle(m)} />
+          <Chip
+            key={m}
+            label={m}
+            selected={muscle === m}
+            onPress={() => setMuscle(m)}
+          />
         ))}
       </ScrollView>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ gap: 6 }}
+      >
         {EQUIPMENT.map((e) => (
           <Chip
             key={e}
@@ -71,7 +90,9 @@ export function PickerBody({
       </Body>
       <View style={{ gap: 7 }}>
         {!list.length && !custom && (
-          <Body size={14}>No matches. Try another search or change the filters.</Body>
+          <Body size={14}>
+            No matches. Try another search or change the filters.
+          </Body>
         )}
         {list.map(([name, m, eq]) => (
           <Press
@@ -109,7 +130,10 @@ export function PickerBody({
             accessibilityRole="button"
             accessibilityLabel={`Add custom exercise: ${query.trim()}`}
             onPress={() => {
-              onPick(query.trim().slice(0, 100), muscle === 'All' ? 'Custom' : muscle);
+              onPick(
+                query.trim().slice(0, 100),
+                muscle === 'All' ? 'Custom' : muscle,
+              );
               setQuery('');
             }}
             scale={0.985}
@@ -145,6 +169,11 @@ export function PickerBody({
           </Press>
         ) : null}
       </View>
+      <Body size={11} style={{ marginTop: 6 }}>
+        Exercise data and photos: {EXERCISE_SOURCE.name},{' '}
+        {EXERCISE_SOURCE.license.toLowerCase()}. Illustrations: Everkinetic, CC
+        BY-SA 4.0.
+      </Body>
     </View>
   );
 }
@@ -163,7 +192,7 @@ export function ExercisePicker({
       open={open}
       onClose={onClose}
       title="Add exercise"
-      description={`${EXERCISES.length} exercises. Filter by muscle and equipment, or add your own.`}
+      description={`${ALL_EXERCISES.length} exercises. Filter by muscle and equipment, or add your own.`}
     >
       <PickerBody onPick={onPick} />
     </Sheet>

@@ -24,6 +24,8 @@ import {
   X,
 } from 'lucide-react-native';
 import { randomUUID } from 'expo-crypto';
+import { exerciseDetail } from '../../../lib/exercises';
+import { ExerciseGuideSheet } from './exercise-guide';
 import {
   pauseWorkout,
   resumeWorkout,
@@ -310,6 +312,7 @@ function ExerciseCard({
   const [restSheet, setRestSheet] = useState(false),
     [restDraft, setRestDraft] = useState(''),
     [demo, setDemo] = useState(false),
+    [guide, setGuide] = useState<string | null>(null),
     [confirmRemove, setConfirmRemove] = useState<LiftSet | null>(null);
   const anyDone = exercise.sets.some((s) => s.done);
   const complete = (set: LiftSet) => {
@@ -424,6 +427,15 @@ function ExerciseCard({
               Rest · {restLabel(exercise.restSeconds)}
             </T>
           </Press>
+          {!!exerciseDetail(exercise.name) && (
+            <TextButton
+              label="How to"
+              size={13}
+              accessibilityLabel={`How to do ${exercise.name}`}
+              onPress={() => setGuide(exercise.name)}
+              style={{ minHeight: 40 }}
+            />
+          )}
           {!!exercise.videoUrl && (
             <TextButton
               label={demo ? 'Hide demo' : 'Watch demo'}
@@ -439,6 +451,7 @@ function ExerciseCard({
             <DemoVideo url={exercise.videoUrl} name={exercise.name} />
           </View>
         )}
+        <ExerciseGuideSheet name={guide} onClose={() => setGuide(null)} />
         {previous?.length ? (
           <View style={{ marginTop: 14 }}>
             <Body size={12}>

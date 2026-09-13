@@ -21,6 +21,7 @@ import {
 } from 'react-native';
 import { Check, Dumbbell, X } from 'lucide-react-native';
 import imagePaths from '../../lib/exercise-images.json';
+import { exerciseFrames } from '../../lib/exercises';
 import { font, radius, useTheme, type Weight } from './theme';
 
 import { API_ORIGIN } from './account';
@@ -118,7 +119,13 @@ export function PageHeading({
         <T weight={500} size={38} line={41} tracking={-2.4}>
           {first}
           {second ? (
-            <T weight={500} size={38} line={41} tracking={-2.4} color={theme.headingSpan}>
+            <T
+              weight={500}
+              size={38}
+              line={41}
+              tracking={-2.4}
+              color={theme.headingSpan}
+            >
               {' '}
               {second}
             </T>
@@ -139,7 +146,13 @@ export function H2({
   size?: number;
 }) {
   return (
-    <T weight={500} size={size} line={Math.round(size * 1.2)} tracking={-size * 0.04} style={style}>
+    <T
+      weight={500}
+      size={size}
+      line={Math.round(size * 1.2)}
+      tracking={-size * 0.04}
+      style={style}
+    >
       {children}
     </T>
   );
@@ -154,21 +167,27 @@ export function H3({
   size?: number;
 }) {
   return (
-    <T weight={500} size={size} line={Math.round(size * 1.3)} tracking={-size * 0.025} style={style}>
+    <T
+      weight={500}
+      size={size}
+      line={Math.round(size * 1.3)}
+      tracking={-size * 0.025}
+      style={style}
+    >
       {children}
     </T>
   );
 }
-export function Body({
-  children,
-  size = 14,
-  style,
-  color,
-  ...rest
-}: TProps) {
+export function Body({ children, size = 14, style, color, ...rest }: TProps) {
   const { theme } = useTheme();
   return (
-    <T size={size} line={Math.round(size * 1.6)} color={color ?? theme.muted} style={style} {...rest}>
+    <T
+      size={size}
+      line={Math.round(size * 1.6)}
+      color={color ?? theme.muted}
+      style={style}
+      {...rest}
+    >
       {children}
     </T>
   );
@@ -206,7 +225,14 @@ export function Reveal({
         style,
         {
           opacity: value,
-          transform: [{ translateY: value.interpolate({ inputRange: [0, 1], outputRange: [y, 0] }) }],
+          transform: [
+            {
+              translateY: value.interpolate({
+                inputRange: [0, 1],
+                outputRange: [y, 0],
+              }),
+            },
+          ],
         },
       ]}
     >
@@ -239,7 +265,10 @@ export function Press({
     <Pressable
       {...props}
       disabled={disabled}
-      accessibilityState={{ ...(props.accessibilityState ?? {}), disabled: !!disabled }}
+      accessibilityState={{
+        ...(props.accessibilityState ?? {}),
+        disabled: !!disabled,
+      }}
       onPressIn={(e) => {
         to(scale, 100);
         props.onPressIn?.(e);
@@ -250,7 +279,10 @@ export function Press({
       }}
     >
       <Animated.View
-        style={[style, { transform: [{ scale: value }], opacity: disabled ? 0.5 : 1 }]}
+        style={[
+          style,
+          { transform: [{ scale: value }], opacity: disabled ? 0.5 : 1 },
+        ]}
       >
         {children}
       </Animated.View>
@@ -406,7 +438,11 @@ export function TextButton({
       ]}
     >
       {icon}
-      <T weight={500} size={size} color={danger ? theme.dangerText : theme.textButton}>
+      <T
+        weight={500}
+        size={size}
+        color={danger ? theme.dangerText : theme.textButton}
+      >
         {label}
       </T>
     </Press>
@@ -557,7 +593,13 @@ export function SectionLabel({
         style,
       ]}
     >
-      <T weight={600} size={11} line={16} tracking={1.4} color={color ?? theme.featureLabel}>
+      <T
+        weight={600}
+        size={11}
+        line={16}
+        tracking={1.4}
+        color={color ?? theme.featureLabel}
+      >
         {children}
       </T>
       {right}
@@ -590,7 +632,14 @@ export function SectionTitle({
         style,
       ]}
     >
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 }}>
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 6,
+          flexShrink: 1,
+        }}
+      >
         <H2>{title}</H2>
         {count !== undefined && (
           <View
@@ -679,7 +728,11 @@ export function Field({
   const { theme } = useTheme();
   return (
     <View style={[{ gap: 8, marginTop: 18 }, style]}>
-      <T weight={500} size={13} color={theme.scheme === 'dark' ? theme.ink : '#52634b'}>
+      <T
+        weight={500}
+        size={13}
+        color={theme.scheme === 'dark' ? theme.ink : '#52634b'}
+      >
         {label}
         {hint ? (
           <T size={12} color={theme.placeholder}>
@@ -752,7 +805,8 @@ export function Segmented<V extends string | number>({
                   ? '#42513b'
                   : theme.surface
                 : 'transparent',
-              boxShadow: selected && !isDark ? '0 2px 5px #23382010' : undefined,
+              boxShadow:
+                selected && !isDark ? '0 2px 5px #23382010' : undefined,
             }}
           >
             <T
@@ -760,7 +814,9 @@ export function Segmented<V extends string | number>({
               size={compact ? 11 : scroll ? 13 : 12}
               line={16}
               numberOfLines={1}
-              color={selected ? (isDark ? theme.ink : '#3b5534') : theme.chipText}
+              color={
+                selected ? (isDark ? theme.ink : '#3b5534') : theme.chipText
+              }
             >
               {option.label}
             </T>
@@ -817,29 +873,39 @@ export function ErrorBanner({
   if (!text) return null;
   return (
     <Reveal y={-8} duration={220}>
-    <View
-      accessibilityRole="alert"
-      style={{
-        flexDirection: 'row',
-        alignItems: 'flex-start',
-        gap: 10,
-        padding: 14,
-        borderRadius: 15,
-        backgroundColor: theme.errorBackground,
-        marginBottom: 18,
-        flexWrap: 'wrap',
-      }}
-    >
-      <T size={13} line={19} color={theme.errorText} style={{ flex: 1, minWidth: 160 }}>
-        {text}
-      </T>
-      {children}
-      {onDismiss && (
-        <Pressable accessibilityRole="button" accessibilityLabel="Dismiss" onPress={onDismiss} hitSlop={8}>
-          <X size={17} color={theme.errorText} />
-        </Pressable>
-      )}
-    </View>
+      <View
+        accessibilityRole="alert"
+        style={{
+          flexDirection: 'row',
+          alignItems: 'flex-start',
+          gap: 10,
+          padding: 14,
+          borderRadius: 15,
+          backgroundColor: theme.errorBackground,
+          marginBottom: 18,
+          flexWrap: 'wrap',
+        }}
+      >
+        <T
+          size={13}
+          line={19}
+          color={theme.errorText}
+          style={{ flex: 1, minWidth: 160 }}
+        >
+          {text}
+        </T>
+        {children}
+        {onDismiss && (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Dismiss"
+            onPress={onDismiss}
+            hitSlop={8}
+          >
+            <X size={17} color={theme.errorText} />
+          </Pressable>
+        )}
+      </View>
     </Reveal>
   );
 }
@@ -848,24 +914,24 @@ export function Notice({ text }: { text: string }) {
   if (!text) return null;
   return (
     <Reveal y={-8} duration={220}>
-    <View
-      accessibilityLiveRegion="polite"
-      style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 10,
-        padding: 12,
-        paddingHorizontal: 16,
-        borderRadius: 13,
-        backgroundColor: theme.navSelected,
-        marginBottom: 18,
-      }}
-    >
-      <Check size={16} color={theme.green} />
-      <T size={13} line={18} color={theme.green} style={{ flex: 1 }}>
-        {text}
-      </T>
-    </View>
+      <View
+        accessibilityLiveRegion="polite"
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 10,
+          padding: 12,
+          paddingHorizontal: 16,
+          borderRadius: 13,
+          backgroundColor: theme.navSelected,
+          marginBottom: 18,
+        }}
+      >
+        <Check size={16} color={theme.green} />
+        <T size={13} line={18} color={theme.green} style={{ flex: 1 }}>
+          {text}
+        </T>
+      </View>
     </Reveal>
   );
 }
@@ -885,7 +951,13 @@ export function DateTile({ iso, size = 44 }: { iso: string; size?: number }) {
         justifyContent: 'center',
       }}
     >
-      <T weight={500} size={21} line={24} tracking={-0.7} color={theme.dateTileText}>
+      <T
+        weight={500}
+        size={21}
+        line={24}
+        tracking={-0.7}
+        color={theme.dateTileText}
+      >
         {date.getDate()}
       </T>
       <T size={10} line={12} tracking={0.4} color={theme.dateTileText}>
@@ -894,9 +966,16 @@ export function DateTile({ iso, size = 44 }: { iso: string; size?: number }) {
     </View>
   );
 }
-export function Thumbnail({ name, size = 56 }: { name: string; size?: number }) {
+export function Thumbnail({
+  name,
+  size = 56,
+}: {
+  name: string;
+  size?: number;
+}) {
   const { theme } = useTheme();
   const path = (imagePaths as Record<string, string>)[name];
+  const frame = path ? null : exerciseFrames(name)[0];
   return (
     <View
       accessibilityElementsHidden
@@ -906,7 +985,7 @@ export function Thumbnail({ name, size = 56 }: { name: string; size?: number }) 
         height: size,
         borderRadius: 12,
         overflow: 'hidden',
-        backgroundColor: path ? '#fff' : theme.soft,
+        backgroundColor: path || frame ? '#fff' : theme.soft,
         borderWidth: 1,
         borderColor: theme.line,
         alignItems: 'center',
@@ -919,8 +998,18 @@ export function Thumbnail({ name, size = 56 }: { name: string; size?: number }) 
           resizeMode="contain"
           style={{ width: size - 6, height: size - 6 }}
         />
+      ) : frame ? (
+        <Image
+          source={{ uri: frame }}
+          resizeMode="cover"
+          style={{ width: size, height: size }}
+        />
       ) : (
-        <Dumbbell size={Math.round(size * 0.43)} strokeWidth={1.4} color={theme.muted} />
+        <Dumbbell
+          size={Math.round(size * 0.43)}
+          strokeWidth={1.4}
+          color={theme.muted}
+        />
       )}
     </View>
   );
@@ -940,8 +1029,10 @@ export function Credits() {
   );
   return (
     <T size={12} line={19} color={theme.muted} style={{ marginVertical: 12 }}>
-      Illustrations: {link('Everkinetic / Greg Priday', 'https://github.com/everkinetic/data')}{' '}
-      · {link('CC BY-SA 4.0', 'https://creativecommons.org/licenses/by-sa/4.0/')}
+      Illustrations:{' '}
+      {link('Everkinetic / Greg Priday', 'https://github.com/everkinetic/data')}{' '}
+      ·{' '}
+      {link('CC BY-SA 4.0', 'https://creativecommons.org/licenses/by-sa/4.0/')}
     </T>
   );
 }
@@ -983,7 +1074,10 @@ export function Sheet({
     }
   }, [open, progress, visible]);
   if (!visible) return null;
-  const scale = progress.interpolate({ inputRange: [0, 1], outputRange: [0.96, 1] });
+  const scale = progress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.96, 1],
+  });
   return (
     <Modal
       visible

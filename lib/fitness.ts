@@ -325,6 +325,55 @@ export function resumeWorkout(workout: Workout, now = new Date()): Workout {
     pausedSeconds: Math.round(pausedSeconds(workout, now.getTime())),
   };
 }
+/** Local calendar date key for a Date. */
+function localKey(d: Date) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+/** Monday-based start of the local week containing `d`. */
+export function startOfWeek(d: Date) {
+  const start = new Date(d);
+  start.setHours(0, 0, 0, 0);
+  start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+  return start;
+}
+/** Workouts per local week for the last `weeks` weeks, oldest first. */
+export function weeklySessionCounts(
+  workouts: Pick<Workout, 'startedAt'>[],
+  weeks = 8,
+  now = new Date(),
+) {
+  const current = startOfWeek(now);
+  const out: { week: string; count: number }[] = [];
+  for (let i = weeks - 1; i >= 0; i--) {
+    const start = new Date(current);
+    start.setDate(start.getDate() - i * 7);
+    const end = new Date(start);
+    end.setDate(end.getDate() + 7);
+    out.push({
+      week: localKey(start),
+      count: workouts.filter((w) => {
+        const t = new Date(w.startedAt);
+        return t >= start && t < end;
+      }).length,
+    });
+  }
+  return out;
+}
+/** Consecutive weeks with at least one workout, counting back from this week
+ *  (a quiet current week does not break a streak that ended last week). */
+export function weeklyStreak(
+  workouts: Pick<Workout, 'startedAt'>[],
+  now = new Date(),
+) {
+  const counts = weeklySessionCounts(workouts, 520, now).reverse();
+  let streak = 0;
+  for (let i = 0; i < counts.length; i++) {
+    if (counts[i].count > 0) streak++;
+    else if (i === 0) continue;
+    else break;
+  }
+  return streak;
+}
 /** Steps logged for one calendar day, or null when nothing was logged. */
 export function stepsOn(data: Pick<FitnessData, 'steps'>, date: string) {
   return data.steps?.find((e) => e.date === date)?.count ?? null;

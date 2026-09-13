@@ -11,7 +11,7 @@ import {
 import { startTraining } from '../../../lib/training';
 
 export type Act = (action: () => Promise<unknown>, notice?: string) => void;
-export type Tab = 'train' | 'weight' | 'history' | 'coach';
+export type Tab = 'train' | 'weight' | 'you' | 'coach';
 
 export const loadValue = (set: LiftSet, unit: 'kg' | 'lb') =>
   set.load ??

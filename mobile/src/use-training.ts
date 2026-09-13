@@ -15,6 +15,7 @@ export function useTraining() {
   const [error, setError] = useState('');
   const [conflict, setConflict] = useState(false);
   const [detail, setDetail] = useState<MemberDetail | null>(null);
+  const [name, setName] = useState('');
   const [coachError, setCoachError] = useState('');
   const coachingBusy = useRef(false);
   const envelope = useRef<Envelope | null>(null);
@@ -42,6 +43,7 @@ export function useTraining() {
     busy.current = true;
     try {
       const remote = await request<FitnessResponse>('/api/data');
+      if (remote.name && remote.name !== 'Your') setName(remote.name);
       if (USER_KEY && remote.userKey !== USER_KEY)
         throw new Error(
           'The signed-in account changed. Reopen the app before editing.',
@@ -233,6 +235,8 @@ export function useTraining() {
     conflict,
     detail,
     coachError,
+    /** First name from the account, or '' when unknown. */
+    name,
     update,
     resolve,
     refresh: async () => {

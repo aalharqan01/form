@@ -50,6 +50,45 @@ import { RoutineEditor } from './routine-editor';
 import { WorkoutDetailSheet } from './history';
 import type { Act } from './shared';
 
+/** Loaded barbell sleeve: three plates on a bar, the strength mark of the next-session card. */
+function PlateStack({ color }: { color: string }) {
+  return (
+    <Svg
+      width={92}
+      height={64}
+      viewBox="0 0 92 64"
+      accessibilityLabel="Loaded barbell"
+    >
+      <Path
+        d="M0 32h14M78 32h14"
+        stroke={color}
+        strokeWidth={5}
+        strokeLinecap="round"
+      />
+      <Path d="M14 30h8v4h-8z" fill={color} opacity={0.9} />
+      <Path d="M70 30h8v4h-8z" fill={color} opacity={0.9} />
+      <Path
+        d="M22 8h12a3 3 0 0 1 3 3v42a3 3 0 0 1-3 3H22a3 3 0 0 1-3-3V11a3 3 0 0 1 3-3z"
+        fill={color}
+      />
+      <Path
+        d="M38 16h10a3 3 0 0 1 3 3v26a3 3 0 0 1-3 3H38a3 3 0 0 1-3-3V19a3 3 0 0 1 3-3z"
+        fill={color}
+        opacity={0.72}
+      />
+      <Path
+        d="M58 8h12a3 3 0 0 1 3 3v42a3 3 0 0 1-3 3H58a3 3 0 0 1-3-3V11a3 3 0 0 1 3-3z"
+        fill={color}
+      />
+      <Path
+        d="M44 16h10a3 3 0 0 1 3 3v26a3 3 0 0 1-3 3H44a3 3 0 0 1-3-3V19a3 3 0 0 1 3-3z"
+        fill={color}
+        opacity={0.72}
+      />
+    </Svg>
+  );
+}
+
 export function TrainScreen({
   training,
   act,
@@ -63,7 +102,7 @@ export function TrainScreen({
   busy: boolean;
   onStart: (routine: Routine | null, membershipId?: string) => void;
   onRepeat: (workout: Workout) => void;
-  navigate: (tab: 'weight' | 'history') => void;
+  navigate: (tab: 'weight' | 'you') => void;
 }) {
   const { theme } = useTheme();
   const { data, update } = training;
@@ -86,6 +125,24 @@ export function TrainScreen({
     return d;
   });
   const next = data.routines[0];
+  const nextSets = next ? next.exercises.reduce((a, e) => a + e.sets, 0) : 0;
+  // Roughly 40 s of work per set plus the rest target.
+  const nextMinutes = next
+    ? Math.max(
+        5,
+        Math.round(
+          next.exercises.reduce(
+            (a, e) => a + e.sets * ((e.restSeconds ?? 90) + 40),
+            0,
+          ) /
+            60 /
+            5,
+        ) * 5,
+      )
+    : 0;
+  const nextMuscles = next
+    ? [...new Set(next.exercises.map((e) => e.muscle))].slice(0, 4)
+    : [];
   const spark = stats.points.slice(-30);
   const lo = Math.min(...spark.map((x) => x.trend)) - 0.1,
     hi = Math.max(...spark.map((x) => x.trend)) + 0.1;
@@ -139,25 +196,44 @@ export function TrainScreen({
               >
                 {next ? next.name : 'Start a workout.'}
               </T>
-              <View
-                style={{
-                  transform: [{ rotate: '-30deg' }],
-                  opacity: 0.55,
-                  paddingRight: 10,
-                }}
-              >
-                <Dumbbell
-                  size={68}
-                  strokeWidth={0.8}
-                  color={theme.featureSymbol}
-                />
-              </View>
+              <PlateStack color={theme.featureSymbol} />
             </View>
-            <Body size={14} color={theme.featureText} style={{ marginTop: 18 }}>
+            <Body size={14} color={theme.featureText} style={{ marginTop: 14 }}>
               {next
-                ? `${next.exercises.length} exercises · ${next.exercises.reduce((a, e) => a + e.sets, 0)} sets`
+                ? `${next.exercises.length} exercises · ${nextSets} sets · about ${nextMinutes} min`
                 : 'Build a plan that works for you.\nKeep every set in one place.'}
             </Body>
+            {nextMuscles.length > 0 && (
+              <View
+                style={{
+                  flexDirection: 'row',
+                  flexWrap: 'wrap',
+                  gap: 6,
+                  marginTop: 14,
+                }}
+              >
+                {nextMuscles.map((m) => (
+                  <View
+                    key={m}
+                    style={{
+                      paddingVertical: 5,
+                      paddingHorizontal: 10,
+                      borderRadius: 30,
+                      backgroundColor: theme.featurePill,
+                    }}
+                  >
+                    <T
+                      weight={500}
+                      size={11}
+                      line={13}
+                      color={theme.featureLabel}
+                    >
+                      {m}
+                    </T>
+                  </View>
+                ))}
+              </View>
+            )}
             <View style={{ marginTop: 30, marginBottom: 4 }}>
               <PrimaryButton
                 full
