@@ -4,6 +4,7 @@ import {
   type APIRequestContext,
 } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
+import { mkdir, unlink, writeFile } from 'node:fs/promises';
 import type { FitnessData } from '../../lib/fitness';
 import type { MemberDetail, WorkoutTemplate } from '../../lib/coaching';
 const client = 'http://127.0.0.1:3101';
@@ -82,21 +83,38 @@ export async function fixture(request: APIRequestContext) {
           `DELETE FROM coaching_media WHERE membership_id='local-form-membership' AND created_at>${quote(startedAt)}`,
         ];
         // Explicit local-only config. Never seed or clean a remote database.
-        execFileSync(
-          'npx',
-          [
-            'wrangler',
-            'd1',
-            'execute',
-            'DB',
-            '--local',
-            '--config',
-            'wrangler.local.json',
-            '--command',
-            statements.join(';'),
-          ],
-          { stdio: 'pipe' },
-        );
+        // The script goes through a file: a long --command has hit wrangler's
+        // argument handling on CI, and local D1 occasionally returns a
+        // transient internal error, so one retry is allowed.
+        await mkdir('.wrangler', { recursive: true });
+        const file = `.wrangler/e2e-restore-${process.pid}-${Date.now()}.sql`;
+        await writeFile(file, statements.join(';\n') + ';\n');
+        try {
+          for (let attempt = 1; ; attempt++) {
+            try {
+              execFileSync(
+                'npx',
+                [
+                  'wrangler',
+                  'd1',
+                  'execute',
+                  'DB',
+                  '--local',
+                  '--config',
+                  'wrangler.local.json',
+                  '--file',
+                  file,
+                ],
+                { stdio: 'pipe' },
+              );
+              break;
+            } catch (error) {
+              if (attempt >= 2) throw error;
+            }
+          }
+        } finally {
+          await unlink(file).catch(() => {});
+        }
       } finally {
         await cleanup.dispose();
       }
