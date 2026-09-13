@@ -1346,10 +1346,13 @@ test('the development site creates each developer their own coach, clients and f
     await handleCoaching(db, dev, new Request('https://form.test/api/coaching'))
   ).json();
   assert.equal(state.profile.name, 'That Guy');
-  assert.equal(state.clients.length, 6);
-  // The developer is a client of their own coach profile.
+  assert.equal(state.clients.length, 5);
+  // The developer is a client of a fixture coach, not of themselves.
   const self = state.memberships.find((m) => m.trainee_id === dev.userId);
   assert.ok(self && self.status === 'active' && self.program);
+  assert.equal(self.coach_id, previewUserId(dev.userId, 'coach'));
+  assert.equal(self.coachName, 'That Guy');
+  assert.ok(state.clients.every((m) => m.trainee_id !== dev.userId));
   const own = state.clients.find((m) => m.trainee_id === coachedId);
   assert.ok(own && own.status === 'active' && own.program);
   const asCoached = await (
@@ -1370,7 +1373,7 @@ test('the development site creates each developer their own coach, clients and f
       new Request('https://form.test/api/coaching'),
     )
   ).json();
-  assert.equal(theirs.clients.length, 6);
+  assert.equal(theirs.clients.length, 5);
   assert.ok(theirs.clients.every((m) => m.coach_id === other.userId));
   const solo = db.sql
     .prepare('SELECT data FROM fitness_accounts WHERE user_id=?')

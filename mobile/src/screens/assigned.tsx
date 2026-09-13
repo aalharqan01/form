@@ -27,7 +27,6 @@ import {
 
 export function ProgramNote({ text }: { text: string }) {
   const { theme } = useTheme();
-  const { t } = useI18n();
   if (!text) return null;
   return (
     <View

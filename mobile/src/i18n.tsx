@@ -30,12 +30,14 @@ function systemTags(): string[] {
   }
 }
 type Vars = Record<string, string | number>;
+/** The translate function handed out by useI18n, for helpers outside components. */
+export type Translate = (key: Key, vars?: Vars) => string;
 const Context = createContext<{
   locale: Locale;
   rtl: boolean;
   preference: LanguagePreference;
   setPreference: (value: LanguagePreference) => void;
-  t: (key: Key, vars?: Vars) => string;
+  t: Translate;
 }>({
   locale: 'en',
   rtl: false,

@@ -13,6 +13,7 @@ import { memberStatus, weekOf, type Checkin } from '../../../lib/coaching';
 import { request } from '../api';
 import type { Training } from '../use-training';
 import { useTheme } from '../theme';
+import { useI18n } from '../i18n';
 import {
   Body,
   Card,
@@ -38,6 +39,7 @@ type CoachTab = 'overview' | 'program' | 'checkins' | 'messages';
 
 function WeeklyChange({ value }: { value: number | null | undefined }) {
   const { theme } = useTheme();
+  const { t } = useI18n();
   if (value == null)
     return (
       <T
@@ -46,7 +48,7 @@ function WeeklyChange({ value }: { value: number | null | undefined }) {
         line={34}
         tracking={-1}
         color={theme.muted}
-        accessibilityLabel="No previous week to compare"
+        accessibilityLabel={t('mycoach.noCompare')}
       >
         —
       </T>
@@ -63,7 +65,13 @@ function WeeklyChange({ value }: { value: number | null | undefined }) {
         line={34}
         tracking={-1}
         color={color}
-        accessibilityLabel={`${flat ? 'No change' : `${Math.abs(value).toFixed(1)} kg ${value > 0 ? 'gain' : 'loss'}`} vs last week's average`}
+        accessibilityLabel={t('mycoach.vsLastWeek', {
+          change: flat
+            ? t('mycoach.noChange')
+            : t(value > 0 ? 'mycoach.gain' : 'mycoach.loss', {
+                amount: Math.abs(value).toFixed(1),
+              }),
+        })}
       >
         {flat ? '0.0' : Math.abs(value).toFixed(1)}
         <T size={14} color={theme.muted}>
@@ -74,6 +82,24 @@ function WeeklyChange({ value }: { value: number | null | undefined }) {
     </View>
   );
 }
+
+const STATUS_KEYS = {
+  invited: 'status.invited',
+  requested: 'status.requested',
+  awaiting_payment: 'status.awaitingPayment',
+  rejected: 'status.rejected',
+  withdrawn: 'status.withdrawn',
+  active: 'status.active',
+  ended: 'status.ended',
+} as const;
+
+const ENERGY_KEYS = [
+  'mycoach.energy1',
+  'mycoach.energy2',
+  'mycoach.energy3',
+  'mycoach.energy4',
+  'mycoach.energy5',
+] as const;
 
 function Badge({ text, amber }: { text: string; amber?: boolean }) {
   const { theme } = useTheme();
@@ -148,6 +174,7 @@ function Metric({
 
 function CheckinCard({ item }: { item: Checkin }) {
   const { theme } = useTheme();
+  const { t } = useI18n();
   return (
     <Card style={{ gap: 6 }}>
       <View
@@ -158,37 +185,39 @@ function CheckinCard({ item }: { item: Checkin }) {
           gap: 12,
         }}
       >
-        <H2 size={20}>Week of {dateLabel(item.week)}</H2>
+        <H2 size={20}>{t('mycoach.weekOf', { date: dateLabel(item.week) })}</H2>
         <Badge
-          text={item.reviewed_at ? 'Reviewed' : 'Awaiting review'}
+          text={
+            item.reviewed_at ? t('mycoach.reviewed') : t('mycoach.awaiting')
+          }
           amber={!item.reviewed_at}
         />
       </View>
       <View style={{ flexDirection: 'row', gap: 32, marginTop: 14 }}>
         <View>
-          <Body size={13}>Energy</Body>
+          <Body size={13}>{t('mycoach.energy')}</Body>
           <T weight={500} size={22} line={26}>
             {item.answers.energy}/5
           </T>
         </View>
         <View>
-          <Body size={13}>Sleep</Body>
+          <Body size={13}>{t('mycoach.sleep')}</Body>
           <T weight={500} size={22} line={26}>
-            {item.answers.sleep} hours
+            {t('mycoach.hours', { count: item.answers.sleep })}
           </T>
         </View>
       </View>
       <H3 size={15} style={{ marginTop: 16 }}>
-        Wins
+        {t('mycoach.wins')}
       </H3>
       <Body size={15} color={theme.ink}>
-        {item.answers.wins || 'No notes'}
+        {item.answers.wins || t('mycoach.noNotes')}
       </Body>
       <H3 size={15} style={{ marginTop: 12 }}>
-        Challenges & questions
+        {t('mycoach.challenges')}
       </H3>
       <Body size={15} color={theme.ink}>
-        {item.answers.challenges || 'No notes'}
+        {item.answers.challenges || t('mycoach.noNotes')}
       </Body>
       {item.reviewed_at ? (
         <View
@@ -201,7 +230,7 @@ function CheckinCard({ item }: { item: Checkin }) {
           }}
         >
           <T weight={500} size={14} line={18}>
-            Coach feedback
+            {t('mycoach.coachReply')}
           </T>
           <Body size={15} color={theme.ink}>
             {item.feedback}
@@ -209,7 +238,7 @@ function CheckinCard({ item }: { item: Checkin }) {
         </View>
       ) : (
         <Body size={13} style={{ marginTop: 12 }}>
-          Your coach will review this update.
+          {t('mycoach.willReview')}
         </Body>
       )}
     </Card>
@@ -230,6 +259,7 @@ export function CoachScreen({
   scrollToEnd: () => void;
 }) {
   const { theme } = useTheme();
+  const { t } = useI18n();
   const detail = training.detail;
   const [tab, setTab] = useState<CoachTab>('overview');
   const [energy, setEnergy] = useState(3),
@@ -250,7 +280,7 @@ export function CoachScreen({
     return (
       <>
         <Eyebrow size={12} color={theme.muted} style={{ marginBottom: 18 }}>
-          YOUR COACHING
+          {t('mycoach.eyebrow')}
         </Eyebrow>
         <T
           weight={500}
@@ -259,21 +289,20 @@ export function CoachScreen({
           tracking={-1.9}
           style={{ marginBottom: 14 }}
         >
-          My coach.
+          {t('mycoach.heading')}
         </T>
         <Body size={16} style={{ marginBottom: 28 }}>
-          Your membership, program and conversations.
+          {t('mycoach.intro')}
         </Body>
         <Card style={{ alignItems: 'center', paddingVertical: 56, gap: 16 }}>
           <ClipboardList size={40} strokeWidth={1.3} color={theme.green} />
-          <H2 size={24}>Find your coach</H2>
+          <H2 size={24}>{t('mycoach.find')}</H2>
           <Body size={15} center style={{ maxWidth: 320 }}>
-            {training.coachError ||
-              'Browse coaches and packages on the Form website. An active membership appears here with your program, check-ins and messages.'}
+            {training.coachError || t('mycoach.findBody')}
           </Body>
           {!!training.coachError && (
             <SecondaryButton
-              label="Retry"
+              label={t('mycoach.retry')}
               onPress={() => act(training.refreshCoach)}
             />
           )}
@@ -284,19 +313,21 @@ export function CoachScreen({
   const m = detail.member;
   const thisWeek = detail.checkins.some((c) => c.week === weekOf());
   const tabs: { value: CoachTab; label: string }[] = [
-    { value: 'overview', label: 'Overview' },
-    { value: 'program', label: 'Program' },
-    { value: 'checkins', label: 'Check-ins' },
+    { value: 'overview', label: t('mycoach.overview') },
+    { value: 'program', label: t('mycoach.program') },
+    { value: 'checkins', label: t('mycoach.checkins') },
     {
       value: 'messages',
-      label: m.unread ? `Messages · ${m.unread}` : 'Messages',
+      label: m.unread
+        ? t('mycoach.messagesUnread', { count: m.unread })
+        : t('mycoach.messages'),
     },
   ];
   return (
     <>
       <View style={{ paddingTop: 4, paddingBottom: 24, gap: 12 }}>
         <Eyebrow size={12} color={theme.muted}>
-          YOUR COACH
+          {t('mycoach.yourCoach')}
         </Eyebrow>
         <T weight={500} size={34} line={38} tracking={-1.9}>
           {m.coachName}
@@ -310,7 +341,7 @@ export function CoachScreen({
           }}
         >
           <Body size={16}>{m.offer.name}</Body>
-          <Badge text={memberStatus(m.status)} />
+          <Badge text={t(STATUS_KEYS[m.status]) || memberStatus(m.status)} />
         </View>
       </View>
       {!!training.coachError && (
@@ -329,20 +360,22 @@ export function CoachScreen({
         <>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
             <Metric
-              label="Workouts · last 7 days"
+              label={t('mycoach.workouts7')}
               value={String(m.stats?.workouts ?? 0)}
               small={
                 m.stats?.lastWorkout
-                  ? 'Last session ' + dateLabel(m.stats.lastWorkout)
-                  : 'No completed workouts yet'
+                  ? t('mycoach.lastSession', {
+                      date: dateLabel(m.stats.lastWorkout),
+                    })
+                  : t('mycoach.noWorkouts')
               }
             />
             <Metric
               accent
-              label="Scheduled sessions"
+              label={t('mycoach.scheduled')}
               value={String(m.stats?.completed ?? 0)}
               suffix={`/${m.stats?.due ?? 0}`}
-              small="Completed · last 7 calendar days (UTC)"
+              small={t('mycoach.scheduledNote')}
             />
             <View
               style={{
@@ -354,7 +387,7 @@ export function CoachScreen({
               }}
             >
               <T size={13} line={17} color={theme.muted}>
-                Weekly average weight
+                {t('mycoach.weeklyAverage')}
               </T>
               <View
                 style={{
@@ -373,13 +406,15 @@ export function CoachScreen({
                     </T>
                   </T>
                   <T size={11} line={15} color={theme.muted}>
-                    {m.stats?.weightCount ?? 0} weigh-ins this week
+                    {t('mycoach.weighInsWeek', {
+                      count: m.stats?.weightCount ?? 0,
+                    })}
                   </T>
                 </View>
                 <View style={{ gap: 2 }}>
                   <WeeklyChange value={m.stats?.averageChangeKg} />
                   <T size={11} line={15} color={theme.muted}>
-                    vs last week’s average
+                    {t('mycoach.vsLast')}
                   </T>
                 </View>
               </View>
@@ -395,42 +430,49 @@ export function CoachScreen({
                 justifyContent: 'space-between',
               }}
             >
-              <H2 size={22}>Weekly check-in</H2>
+              <H2 size={22}>{t('mycoach.weeklyCheckin')}</H2>
               <ClipboardList size={21} strokeWidth={1.5} color={theme.muted} />
             </View>
             <Body size={15} style={{ marginTop: 12, marginBottom: 18 }}>
-              {thisWeek
-                ? 'This week’s check-in has been submitted.'
-                : 'Share how training has felt this week.'}
+              {thisWeek ? t('mycoach.submitted') : t('mycoach.shareWeek')}
             </Body>
             <SecondaryButton
-              label="Open check-in"
+              label={t('mycoach.openCheckin')}
               icon={<ChevronRight size={17} color={theme.secondaryText} />}
               onPress={() => setTab('checkins')}
             />
             <Divider style={{ marginVertical: 22 }} />
-            <H3 size={16}>Current program</H3>
+            <H3 size={16}>{t('mycoach.currentProgram')}</H3>
             <Body size={15} style={{ marginTop: 8 }}>
-              {m.program?.title ?? 'No program assigned yet.'}
+              {m.program?.title ?? t('mycoach.noProgram')}
             </Body>
             <TextButton
-              label="View program"
+              label={t('mycoach.viewProgram')}
               icon={<ChevronRight size={16} color={theme.textButton} />}
               onPress={() => setTab('program')}
             />
           </Card>
           <Card style={{ marginTop: 14 }}>
-            <H2 size={22}>Intake</H2>
+            <H2 size={22}>{t('mycoach.intake')}</H2>
             <View style={{ marginTop: 6 }}>
               {(
                 [
-                  ['Goals', m.intake.goals],
-                  ['Training experience', m.intake.experience],
-                  ['Equipment', m.intake.equipment],
-                  ['Considerations', m.intake.limitations || 'None shared'],
+                  [t('mycoach.goals'), m.intake.goals],
+                  [t('mycoach.experience'), m.intake.experience],
+                  [t('mycoach.equipment'), m.intake.equipment],
                   [
-                    'Availability',
-                    `${m.intake.days} days/week · ${m.intake.country === 'QA' ? 'Qatar' : 'Saudi Arabia'}`,
+                    t('mycoach.considerations'),
+                    m.intake.limitations || t('mycoach.noneShared'),
+                  ],
+                  [
+                    t('mycoach.availability'),
+                    t('mycoach.daysPerWeek', {
+                      count: m.intake.days,
+                      country:
+                        m.intake.country === 'QA'
+                          ? t('mycoach.qatar')
+                          : t('mycoach.saudi'),
+                    }),
                   ],
                 ] as const
               ).map(([label, value]) => (
@@ -448,20 +490,23 @@ export function CoachScreen({
       {tab === 'program' &&
         (!m.program ? (
           <Card>
-            <H2 size={22}>Your program</H2>
+            <H2 size={22}>{t('mycoach.yourProgram')}</H2>
             <Body size={15} style={{ marginTop: 10 }}>
-              Your coach is preparing your program. Assigned sessions also
-              appear in Train.
+              {t('mycoach.preparing')}
             </Body>
           </Card>
         ) : (
           <>
             <H2 size={24}>{m.program.title}</H2>
             <Body size={13} style={{ marginTop: 6 }}>
-              Starts {dateLabel(m.program.startDate, true)} ·{' '}
-              {m.program.sessions.length}{' '}
-              {m.program.sessions.length === 1 ? 'session' : 'sessions'} per
-              week
+              {t('mycoach.starts', {
+                date: dateLabel(m.program.startDate, true),
+                count: m.program.sessions.length,
+                noun:
+                  m.program.sessions.length === 1
+                    ? t('mycoach.session')
+                    : t('mycoach.sessions'),
+              })}
             </Body>
             <ProgramNote text={m.program.notes} />
             {m.program.sessions.map((session) => (
@@ -486,26 +531,27 @@ export function CoachScreen({
                 color={theme.muted}
                 style={{ marginBottom: 12 }}
               >
-                WEEK OF {dateLabel(weekOf()).toUpperCase()}
+                {t('mycoach.weekOfEyebrow', {
+                  date: dateLabel(weekOf()).toUpperCase(),
+                })}
               </Eyebrow>
-              <H2 size={22}>Your weekly check-in</H2>
-              <Field label="Energy this week">
+              <H2 size={22}>{t('mycoach.yourCheckin')}</H2>
+              <Field label={t('mycoach.energyWeek')}>
                 <Segmented
-                  accessibilityLabel="Energy this week"
-                  options={['Very low', 'Low', 'Okay', 'Good', 'Great'].map(
-                    (label, i) => ({ value: i + 1, label: String(i + 1) }),
-                  )}
-                  labelFor={(o) => `Energy ${o.value} of 5`}
+                  accessibilityLabel={t('mycoach.energyWeek')}
+                  options={[1, 2, 3, 4, 5].map((n) => ({
+                    value: n,
+                    label: String(n),
+                  }))}
+                  labelFor={(o) => t('mycoach.energyOf', { value: o.value })}
                   value={energy}
                   onChange={setEnergy}
                 />
-                <Body size={12}>
-                  {['Very low', 'Low', 'Okay', 'Good', 'Great'][energy - 1]}
-                </Body>
+                <Body size={12}>{t(ENERGY_KEYS[energy - 1])}</Body>
               </Field>
-              <Field label="Average sleep (hours)">
+              <Field label={t('mycoach.sleepHours')}>
                 <Input
-                  accessibilityLabel="Average sleep (hours)"
+                  accessibilityLabel={t('mycoach.sleepHours')}
                   keyboardType="decimal-pad"
                   inputMode="decimal"
                   value={sleep}
@@ -513,18 +559,18 @@ export function CoachScreen({
                   maxLength={4}
                 />
               </Field>
-              <Field label="What went well?">
+              <Field label={t('mycoach.wentWell')}>
                 <Input
-                  accessibilityLabel="What went well?"
+                  accessibilityLabel={t('mycoach.wentWell')}
                   multiline
                   maxLength={2000}
                   value={wins}
                   onChangeText={setWins}
                 />
               </Field>
-              <Field label="Challenges or questions for your coach">
+              <Field label={t('mycoach.askCoach')}>
                 <Input
-                  accessibilityLabel="Challenges or questions for your coach"
+                  accessibilityLabel={t('mycoach.askCoach')}
                   multiline
                   maxLength={2000}
                   value={challenges}
@@ -533,8 +579,8 @@ export function CoachScreen({
               </Field>
               <View style={{ marginTop: 22 }}>
                 <PrimaryButton
-                  label={busy ? 'Sending…' : 'Submit check-in'}
-                  accessibilityLabel="Submit check-in"
+                  label={busy ? t('mycoach.sending') : t('mycoach.submit')}
+                  accessibilityLabel={t('mycoach.submit')}
                   icon={<Check size={18} color={theme.primaryText} />}
                   disabled={busy}
                   onPress={() =>
@@ -552,7 +598,7 @@ export function CoachScreen({
                       setWins('');
                       setChallenges('');
                       await training.refreshCoach();
-                    }, 'Check-in sent to your coach.')
+                    }, t('mycoach.sent'))
                   }
                 />
               </View>
@@ -562,7 +608,7 @@ export function CoachScreen({
             <CheckinCard key={c.id} item={c} />
           ))}
           {!detail.checkins.length && thisWeek && (
-            <Body size={14}>Your check-ins will be collected here.</Body>
+            <Body size={14}>{t('mycoach.collected')}</Body>
           )}
         </View>
       )}

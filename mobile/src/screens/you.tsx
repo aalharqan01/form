@@ -81,7 +81,6 @@ function ShareCard({
   cardRef: React.RefObject<View | null>;
 }) {
   const { theme } = useTheme();
-  const { t } = useI18n();
   const top = workout.exercises.slice(0, 5);
   return (
     <View
