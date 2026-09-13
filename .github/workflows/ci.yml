@@ -103,11 +103,21 @@ jobs:
       - name: Apply reviewed migrations
         if: steps.config.outputs.ready == 'true'
         run: npx wrangler d1 migrations apply DB --remote --config .cloudflare/wrangler.json
+      - name: Record what is about to be uploaded
+        if: steps.config.outputs.ready == 'true'
+        run: |
+          echo "Commit: $(git rev-parse HEAD)"
+          echo "Files under dist/client: $(find dist/client -type f | wc -l)"
+          echo "Ignore list:"; cat dist/client/.assetsignore
+          echo "Website chunks:"; ls dist/client/_next/static/chunks
+          echo "Trainee app bundle:"; ls dist/client/app/_expo/static/js/web
+          grep -oE 'index-[0-9a-f]{32}\.js' dist/client/app/index.html
       - name: Deploy the Worker and assets
         id: publish
         if: steps.config.outputs.ready == 'true'
         run: |
           npx wrangler deploy --config dist/server/wrangler.json | tee deploy.log
           url=$(grep -oE 'https://[a-z0-9.-]+\.workers\.dev' deploy.log | head -1)
+          version=$(grep -oE 'Current Version ID: [0-9a-f-]+' deploy.log | awk '{print $4}')
           echo "url=$url" >> "$GITHUB_OUTPUT"
-          echo "Deployed $FORM_WORKER_NAME to ${url:-Cloudflare}"
+          echo "Deployed $FORM_WORKER_NAME version ${version:-unknown} to ${url:-Cloudflare}"
