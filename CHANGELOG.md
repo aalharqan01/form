@@ -2,6 +2,19 @@
 
 Newest first. Each entry says what changed, how to run it, and what is still open, so a fresh `git pull` is enough to get going.
 
+## 13 September 2026 — Arabic, phase 2; developers are no longer their own client
+
+### What changed
+
+- **Arabic covers the whole trainee app now.** The active workout (sets, rest sheet, finish and end dialogs), the Weight tab (trend, goal, weigh-in history and forms), the plan editor, the exercise picker and How-to guide, the workout detail and exercise progress sheets, the My coach tab (overview, program, check-ins), messages and progress photos, and the app-level notices (sync errors, conflicts, loading) all read from the dictionaries. Muscle-group filters and photo views (front/side/back) are translated too. Numbers, dates and API messages are still left as they are, as decided.
+- **Developer fixtures.** Every developer's own coached membership now hangs off a fixture coach named That Guy (`<you>:preview-coach`) instead of your own coach profile, so your email no longer appears in your client list on the dev site. Existing rows are repaired on the next request; locally run `npm run db:seed -- --refresh`.
+- **Wording fix:** the Train tab heading is تمرينك اليوم.
+
+### Still open
+
+- Arabic on the coach website beyond the sidebar (clients, client detail, program editor, templates, Marketplace) is phase 3.
+- A native-speaker review of the glossary in `docs/I18N.md`.
+
 ## 13 September 2026 — Arabic, phase 1
 
 ### What changed

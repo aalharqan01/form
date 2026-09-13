@@ -4,6 +4,7 @@ import { Bookmark, Plus, X } from 'lucide-react-native';
 import { randomUUID } from 'expo-crypto';
 import type { Routine } from '../../../lib/fitness';
 import { useTheme } from '../theme';
+import { useI18n } from '../i18n';
 import {
   Field,
   IconButton,
@@ -32,6 +33,7 @@ export function RoutineEditor({
   onSave: (routine: Routine) => void;
 }) {
   const { theme } = useTheme();
+  const { t } = useI18n();
   const [name, setName] = useState(routine?.name ?? ''),
     [exercises, setExercises] = useState<Item[]>(routine?.exercises ?? []),
     [drafts, setDrafts] = useState<Record<string, string>>({}),
@@ -56,11 +58,18 @@ export function RoutineEditor({
           accessibilityLabel={`${label} for ${exercises[i].name}`}
           keyboardType="number-pad"
           inputMode="numeric"
-          value={drafts[draftKey] ?? (current === undefined ? '' : String(current))}
+          value={
+            drafts[draftKey] ?? (current === undefined ? '' : String(current))
+          }
           onChangeText={(value) => {
             setDrafts({ ...drafts, [draftKey]: value });
             const parsed = Number(value);
-            if (value.trim() && Number.isInteger(parsed) && parsed >= 0 && parsed <= max)
+            if (
+              value.trim() &&
+              Number.isInteger(parsed) &&
+              parsed >= 0 &&
+              parsed <= max
+            )
               edit(i, { [key]: parsed } as Partial<Item>);
           }}
           style={{ minHeight: 40, paddingVertical: 7, paddingHorizontal: 10 }}
@@ -72,17 +81,32 @@ export function RoutineEditor({
     <Sheet
       open={open}
       onClose={onClose}
-      title={picking ? 'Add exercise' : routine ? 'Edit plan' : 'Create plan'}
-      description={picking ? 'Choose an exercise for this plan.' : 'Set exercises and targets.'}
+      title={
+        picking
+          ? t('editor.addExercise')
+          : routine
+            ? t('editor.editPlan')
+            : t('editor.createPlan')
+      }
+      description={picking ? t('editor.pickHint') : t('editor.hint')}
     >
       {picking ? (
         <>
-          <TextButton label="Back to plan" onPress={() => setPicking(false)} />
+          <TextButton
+            label={t('editor.back')}
+            onPress={() => setPicking(false)}
+          />
           <PickerBody
             onPick={(exerciseName, muscle) => {
               setExercises([
                 ...exercises,
-                { name: exerciseName, muscle, sets: 3, reps: 10, restSeconds: 90 },
+                {
+                  name: exerciseName,
+                  muscle,
+                  sets: 3,
+                  reps: 10,
+                  restSeconds: 90,
+                },
               ]);
               setPicking(false);
             }}
@@ -90,13 +114,13 @@ export function RoutineEditor({
         </>
       ) : (
         <>
-          <Field label="Plan name">
+          <Field label={t('editor.planName')}>
             <Input
-              accessibilityLabel="Plan name"
+              accessibilityLabel={t('editor.planName')}
               value={name}
               onChangeText={setName}
               maxLength={100}
-              placeholder="e.g. Monday upper body"
+              placeholder={t('editor.namePlaceholder')}
             />
           </Field>
           <View style={{ gap: 12, marginVertical: 18 }}>
@@ -110,26 +134,40 @@ export function RoutineEditor({
                   gap: 10,
                 }}
               >
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 10,
+                  }}
+                >
                   <Thumbnail name={x.name} size={42} />
                   <T weight={500} size={14} line={18} style={{ flex: 1 }}>
                     {x.name}
                   </T>
                   <IconButton
                     icon={<X size={17} color={theme.muted} />}
-                    accessibilityLabel={`Remove ${x.name}`}
+                    accessibilityLabel={t('editor.remove', { name: x.name })}
                     size={36}
-                    onPress={() => setExercises(exercises.filter((_, j) => j !== i))}
+                    onPress={() =>
+                      setExercises(exercises.filter((_, j) => j !== i))
+                    }
                   />
                 </View>
-                <View style={{ flexDirection: 'row', gap: 10, alignItems: 'flex-end' }}>
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    gap: 10,
+                    alignItems: 'flex-end',
+                  }}
+                >
                   <View style={{ gap: 6 }}>
                     <T size={11} line={14} color={theme.muted}>
-                      Unit
+                      {t('editor.unit')}
                     </T>
                     <Segmented
                       compact
-                      accessibilityLabel={`Unit for ${x.name}`}
+                      accessibilityLabel={t('editor.unitFor', { name: x.name })}
                       options={[
                         { value: 'kg', label: 'kg' },
                         { value: 'lb', label: 'lb' },
@@ -139,33 +177,39 @@ export function RoutineEditor({
                       onChange={(unit) => edit(i, { unit })}
                     />
                   </View>
-                  {numberField(i, 'sets', 'Sets', 50)}
-                  {numberField(i, 'reps', 'Reps', 1000)}
-                  {numberField(i, 'restSeconds', 'Rest (s)', 600)}
+                  {numberField(i, 'sets', t('editor.sets'), 50)}
+                  {numberField(i, 'reps', t('editor.reps'), 1000)}
+                  {numberField(i, 'restSeconds', t('editor.rest'), 600)}
                 </View>
               </View>
             ))}
           </View>
           <SecondaryButton
             full
-            label="Add exercise"
+            label={t('editor.addExercise')}
             icon={<Plus size={18} color={theme.secondaryText} />}
             disabled={exercises.length >= 60}
             onPress={() => setPicking(true)}
           />
           {!!error && (
-            <T size={13} line={18} color={theme.errorText} style={{ marginTop: 14 }} accessibilityRole="alert">
+            <T
+              size={13}
+              line={18}
+              color={theme.errorText}
+              style={{ marginTop: 14 }}
+              accessibilityRole="alert"
+            >
               {error}
             </T>
           )}
           <View style={{ marginTop: 22 }}>
             <PrimaryButton
               full
-              label="Save plan"
+              label={t('editor.save')}
               icon={<Bookmark size={19} color={theme.primaryText} />}
               onPress={() => {
                 if (!name.trim() || !exercises.length) {
-                  setError('Name your plan and add at least one exercise.');
+                  setError(t('editor.nameError'));
                   return;
                 }
                 if (
@@ -183,10 +227,14 @@ export function RoutineEditor({
                           x.restSeconds > 600)),
                   )
                 ) {
-                  setError('Use 1-50 sets, 1-1000 whole reps and 0-600 seconds of rest.');
+                  setError(t('editor.rangeError'));
                   return;
                 }
-                onSave({ id: routine?.id ?? randomUUID(), name: name.trim(), exercises });
+                onSave({
+                  id: routine?.id ?? randomUUID(),
+                  name: name.trim(),
+                  exercises,
+                });
                 onClose();
               }}
             />

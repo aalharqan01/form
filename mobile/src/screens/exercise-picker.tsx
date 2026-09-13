@@ -9,6 +9,7 @@ import {
 } from '../../../lib/exercises';
 import { ExerciseGuideSheet } from './exercise-guide';
 import { useTheme } from '../theme';
+import { useI18n } from '../i18n';
 import { Body, Chip, Input, Press, Sheet, T, Thumbnail } from '../ui';
 
 const MUSCLES = [
@@ -23,12 +24,36 @@ const MUSCLES = [
 ];
 const EQUIPMENT = ['All', ...EQUIPMENT_OPTIONS];
 
+/** Muscle group names shown on filter chips and rows. */
+export function muscleLabel(muscle: string, t: (key: MuscleKey) => string) {
+  const key = MUSCLE_KEYS[muscle];
+  return key ? t(key) : muscle;
+}
+const MUSCLE_KEYS: Record<string, MuscleKey> = {
+  Chest: 'muscle.chest',
+  Back: 'muscle.back',
+  Legs: 'muscle.legs',
+  Shoulders: 'muscle.shoulders',
+  Arms: 'muscle.arms',
+  Core: 'muscle.core',
+  'Full body': 'muscle.fullBody',
+};
+type MuscleKey =
+  | 'muscle.chest'
+  | 'muscle.back'
+  | 'muscle.legs'
+  | 'muscle.shoulders'
+  | 'muscle.arms'
+  | 'muscle.core'
+  | 'muscle.fullBody';
+
 export function PickerBody({
   onPick,
 }: {
   onPick: (name: string, muscle: string) => void;
 }) {
   const { theme } = useTheme();
+  const { t } = useI18n();
   const [query, setQuery] = useState(''),
     [muscle, setMuscle] = useState('All'),
     [equipment, setEquipment] = useState('All'),
@@ -48,8 +73,8 @@ export function PickerBody({
     <View style={{ gap: 12, marginTop: 16 }}>
       <View style={{ justifyContent: 'center' }}>
         <Input
-          accessibilityLabel="Search exercises"
-          placeholder="Search exercises"
+          accessibilityLabel={t('picker.search')}
+          placeholder={t('picker.search')}
           value={query}
           onChangeText={setQuery}
           maxLength={100}
@@ -68,7 +93,7 @@ export function PickerBody({
         {MUSCLES.map((m) => (
           <Chip
             key={m}
-            label={m}
+            label={m === 'All' ? t('picker.all') : muscleLabel(m, t)}
             selected={muscle === m}
             onPress={() => setMuscle(m)}
           />
@@ -82,26 +107,24 @@ export function PickerBody({
         {EQUIPMENT.map((e) => (
           <Chip
             key={e}
-            label={e === 'All' ? 'All equipment' : e}
+            label={e === 'All' ? t('picker.allEquipment') : e}
             selected={equipment === e}
             onPress={() => setEquipment(e)}
           />
         ))}
       </ScrollView>
       <Body size={12} accessibilityLiveRegion="polite">
-        {list.length} exercises found
+        {t('picker.found', { count: list.length })}
       </Body>
       <View style={{ gap: 7 }}>
         {!list.length && !custom && (
-          <Body size={14}>
-            No matches. Try another search or change the filters.
-          </Body>
+          <Body size={14}>{t('picker.noMatches')}</Body>
         )}
         {list.map(([name, m, eq]) => (
           <Press
             key={name}
             accessibilityRole="button"
-            accessibilityLabel={`Add ${name}`}
+            accessibilityLabel={t('picker.add', { name })}
             onPress={() => {
               onPick(name, m);
               setQuery('');
@@ -128,7 +151,7 @@ export function PickerBody({
             {exerciseDetail(name) && (
               <Press
                 accessibilityRole="button"
-                accessibilityLabel={`How to do ${name}`}
+                accessibilityLabel={t('workout.howToDo', { name })}
                 onPress={() => setGuide(name)}
                 scale={0.9}
                 style={{
@@ -147,11 +170,11 @@ export function PickerBody({
         {custom ? (
           <Press
             accessibilityRole="button"
-            accessibilityLabel={`Add custom exercise: ${query.trim()}`}
+            accessibilityLabel={t('picker.addCustom', { name: query.trim() })}
             onPress={() => {
               onPick(
                 query.trim().slice(0, 100),
-                muscle === 'All' ? 'Custom' : muscle,
+                muscle === 'All' ? t('picker.customMuscle') : muscle,
               );
               setQuery('');
             }}
@@ -179,10 +202,10 @@ export function PickerBody({
             </View>
             <View style={{ flex: 1 }}>
               <T weight={500} size={14} line={19}>
-                Add “{query.trim()}”
+                {t('picker.addQuoted', { name: query.trim() })}
               </T>
               <T size={11} line={15} color={theme.placeholder}>
-                Custom exercise
+                {t('picker.custom')}
               </T>
             </View>
           </Press>
@@ -207,12 +230,13 @@ export function ExercisePicker({
   onClose: () => void;
   onPick: (name: string, muscle: string) => void;
 }) {
+  const { t } = useI18n();
   return (
     <Sheet
       open={open}
       onClose={onClose}
-      title="Add exercise"
-      description={`${ALL_EXERCISES.length} exercises. Filter by muscle and equipment, or add your own.`}
+      title={t('picker.title')}
+      description={t('picker.description', { count: ALL_EXERCISES.length })}
     >
       <PickerBody onPick={onPick} />
     </Sheet>

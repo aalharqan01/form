@@ -7,6 +7,7 @@ import {
   GUIDES_FREE,
 } from '../../../lib/exercises';
 import { useTheme } from '../theme';
+import { useI18n } from '../i18n';
 import { Body, Chip, Sheet, T } from '../ui';
 
 /**
@@ -22,6 +23,7 @@ export function ExerciseGuideSheet({
   onClose: () => void;
 }) {
   const { theme } = useTheme();
+  const { t } = useI18n();
   const detail = name ? exerciseDetail(name) : null;
   const frames = name ? exerciseFrames(name) : [];
   const [frame, setFrame] = useState(0);
@@ -45,12 +47,16 @@ export function ExerciseGuideSheet({
       description={
         detail
           ? `${detail.equipment} · ${detail.level}${detail.mechanic ? ` · ${detail.mechanic}` : ''}`
-          : 'No guide for this exercise yet.'
+          : t('guide.none')
       }
     >
       {frames.length > 0 && GUIDES_FREE && (
         <View
-          accessibilityLabel={`${name} demonstration, frame ${frame + 1} of ${frames.length}`}
+          accessibilityLabel={t('guide.frame', {
+            name: name ?? '',
+            index: frame + 1,
+            total: frames.length,
+          })}
           style={{
             marginTop: 14,
             borderRadius: 18,
@@ -138,8 +144,7 @@ export function ExerciseGuideSheet({
         </View>
       ) : null}
       <Body size={11} style={{ marginTop: 18 }}>
-        Photos and steps: {EXERCISE_SOURCE.name},{' '}
-        {EXERCISE_SOURCE.license.toLowerCase()}.
+        {t('guide.credit', { source: EXERCISE_SOURCE.name })}
       </Body>
     </Sheet>
   );

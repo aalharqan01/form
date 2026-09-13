@@ -23,7 +23,7 @@ import {
   IBMPlexSansArabic_600SemiBold,
   IBMPlexSansArabic_700Bold,
 } from '@expo-google-fonts/ibm-plex-sans-arabic';
-import { LocaleProvider } from './src/i18n';
+import { LocaleProvider, useI18n } from './src/i18n';
 import { randomUUID } from 'expo-crypto';
 import type { Routine, Workout } from '../lib/fitness';
 import { routineFromWorkout } from '../lib/training';
@@ -58,6 +58,7 @@ import {
 
 function AppContent() {
   const { theme } = useTheme();
+  const { t } = useI18n();
   const training = useTraining();
   const { data } = training;
   const rest = useRest(data.active?.id);
@@ -88,9 +89,7 @@ function AppContent() {
         if (message) setNotice(message);
       })
       .catch((e: unknown) =>
-        setError(
-          e instanceof Error ? e.message : 'This change could not be saved.',
-        ),
+        setError(e instanceof Error ? e.message : t('app.saveFailed')),
       )
       .finally(() => setPending((n) => n - 1));
   };
@@ -158,7 +157,7 @@ function AppContent() {
           >
             {!!training.error && (
               <SecondaryButton
-                label="Retry"
+                label={t('app.retry')}
                 height={38}
                 size={13}
                 onPress={() => act(training.refresh)}
@@ -168,17 +167,14 @@ function AppContent() {
           <Notice text={notice} />
           {training.conflict && (
             <Card style={{ marginBottom: 18, gap: 12 }}>
-              <H2 size={20}>Choose which changes to keep</H2>
-              <Body size={14}>
-                The same data changed on this device and on the server. A backup
-                of this device’s log is kept before either choice.
-              </Body>
+              <H2 size={20}>{t('app.conflictTitle')}</H2>
+              <Body size={14}>{t('app.conflictBody')}</Body>
               <SecondaryButton
-                label="Keep this device’s changes"
+                label={t('app.keepDevice')}
                 onPress={() => act(() => training.resolve(true))}
               />
               <TextButton
-                label="Use the server’s changes"
+                label={t('app.useServer')}
                 onPress={() => act(() => training.resolve(false))}
               />
             </Card>
@@ -202,12 +198,10 @@ function AppContent() {
                 f.
               </T>
               <H2 size={23}>
-                {training.error
-                  ? 'Your log is safe. Let’s reconnect.'
-                  : 'Loading your log…'}
+                {training.error ? t('app.reconnect') : t('app.loading')}
               </H2>
               {training.error ? (
-                <Body size={14}>Retry above to continue.</Body>
+                <Body size={14}>{t('app.retryHint')}</Body>
               ) : (
                 <ActivityIndicator color={theme.green} />
               )}
@@ -280,19 +274,19 @@ function AppContent() {
             >
               <View style={{ flex: 1, minWidth: 0 }}>
                 <T weight={500} size={15} line={19} numberOfLines={1}>
-                  {data.active.name || 'Workout'}
+                  {data.active.name || t('workout.defaultName')}
                 </T>
                 <Body size={11}>
                   {duration(
                     (rest.clock - Date.parse(data.active.startedAt)) / 1000,
                   )}{' '}
-                  elapsed
+                  {t('app.elapsed')}
                 </Body>
               </View>
               <PrimaryButton
                 small
-                label="Finish"
-                accessibilityLabel="Finish this workout"
+                label={t('app.finish')}
+                accessibilityLabel={t('app.finishThis')}
                 icon={<Check size={17} color={theme.primaryText} />}
                 disabled={busy}
                 onPress={() => finishRef.current?.()}

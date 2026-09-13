@@ -23,6 +23,7 @@ import { Check, Dumbbell, X } from 'lucide-react-native';
 import imagePaths from '../../lib/exercise-images.json';
 import { exerciseFrames } from '../../lib/exercises';
 import { font, radius, useTheme, type Weight } from './theme';
+import { useI18n } from './i18n';
 
 import { API_ORIGIN } from './account';
 export { API_ORIGIN };
@@ -870,6 +871,7 @@ export function ErrorBanner({
   children?: ReactNode;
 }) {
   const { theme } = useTheme();
+  const { t } = useI18n();
   if (!text) return null;
   return (
     <Reveal y={-8} duration={220}>
@@ -898,7 +900,7 @@ export function ErrorBanner({
         {onDismiss && (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Dismiss"
+            accessibilityLabel={t('ui.dismiss')}
             onPress={onDismiss}
             hitSlop={8}
           >
@@ -1054,6 +1056,7 @@ export function Sheet({
   wide?: boolean;
 }) {
   const { theme } = useTheme();
+  const { t } = useI18n();
   const [visible, setVisible] = useState(open);
   const progress = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -1095,7 +1098,7 @@ export function Sheet({
       >
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Close dialog"
+          accessibilityLabel={t('ui.closeDialog')}
           onPress={onClose}
           style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 }}
         />
@@ -1146,7 +1149,7 @@ export function Sheet({
             </ScrollView>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Close"
+              accessibilityLabel={t('ui.close')}
               onPress={onClose}
               hitSlop={6}
               style={{

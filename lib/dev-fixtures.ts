@@ -10,11 +10,13 @@ import { seedStatements } from './seed-sql.ts';
  * module creates their rows the first time the developer signs in.
  */
 export const PREVIEW_ROLES = ['coached', 'solo'] as const;
+/** Identity suffixes that exist only as data: the fixture coach has no login. */
+export type FixtureRole = PreviewRole | 'coach';
 export type PreviewRole = (typeof PREVIEW_ROLES)[number];
 export const isPreviewRole = (value: unknown): value is PreviewRole =>
   PREVIEW_ROLES.includes(value as PreviewRole);
 const SUFFIX = ':preview-';
-export const previewUserId = (developerId: string, role: PreviewRole) =>
+export const previewUserId = (developerId: string, role: FixtureRole) =>
   `${developerId}${SUFFIX}${role}`;
 export const previewEmail = (developerId: string, role: PreviewRole) =>
   `${role}.${developerId.replace(/[^a-z0-9]/gi, '')}@preview.invalid`;
@@ -41,11 +43,12 @@ export async function ensureDeveloperFixtures(
   const prefix = `dev-${hash(developer)}`;
   // The self-membership is the last row the seed adds; every statement is
   // idempotent, so an older partial set is completed rather than duplicated.
-  const exists = await db
-    .prepare('SELECT 1 AS ok FROM coaching_memberships WHERE id=?')
+  const self = await db
+    .prepare('SELECT coach_id FROM coaching_memberships WHERE id=?')
     .bind(`${prefix}-membership-self`)
-    .first();
-  if (exists) return false;
+    .first<{ coach_id: string }>();
+  // Complete: the self-membership exists under the fixture coach.
+  if (self && self.coach_id !== developer) return false;
   const statements = seedStatements({
     prefix,
     coach: { id: developer, name: COACH_NAME },
@@ -55,9 +58,15 @@ export async function ensureDeveloperFixtures(
       name: PREVIEW_NAMES.coached,
     },
     solo: { id: previewUserId(developer, 'solo') },
-    // The developer's own account is also a client of That Guy, so /app/
-    // without a role shows the coached experience for whoever signs in.
-    self: { id: developer, email: user.email, name: user.displayName },
+    // The developer's own account is a client of a fixture coach named That
+    // Guy, so /app/ shows the coached experience without the developer
+    // appearing in their own client list.
+    self: {
+      id: developer,
+      email: user.email,
+      name: user.displayName,
+      coachId: previewUserId(developer, 'coach'),
+    },
     refresh: false,
   });
   await db.batch(statements.map((sql) => db.prepare(sql)));

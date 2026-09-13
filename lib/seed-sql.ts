@@ -17,8 +17,10 @@ export type SeedPlan = {
   client: { id: string | null; email: string; name: string };
   /** Account that receives the independent-trainee history, if any. */
   solo: { id: string } | null;
-  /** The signed-in developer as an active client of their own coach. */
-  self?: { id: string; email: string; name: string };
+  /** The signed-in developer as an active client of a fixture coach, so
+   *  their own app shows the coached experience without listing them in
+   *  their own client list. */
+  self?: { id: string; email: string; name: string; coachId: string };
   /** Rewrite existing fixture history and names instead of only filling gaps. */
   refresh: boolean;
   now?: Date;
@@ -50,13 +52,14 @@ export function seedStatements(plan: SeedPlan): string[] {
     email: string,
     name: string,
     status: 'active' | 'requested',
+    coachId = plan.coach.id,
   ) =>
     `INSERT OR IGNORE INTO coaching_memberships
 (id,coach_id,trainee_id,email,name,status,token_hash,expires_at,offer,intake,program,nutrition,step_goal,revision,created_at,accepted_at,open_key)
-VALUES (${quote(id)},${quote(plan.coach.id)},${traineeId === null ? 'NULL' : quote(traineeId)},${quote(email)},${quote(name)},${quote(status)},${quote(`${prefix}-fixture-${id}`)},
+VALUES (${quote(id)},${quote(coachId)},${traineeId === null ? 'NULL' : quote(traineeId)},${quote(email)},${quote(name)},${quote(status)},${quote(`${prefix}-fixture-${id}`)},
 '2099-01-01T00:00:00.000Z',${json(profile.offers[0])},
 ${json({ ...INTAKE, goals: status === 'active' ? 'Build strength' : 'Lose weight and feel stronger' })},
-${status === 'active' ? json(program) : "'null'"},'null',${status === 'active' ? 8500 : 'NULL'},0,${quote(stamp)},${status === 'active' ? quote(stamp) : 'NULL'},${quote(`${plan.coach.id}:${traineeId ?? email}`)});
+${status === 'active' ? json(program) : "'null'"},'null',${status === 'active' ? 8500 : 'NULL'},0,${quote(stamp)},${status === 'active' ? quote(stamp) : 'NULL'},${quote(`${coachId}:${traineeId ?? email}`)});
 ${refresh ? `UPDATE coaching_memberships SET name=${quote(name)}, program=${status === 'active' ? json(program) : "'null'"}, revision=revision+1 WHERE id=${quote(id)};` : `UPDATE coaching_memberships SET program=${json(program)}, revision=revision+1 WHERE id=${quote(id)} AND status='active' AND program='null';`}`;
   const lines = [
     `INSERT OR IGNORE INTO coach_profiles (user_id,profile,revision,updated_at) VALUES (${quote(plan.coach.id)},${json(profile)},0,${quote(stamp)});`,
@@ -82,13 +85,17 @@ ${refresh ? `UPDATE coaching_memberships SET name=${quote(name)}, program=${stat
     ...(plan.self
       ? [
           account(plan.self.id),
+          `INSERT OR IGNORE INTO coach_profiles (user_id,profile,revision,updated_at) VALUES (${quote(plan.self.coachId)},${json(profile)},0,${quote(stamp)});`,
           member(
             `${prefix}-membership-self`,
             plan.self.id,
             plan.self.email,
             plan.self.name,
             'active',
+            plan.self.coachId,
           ),
+          // Rows created before the fixture coach existed move under it.
+          `UPDATE coaching_memberships SET coach_id=${quote(plan.self.coachId)} WHERE id=${quote(`${prefix}-membership-self`)} AND coach_id=${quote(plan.coach.id)};`,
           fill(
             plan.self.id,
             coachedHistory(program, `${prefix}-membership-self`, now, {

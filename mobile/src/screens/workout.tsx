@@ -46,6 +46,7 @@ import {
 import type { Training } from '../use-training';
 import type { Rest } from '../use-rest';
 import { font, useTheme } from '../theme';
+import { useI18n } from '../i18n';
 import {
   Bezel,
   Body,
@@ -196,6 +197,7 @@ function Stepper({
   keyboard: 'decimal-pad' | 'number-pad';
 }) {
   const { theme } = useTheme();
+  const { t } = useI18n();
   const bump = (delta: number) => {
     const next = Math.max(0, Number(value || 0) + delta);
     onChange(String(Number(next.toFixed(2))));
@@ -241,7 +243,7 @@ function Stepper({
       >
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={`Decrease ${label}`}
+          accessibilityLabel={t('workout.decrease', { label })}
           onPress={() => bump(-Number(step))}
           style={{
             flex: 1,
@@ -264,7 +266,7 @@ function Stepper({
         </T>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={`Increase ${label}`}
+          accessibilityLabel={t('workout.increase', { label })}
           onPress={() => bump(Number(step))}
           style={{
             flex: 1,
@@ -307,6 +309,7 @@ function ExerciseCard({
   onError: (message: string) => void;
 }) {
   const { theme } = useTheme();
+  const { t } = useI18n();
   const unit = exercise.unit ?? 'kg';
   const previous = lastPerformance(workouts, exercise.name);
   const [restSheet, setRestSheet] = useState(false),
@@ -330,7 +333,7 @@ function ExerciseCard({
       Number(set.reps) < 1 ||
       Number(set.reps) > 1000
     ) {
-      onError('Enter a weight (0 for bodyweight) and whole reps.');
+      onError(t('workout.setError'));
       return;
     }
     onError('');
@@ -380,7 +383,7 @@ function ExerciseCard({
           </View>
           <Segmented
             compact
-            accessibilityLabel={`Weight unit for ${exercise.name}`}
+            accessibilityLabel={t('workout.unitFor', { name: exercise.name })}
             options={[
               { value: 'kg', label: 'kg' },
               { value: 'lb', label: 'lb' },
@@ -393,7 +396,7 @@ function ExerciseCard({
           />
           <IconButton
             icon={<X size={18} color={theme.muted} />}
-            accessibilityLabel={`Remove ${exercise.name}`}
+            accessibilityLabel={t('workout.remove', { name: exercise.name })}
             size={36}
             onPress={remove}
           />
@@ -409,7 +412,7 @@ function ExerciseCard({
         >
           <Press
             accessibilityRole="button"
-            accessibilityLabel={`Rest time for ${exercise.name}`}
+            accessibilityLabel={t('workout.restFor', { name: exercise.name })}
             onPress={() => {
               setRestDraft(String(exercise.restSeconds ?? 90));
               setRestSheet(true);
@@ -424,21 +427,21 @@ function ExerciseCard({
             }}
           >
             <T size={13} line={16} color={theme.textButton}>
-              Rest · {restLabel(exercise.restSeconds)}
+              {t('workout.rest', { label: restLabel(exercise.restSeconds) })}
             </T>
           </Press>
           {!!exerciseDetail(exercise.name) && (
             <TextButton
-              label="How to"
+              label={t('workout.howTo')}
               size={13}
-              accessibilityLabel={`How to do ${exercise.name}`}
+              accessibilityLabel={t('workout.howToDo', { name: exercise.name })}
               onPress={() => setGuide(exercise.name)}
               style={{ minHeight: 40 }}
             />
           )}
           {!!exercise.videoUrl && (
             <TextButton
-              label={demo ? 'Hide demo' : 'Watch demo'}
+              label={demo ? t('workout.hideDemo') : t('workout.watchDemo')}
               size={13}
               accessibilityLabel={`${demo ? 'Hide' : 'Show'} ${exercise.name} demonstration`}
               onPress={() => setDemo(!demo)}
@@ -455,7 +458,7 @@ function ExerciseCard({
         {previous?.length ? (
           <View style={{ marginTop: 14 }}>
             <Body size={12}>
-              Last time:{' '}
+              {t('workout.lastTime')}{' '}
               {previous
                 .map(
                   (s) =>
@@ -465,7 +468,7 @@ function ExerciseCard({
               {unit}
             </Body>
             <TextButton
-              label="Copy last"
+              label={t('workout.copyLast')}
               size={12}
               disabled={anyDone}
               style={{ minHeight: 34, marginTop: 2 }}
@@ -496,7 +499,12 @@ function ExerciseCard({
             marginBottom: 6,
           }}
         >
-          {['SET', unit.toUpperCase(), 'REPS', 'DONE'].map((label, i) => (
+          {[
+            t('workout.set'),
+            unit.toUpperCase(),
+            t('workout.reps'),
+            t('workout.done'),
+          ].map((label, i) => (
             <T
               key={label + i}
               size={10}
@@ -527,7 +535,10 @@ function ExerciseCard({
               <View style={{ width: 35, alignItems: 'center', gap: 4 }}>
                 <Pressable
                   accessibilityRole="button"
-                  accessibilityLabel={`Set ${i + 1} type: ${warmup ? 'warm-up' : 'working'}`}
+                  accessibilityLabel={t('workout.setType', {
+                    index: i + 1,
+                    kind: warmup ? t('workout.warmUp') : t('workout.working'),
+                  })}
                   accessibilityHint="Toggles between working and warm-up"
                   onPress={() =>
                     act(() =>
@@ -560,7 +571,7 @@ function ExerciseCard({
                 </Pressable>
                 <Pressable
                   accessibilityRole="button"
-                  accessibilityLabel={`Remove set ${i + 1}`}
+                  accessibilityLabel={t('workout.removeSet', { index: i + 1 })}
                   onPress={() => {
                     if (set.done) setConfirmRemove(set);
                     else
@@ -606,7 +617,10 @@ function ExerciseCard({
               <CheckButton
                 done={set.done}
                 busy={busy}
-                label={`Complete ${exercise.name} set ${i + 1}`}
+                label={t('workout.completeSet', {
+                  name: exercise.name,
+                  index: i + 1,
+                })}
                 onPress={() => complete(set)}
               />
             </View>
@@ -619,8 +633,8 @@ function ExerciseCard({
               accessibilityRole="button"
               accessibilityLabel={
                 kind === 'working'
-                  ? `Add set to ${exercise.name}`
-                  : `Add warm-up set to ${exercise.name}`
+                  ? t('workout.addSet', { name: exercise.name })
+                  : t('workout.addWarmUp', { name: exercise.name })
               }
               disabled={busy || exercise.sets.length >= 50}
               onPress={() => addSet(kind)}
@@ -639,7 +653,9 @@ function ExerciseCard({
             >
               <Plus size={16} color={theme.textButton} />
               <T size={13} line={16} color={theme.textButton}>
-                {kind === 'working' ? 'Working set' : 'Warm-up'}
+                {kind === 'working'
+                  ? t('workout.workingSet')
+                  : t('workout.warmUpSet')}
               </T>
             </Press>
           ))}
@@ -648,8 +664,8 @@ function ExerciseCard({
       <Sheet
         open={restSheet}
         onClose={() => setRestSheet(false)}
-        title={`Rest for ${exercise.name}`}
-        description="Rest after each set of this exercise. 0 turns the countdown off."
+        title={t('workout.restTitle', { name: exercise.name })}
+        description={t('workout.restBody')}
       >
         <ScrollView
           horizontal
@@ -665,7 +681,7 @@ function ExerciseCard({
             />
           ))}
         </ScrollView>
-        <Field label="Seconds">
+        <Field label={t('workout.seconds')}>
           <Input
             accessibilityLabel={`${exercise.name} rest seconds`}
             keyboardType="number-pad"
@@ -678,8 +694,10 @@ function ExerciseCard({
         <View style={{ marginTop: 22, gap: 6 }}>
           <PrimaryButton
             full
-            label="Save rest"
-            accessibilityLabel={`Save rest for ${exercise.name}`}
+            label={t('workout.saveRest')}
+            accessibilityLabel={t('workout.saveRestFor', {
+              name: exercise.name,
+            })}
             icon={<Check size={19} color={theme.primaryText} />}
             onPress={() =>
               act(async () => {
@@ -690,15 +708,17 @@ function ExerciseCard({
                   seconds < 0 ||
                   seconds > 600
                 )
-                  throw new Error('Choose a rest time from 0 to 600 seconds.');
+                  throw new Error(t('workout.restError'));
                 await change((e) => ({ ...e, restSeconds: seconds }));
                 setRestSheet(false);
               })
             }
           />
           <TextButton
-            label="Start this rest now"
-            accessibilityLabel={`Start rest for ${exercise.name}`}
+            label={t('workout.startRest')}
+            accessibilityLabel={t('workout.startRestFor', {
+              name: exercise.name,
+            })}
             disabled={!Number(restDraft)}
             onPress={() => {
               rest.start({ ...exercise, restSeconds: Number(restDraft) });
@@ -710,12 +730,12 @@ function ExerciseCard({
       <Sheet
         open={!!confirmRemove}
         onClose={() => setConfirmRemove(null)}
-        title="Remove this completed set?"
-        description="Its logged weight and reps will be lost."
+        title={t('workout.removeSetTitle')}
+        description={t('workout.removeSetBody')}
       >
         <View style={{ marginTop: 18 }}>
           <DangerButton
-            label="Remove set"
+            label={t('workout.removeSetButton')}
             onPress={() => {
               const target = confirmRemove;
               setConfirmRemove(null);
@@ -750,6 +770,7 @@ export function WorkoutScreen({
   finishRef: MutableRefObject<(() => void) | null>;
 }) {
   const { theme } = useTheme();
+  const { t } = useI18n();
   const { data, update } = training;
   const workout = data.active!;
   const [pick, setPick] = useState(false),
@@ -790,17 +811,17 @@ export function WorkoutScreen({
   const finishNow = () =>
     act(async () => {
       await update((d) => {
-        if (!d.active) throw new Error('The workout already ended.');
+        if (!d.active) throw new Error(t('workout.alreadyEnded'));
         const finished = finishAssignedWorkout({
           ...d.active,
-          name: d.active.name.trim() || 'Workout',
+          name: d.active.name.trim() || t('workout.defaultName'),
         });
         return { ...d, active: null, workouts: [...d.workouts, finished] };
       });
       rest.skip();
       setFinish(false);
       onFinished();
-    }, 'Workout saved. Your coach can review your sets.');
+    }, t('workout.saved'));
   return (
     <View style={{ paddingBottom: 20 }}>
       <View
@@ -813,9 +834,9 @@ export function WorkoutScreen({
         }}
       >
         <View style={{ flex: 1, minWidth: 0 }}>
-          <Eyebrow style={{ marginBottom: 8 }}>ACTIVE WORKOUT</Eyebrow>
+          <Eyebrow style={{ marginBottom: 8 }}>{t('workout.eyebrow')}</Eyebrow>
           <TextInput
-            accessibilityLabel="Workout name"
+            accessibilityLabel={t('workout.name')}
             maxLength={100}
             value={workout.name}
             onChangeText={(name) => act(() => change((w) => ({ ...w, name })))}
@@ -833,8 +854,8 @@ export function WorkoutScreen({
         </View>
         <PrimaryButton
           small
-          label="Finish"
-          accessibilityLabel="Finish workout"
+          label={t('workout.finish')}
+          accessibilityLabel={t('workout.finishWorkout')}
           icon={<Check size={19} color={theme.primaryText} />}
           disabled={busy}
           onPress={requestFinish}
@@ -851,8 +872,8 @@ export function WorkoutScreen({
       >
         <Segmented
           options={[
-            { value: 'focus', label: 'Focus' },
-            { value: 'all', label: 'All exercises' },
+            { value: 'focus', label: t('workout.focus') },
+            { value: 'all', label: t('workout.allExercises') },
           ]}
           value={focus ? 'focus' : 'all'}
           onChange={(v) => setFocus(v === 'focus')}
@@ -867,13 +888,13 @@ export function WorkoutScreen({
           }}
         >
           <Body size={12} style={paused ? { color: theme.green } : undefined}>
-            {done}/{total} sets · {elapsed}
-            {paused ? ' · Paused' : ''}
+            {t('workout.setsProgress', { done, total, elapsed })}
+            {paused ? ` · ${t('workout.paused')}` : ''}
           </Body>
           <IconButton
             size={34}
             accessibilityLabel={
-              paused ? 'Resume workout timer' : 'Pause workout timer'
+              paused ? t('workout.resumeTimer') : t('workout.pauseTimer')
             }
             icon={
               paused ? (
@@ -903,16 +924,19 @@ export function WorkoutScreen({
           }}
         >
           <TextButton
-            label="Previous"
+            label={t('workout.previous')}
             size={13}
             disabled={index === 0}
             onPress={() => setFocusIndex(index - 1)}
           />
           <Body size={12}>
-            Exercise {index + 1} of {workout.exercises.length}
+            {t('workout.exerciseOf', {
+              index: index + 1,
+              total: workout.exercises.length,
+            })}
           </Body>
           <TextButton
-            label="Next"
+            label={t('workout.next')}
             size={13}
             disabled={index === workout.exercises.length - 1}
             onPress={() => setFocusIndex(index + 1)}
@@ -968,7 +992,7 @@ export function WorkoutScreen({
             tracking={-0.8}
             color={theme.secondaryText}
           >
-            No exercises yet
+            {t('workout.noExercises')}
           </T>
         </View>
       )}
@@ -976,7 +1000,7 @@ export function WorkoutScreen({
         <SecondaryButton
           full
           height={52}
-          label="Add exercise"
+          label={t('workout.addExercise')}
           background={theme.addExercise}
           icon={<Plus size={19} color={theme.secondaryText} />}
           disabled={workout.exercises.length >= 60}
@@ -984,9 +1008,9 @@ export function WorkoutScreen({
         />
       </View>
       <Disclosure summary="Notes and session options" style={{ marginTop: 18 }}>
-        <Field label="Notes">
+        <Field label={t('workout.notes')}>
           <Input
-            accessibilityLabel="Workout notes"
+            accessibilityLabel={t('workout.workoutNotes')}
             multiline
             maxLength={2000}
             value={workout.notes}
@@ -1004,13 +1028,13 @@ export function WorkoutScreen({
           }}
         >
           <TextButton
-            label="Save as plan"
+            label={t('workout.saveAsPlan')}
             icon={<Bookmark size={16} color={theme.textButton} />}
             disabled={!workout.exercises.length || data.routines.length >= 100}
             onPress={() => setSaveRoutine(true)}
           />
           <TextButton
-            label="End without saving"
+            label={t('workout.endWithoutSaving')}
             danger
             onPress={() => setDiscard(true)}
           />
@@ -1060,31 +1084,31 @@ export function WorkoutScreen({
       <Sheet
         open={finish}
         onClose={() => setFinish(false)}
-        title={done ? 'Finish workout?' : 'End workout?'}
+        title={done ? t('workout.finishTitle') : t('workout.endTitle')}
         description={
           <View style={{ gap: 8 }}>
             {done ? (
               <Body size={13}>
-                {done} completed {done === 1 ? 'set' : 'sets'} ·{' '}
-                {volume(workout).toLocaleString(undefined, {
-                  maximumFractionDigits: 1,
-                })}{' '}
-                kg total volume.
+                {t('workout.summary', {
+                  done,
+                  noun: done === 1 ? t('you.set') : t('you.sets'),
+                  volume: volume(workout).toLocaleString(undefined, {
+                    maximumFractionDigits: 1,
+                  }),
+                })}
               </Body>
             ) : (
-              <Body size={13}>
-                No sets are completed yet, so there is nothing to save. End the
-                workout without saving, or keep training.
-              </Body>
+              <Body size={13}>{t('workout.noSetsYet')}</Body>
             )}
             {!done ? null : unfinished > 0 ? (
               <Body size={13}>
-                {unfinished} unfinished {unfinished === 1 ? 'set' : 'sets'} will
-                be marked as skipped. Your coach can see that you finished
-                early.
+                {t('workout.unfinished', {
+                  count: unfinished,
+                  noun: unfinished === 1 ? t('you.set') : t('you.sets'),
+                })}
               </Body>
             ) : (
-              <Body size={13}>Every set is complete. Nice work.</Body>
+              <Body size={13}>{t('workout.allDone')}</Body>
             )}
           </View>
         }
@@ -1093,32 +1117,39 @@ export function WorkoutScreen({
           {done > 0 && (
             <PrimaryButton
               full
-              label={unfinished > 0 ? 'Save & finish early' : 'Save workout'}
+              label={
+                unfinished > 0
+                  ? t('workout.saveFinishEarly')
+                  : t('workout.saveWorkout')
+              }
               icon={<Check size={19} color={theme.primaryText} />}
               disabled={busy}
               onPress={finishNow}
             />
           )}
           <TextButton
-            label="End without saving"
+            label={t('workout.endWithoutSaving')}
             danger
             onPress={() => {
               setFinish(false);
               setDiscard(true);
             }}
           />
-          <TextButton label="Keep training" onPress={() => setFinish(false)} />
+          <TextButton
+            label={t('workout.keepTraining')}
+            onPress={() => setFinish(false)}
+          />
         </View>
       </Sheet>
       <Sheet
         open={discard}
         onClose={() => setDiscard(false)}
-        title="End without saving?"
-        description="This ends the active workout and drops its sets. Your saved history stays unchanged."
+        title={t('workout.endConfirmTitle')}
+        description={t('workout.endConfirmBody')}
       >
         <View style={{ marginTop: 18 }}>
           <DangerButton
-            label="End workout"
+            label={t('workout.endWorkout')}
             onPress={() =>
               act(async () => {
                 await update((d) => ({ ...d, active: null }));
@@ -1133,12 +1164,12 @@ export function WorkoutScreen({
       <Sheet
         open={!!removing}
         onClose={() => setRemoving(null)}
-        title="Remove this exercise?"
-        description="Its completed sets will be removed from this workout."
+        title={t('workout.removeExerciseTitle')}
+        description={t('workout.removeExerciseBody')}
       >
         <View style={{ marginTop: 18 }}>
           <DangerButton
-            label="Remove exercise"
+            label={t('workout.removeExercise')}
             onPress={() => {
               const target = removing;
               setRemoving(null);
@@ -1165,7 +1196,7 @@ export function WorkoutScreen({
                   ...d,
                   routines: [...d.routines, { ...r, id: randomUUID() }],
                 })),
-              'Plan saved.',
+              t('workout.planSaved'),
             )
           }
         />

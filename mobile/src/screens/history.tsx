@@ -13,6 +13,7 @@ import {
 } from '../../../lib/fitness';
 import type { Training } from '../use-training';
 import { font, useTheme } from '../theme';
+import { useI18n } from '../i18n';
 import {
   Body,
   DangerButton,
@@ -41,6 +42,7 @@ export function WorkoutDetailSheet({
   onShare?: (workout: Workout) => void;
 }) {
   const { theme } = useTheme();
+  const { t } = useI18n();
   const [confirm, setConfirm] = useState(false);
   const w = workout;
   return (
@@ -51,7 +53,14 @@ export function WorkoutDetailSheet({
         title={w?.name ?? ''}
         description={
           w
-            ? `${dateLabel(w.startedAt, true)} · ${completedSets(w)} sets · ${volume(w).toLocaleString()} kg total volume${w.endedEarly ? ` · Finished early, ${skippedSets(w)} skipped` : ''}`
+            ? t('history.sessionSummary', {
+                date: dateLabel(w.startedAt, true),
+                sets: completedSets(w),
+                volume: volume(w).toLocaleString(),
+              }) +
+              (w.endedEarly
+                ? t('history.finishedEarlySuffix', { count: skippedSets(w) })
+                : '')
             : ''
         }
       >
@@ -90,7 +99,7 @@ export function WorkoutDetailSheet({
                   >
                     {s.done
                       ? `${displayWeight(Number(s.kg), e.unit ?? 'kg').toLocaleString(undefined, { maximumFractionDigits: 2 })} ${e.unit ?? 'kg'} × ${s.reps}${s.kind === 'warmup' ? ' · Warm-up' : ''}`
-                      : `Skipped · ${s.reps || '—'} target reps`}
+                      : t('history.skipped', { reps: s.reps || '—' })}
                   </T>
                   {s.done ? (
                     <Check size={14} color={theme.textButton} />
@@ -119,20 +128,20 @@ export function WorkoutDetailSheet({
         <View style={{ marginTop: 22, gap: 6 }}>
           <SecondaryButton
             full
-            label="Repeat workout"
+            label={t('history.repeat')}
             icon={<Play size={16} color={theme.secondaryText} />}
             onPress={() => w && onRepeat(w)}
           />
           {onShare && (
             <SecondaryButton
               full
-              label="Share workout"
+              label={t('history.share')}
               icon={<Share2 size={16} color={theme.secondaryText} />}
               onPress={() => w && onShare(w)}
             />
           )}
           <TextButton
-            label="Delete workout"
+            label={t('history.delete')}
             danger
             style={{ alignSelf: 'center' }}
             onPress={() => setConfirm(true)}
@@ -142,12 +151,12 @@ export function WorkoutDetailSheet({
       <Sheet
         open={!!w && confirm}
         onClose={() => setConfirm(false)}
-        title="Delete this workout?"
-        description="This removes the session and all of its sets from your history."
+        title={t('history.deleteTitle')}
+        description={t('history.deleteBody')}
       >
         <View style={{ marginTop: 18 }}>
           <DangerButton
-            label="Delete workout"
+            label={t('history.delete')}
             onPress={() => {
               setConfirm(false);
               if (w) onDelete(w);
@@ -169,6 +178,7 @@ export function ExerciseProgressSheet({
   onClose: () => void;
 }) {
   const { theme } = useTheme();
+  const { t } = useI18n();
   const [metric, setMetric] = useState<'kg' | 'volume' | 'reps'>('kg');
   const svgFont = font(400).fontFamily;
   const points = name ? exerciseHistory(data.workouts, name) : [];
@@ -189,14 +199,14 @@ export function ExerciseProgressSheet({
       open={!!name}
       onClose={onClose}
       title={name ?? ''}
-      description="Best working-set load, reps at that load, and total working-set volume."
+      description={t('history.progressHint')}
     >
       <View style={{ marginTop: 16 }}>
         <Segmented
           options={[
-            { value: 'kg', label: 'Weight' },
-            { value: 'reps', label: 'Reps' },
-            { value: 'volume', label: 'Volume' },
+            { value: 'kg', label: t('history.weight') },
+            { value: 'reps', label: t('history.reps') },
+            { value: 'volume', label: t('history.volume') },
           ]}
           value={metric}
           onChange={setMetric}
@@ -259,7 +269,7 @@ export function ExerciseProgressSheet({
       >
         <Trophy size={20} color={theme.ink} />
         <T size={14} line={18} style={{ flex: 1 }}>
-          Best load
+          {t('history.bestLoad')}
         </T>
         <T weight={500} size={14} line={18}>
           {displayWeight(Math.max(0, ...points.map((p) => p.kg)), unit).toFixed(
