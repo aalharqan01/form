@@ -2,6 +2,13 @@
 
 Newest first. Each entry says what changed, how to run it, and what is still open, so a fresh `git pull` is enough to get going.
 
+## 13 September 2026 — next plan rotates; Arabic plan
+
+### What changed
+
+- **Your next session** now suggests the plan you trained least recently (plans you have never trained come first), so a two-plan split alternates and a three-day split rotates. Before, it always showed the first plan.
+- `docs/I18N.md` holds the audit and phased plan for Arabic support (language switch in the app and on the coach site, RTL, Arabic typeface, glossary).
+
 ## 13 September 2026 — You tab, sharing, exercise library, next-session card
 
 ### What changed

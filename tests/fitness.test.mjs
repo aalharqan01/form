@@ -402,3 +402,36 @@ test('weekly session counts and streaks use local Monday weeks', async () => {
   assert.equal(weeklyStreak([], now), 0);
   assert.equal(weeklyStreak([at(30)], now), 0);
 });
+
+test('the next plan is the one trained least recently, never-trained plans first', async () => {
+  const { nextRoutine } = await import('../lib/fitness.ts');
+  const plan = (name) => ({ id: name, name, exercises: [] });
+  const upper = plan('Upper body'),
+    lower = plan('Lower body'),
+    full = plan('Full body');
+  assert.equal(nextRoutine([], []), null);
+  assert.equal(nextRoutine([upper, lower], []), upper);
+  const w = (name, day) => ({
+    name,
+    startedAt: `2026-09-${String(day).padStart(2, '0')}T10:00:00.000Z`,
+  });
+  assert.equal(nextRoutine([upper, lower], [w('Upper body', 11)]), lower);
+  assert.equal(
+    nextRoutine([upper, lower], [w('Upper body', 11), w('lower body', 12)]),
+    upper,
+  );
+  assert.equal(
+    nextRoutine(
+      [upper, lower, full],
+      [w('Upper body', 11), w('Lower body', 12)],
+    ),
+    full,
+  );
+  assert.equal(
+    nextRoutine(
+      [upper, lower, full],
+      [w('Upper body', 11), w('Lower body', 12), w('Full body', 13)],
+    ),
+    upper,
+  );
+});
