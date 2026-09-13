@@ -46,9 +46,15 @@ export type Routine = {
   }[];
 };
 export type WeighIn = { date: string; kg: number; note: string };
+/** Steps walked on one day, logged by hand or read from the phone. */
+export type StepEntry = { date: string; count: number };
 export type FitnessData = {
   version: 1;
   weights: WeighIn[];
+  /** Optional for logs saved before steps existed. */
+  steps?: StepEntry[];
+  /** The trainee's own daily step goal; a coach's target takes precedence. */
+  stepGoal?: number | null;
   workouts: Workout[];
   routines: Routine[];
   active: Workout | null;
@@ -59,6 +65,8 @@ export type FitnessData = {
 export const EMPTY: FitnessData = {
   version: 1,
   weights: [],
+  steps: [],
+  stepGoal: null,
   workouts: [],
   routines: [],
   active: null,
@@ -312,6 +320,30 @@ export function resumeWorkout(workout: Workout, now = new Date()): Workout {
     pausedSeconds: Math.round(pausedSeconds(workout, now.getTime())),
   };
 }
+/** Steps logged for one calendar day, or null when nothing was logged. */
+export function stepsOn(data: Pick<FitnessData, 'steps'>, date: string) {
+  return data.steps?.find((e) => e.date === date)?.count ?? null;
+}
+/** Average daily steps over the last `days` days, counting logged days only. */
+export function stepsAverage(
+  steps: StepEntry[] | undefined,
+  days = 7,
+  now = new Date(),
+) {
+  const end = new Date(now);
+  end.setHours(0, 0, 0, 0);
+  const start = new Date(end);
+  start.setDate(start.getDate() - (days - 1));
+  const from = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}-${String(start.getDate()).padStart(2, '0')}`;
+  const to = `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, '0')}-${String(end.getDate()).padStart(2, '0')}`;
+  const logged = (steps ?? []).filter((e) => e.date >= from && e.date <= to);
+  return {
+    days: logged.length,
+    average: logged.length
+      ? Math.round(logged.reduce((n, e) => n + e.count, 0) / logged.length)
+      : null,
+  };
+}
 export function validateData(d: unknown): d is FitnessData {
   if (!d || typeof d !== 'object') return false;
   const v = d as FitnessData;
@@ -376,6 +408,23 @@ export function validateData(d: unknown): d is FitnessData {
         w && validDate(w.date) && number(w.kg, 20, 500) && str(w.note, 500),
     ) &&
     new Set(v.weights.map((w) => w.date)).size === v.weights.length &&
+    (v.steps === undefined ||
+      (Array.isArray(v.steps) &&
+        v.steps.length <= 20000 &&
+        v.steps.every(
+          (e) =>
+            e &&
+            validDate(e.date) &&
+            Number.isInteger(e.count) &&
+            e.count >= 0 &&
+            e.count <= 200000,
+        ) &&
+        new Set(v.steps.map((e) => e.date)).size === v.steps.length)) &&
+    (v.stepGoal === undefined ||
+      v.stepGoal === null ||
+      (Number.isInteger(v.stepGoal) &&
+        v.stepGoal >= 500 &&
+        v.stepGoal <= 100000)) &&
     Array.isArray(v.workouts) &&
     v.workouts.length <= 10000 &&
     v.workouts.every(validWorkout) &&

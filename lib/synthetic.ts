@@ -127,6 +127,23 @@ function weights(
   return out;
 }
 
+/** Daily step counts for the last `weeks` weeks; weekends drift lower. */
+function steps(random: () => number, weeks: number, base: number, now: Date) {
+  const out: NonNullable<FitnessData['steps']> = [];
+  const today = startOfUtcDay(now);
+  for (let day = weeks * 7 - 1; day >= 0; day--) {
+    const date = new Date(today);
+    date.setUTCDate(date.getUTCDate() - day);
+    if (random() < 0.06) continue;
+    const weekend = date.getUTCDay() === 5 || date.getUTCDay() === 6;
+    const count =
+      Math.round((base * (weekend ? 0.7 : 1) + (random() - 0.5) * 3600) / 10) *
+      10;
+    out.push({ date: dayKey(date), count: Math.max(800, count) });
+  }
+  return out;
+}
+
 export type CoachedOptions = {
   seed?: number;
   weeks?: number;
@@ -180,6 +197,7 @@ export function coachedHistory(
     ...EMPTY,
     goal,
     weights: weights(random, weeks, startKg, perWeek, [0, 6], now),
+    steps: steps(random, weeks, 8600, now),
     workouts,
   };
   if (!validateData(data))
@@ -218,6 +236,8 @@ export function soloHistory(now = new Date()): FitnessData {
     goal: 70,
     routines,
     weights: weights(random, weeks, 66.8, 0.17, [0, 2, 4], now),
+    steps: steps(random, weeks, 7200, now),
+    stepGoal: 8000,
     workouts,
   };
   if (!validateData(data))

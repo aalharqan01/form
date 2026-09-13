@@ -457,6 +457,20 @@ test('coach-client lifecycle enforces identity, consent, ownership, persistence 
       await call(coach, {
         action: 'nutrition',
         memberId,
+        nutrition: { ...nutrition, steps: 100 },
+        revision: (
+          await call(coach, null, '?member=' + memberId)
+        ).body.member.revision,
+      })
+    ).status,
+    400,
+  );
+
+  assert.equal(
+    (
+      await call(coach, {
+        action: 'nutrition',
+        memberId,
         nutrition,
         revision: 2,
       })

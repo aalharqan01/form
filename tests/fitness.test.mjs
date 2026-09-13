@@ -342,3 +342,36 @@ test('pausing a workout excludes paused time from its duration and validates', a
     !validateData({ ...EMPTY, active: { ...resumed, pausedAt: 'soon' } }),
   );
 });
+
+test('daily steps validate, merge by date, and average over logged days only', async () => {
+  const { stepsAverage, stepsOn } = await import('../lib/fitness.ts');
+  const ok = {
+    ...EMPTY,
+    steps: [
+      { date: '2026-09-10', count: 8200 },
+      { date: '2026-09-12', count: 4000 },
+    ],
+    stepGoal: 8000,
+  };
+  assert.ok(validateData(ok));
+  assert.ok(validateData({ ...EMPTY, steps: undefined, stepGoal: undefined }));
+  assert.ok(
+    !validateData({ ...EMPTY, steps: [{ date: '2026-09-10', count: 1.5 }] }),
+  );
+  assert.ok(
+    !validateData({
+      ...EMPTY,
+      steps: [
+        { date: '2026-09-10', count: 1 },
+        { date: '2026-09-10', count: 2 },
+      ],
+    }),
+  );
+  assert.ok(!validateData({ ...EMPTY, stepGoal: 100 }));
+  assert.equal(stepsOn(ok, '2026-09-12'), 4000);
+  assert.equal(stepsOn(ok, '2026-09-11'), null);
+  const now = new Date(2026, 8, 12, 15, 0, 0);
+  assert.deepEqual(stepsAverage(ok.steps, 7, now), { days: 2, average: 6100 });
+  assert.deepEqual(stepsAverage(ok.steps, 1, now), { days: 1, average: 4000 });
+  assert.deepEqual(stepsAverage([], 7, now), { days: 0, average: null });
+});

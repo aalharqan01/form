@@ -62,6 +62,7 @@ import { exerciseVideo } from '@/lib/video';
 import ProgressPanel from '../progress-panel';
 import ThemeControl from '../theme-control';
 import { useCoachingTransport } from './transport';
+import { Wordmark } from '../wordmark';
 import './coaching.css';
 /* oxlint-disable nextjs/no-html-link-for-pages, jsx-a11y/prefer-tag-over-role */
 const money = (price: number, currency: string) =>
@@ -199,8 +200,8 @@ export default function CoachingWorkspace() {
   return (
     <div className="co-shell">
       <aside className="co-sidebar">
-        <a className="co-logo" href="/">
-          form<span>®</span>
+        <a className="co-logo" href="/" aria-label="FORM home">
+          <Wordmark height={22} />
         </a>
         <span className="co-overline">COACH WORKSPACE</span>
         <nav>
@@ -242,8 +243,8 @@ export default function CoachingWorkspace() {
       </aside>
       <main className="co-main">
         <header className="co-topbar">
-          <a href="/" className="co-mobile-brand">
-            form®
+          <a href="/" className="co-mobile-brand" aria-label="FORM home">
+            <Wordmark height={18} />
           </a>
           <span>
             {new Date().toLocaleDateString('en-GB', {
@@ -1164,6 +1165,19 @@ function ClientDetail({
                     <em>/{m.stats?.due ?? 0}</em>
                   </strong>
                   <small>Completed · last 7 calendar days (UTC)</small>
+                </div>
+                <div>
+                  <span>Steps · daily average</span>
+                  <strong>
+                    {m.stats?.stepsAverage == null
+                      ? '—'
+                      : m.stats.stepsAverage.toLocaleString()}
+                  </strong>
+                  <small>
+                    {m.stats?.stepsDays
+                      ? `${m.stats.stepsDays} of the last 7 days logged${m.nutrition?.steps ? ` · goal ${m.nutrition.steps.toLocaleString()}` : ''}`
+                      : 'No steps logged in the last 7 days'}
+                  </small>
                 </div>
                 <button
                   type="button"

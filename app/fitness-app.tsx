@@ -49,6 +49,7 @@ import {
   lastPerformance,
 } from '@/lib/fitness';
 import WeightPanel from './weight-panel';
+import { Wordmark } from './wordmark';
 import {
   AssignedWorkouts,
   MyCoach,
@@ -300,7 +301,7 @@ export default function FitnessApp() {
           aria-label="Form home"
         >
           <div className="wordmark">
-            form<span>®</span>
+            <Wordmark height={26} />
           </div>
         </button>
         <p className="brand-sub">Training & weight</p>
@@ -344,7 +345,7 @@ export default function FitnessApp() {
               .toUpperCase()}
           </span>
           <span className="mobile-wordmark">
-            form<span>®</span>
+            <Wordmark height={18} />
           </span>
           <div className="topbar-right">
             {!demo && <CoachingNotice onOpen={() => setTab('coach')} />}

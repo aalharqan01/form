@@ -1,5 +1,9 @@
 import { View } from 'react-native';
-import { dateLabel, type FitnessData, type Routine } from '../../../lib/fitness';
+import {
+  dateLabel,
+  type FitnessData,
+  type Routine,
+} from '../../../lib/fitness';
 import {
   DAYS,
   weekOf,
@@ -46,19 +50,29 @@ export function NutritionCard({
   return (
     <Card style={{ marginTop: 14 }}>
       <Eyebrow size={12} color={theme.muted} style={{ marginBottom: 12 }}>
-        DAILY NUTRITION
+        DAILY TARGETS
       </Eyebrow>
-      <H2 size={22}>Calorie & macro targets</H2>
+      <H2 size={22}>Nutrition & steps</H2>
       {targets ? (
         <>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 16, marginTop: 20 }}>
+          <View
+            style={{
+              flexDirection: 'row',
+              flexWrap: 'wrap',
+              gap: 16,
+              marginTop: 20,
+            }}
+          >
             {(
               [
                 [targets.calories, 'kcal', 'Calories'],
                 [targets.protein, 'g', 'Protein'],
                 [targets.carbs, 'g', 'Carbs'],
                 [targets.fat, 'g', 'Fat'],
-              ] as const
+                ...(targets.steps
+                  ? [[targets.steps.toLocaleString(), 'steps', 'Steps']]
+                  : []),
+              ] as [string | number, string, string][]
             ).map(([value, unit, label]) => (
               <View key={label} style={{ minWidth: '40%', flex: 1 }}>
                 <Body size={13}>{label}</Body>
@@ -76,7 +90,7 @@ export function NutritionCard({
         </>
       ) : (
         <Body size={14} style={{ marginTop: 10 }}>
-          Your coach hasn’t set nutrition targets yet.
+          Your coach hasn’t set daily targets yet.
         </Body>
       )}
     </Card>

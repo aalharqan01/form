@@ -19,6 +19,7 @@ import { useTheme } from './theme';
 import { Press, T, easeOut } from './ui';
 const native = Platform.OS !== 'web';
 import { duration, type Tab } from './screens/shared';
+import { Wordmark } from './wordmark';
 
 export function Topbar({
   status,
@@ -42,25 +43,10 @@ export function Topbar({
         marginBottom: 28,
       }}
     >
-      <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-        <T
-          weight={600}
-          size={32}
-          line={34}
-          tracking={-2.4}
-          color={isDark ? theme.ink : '#233b26'}
-        >
-          form
-        </T>
-        <T
-          weight={500}
-          size={11}
-          line={13}
-          color={isDark ? theme.ink : '#233b26'}
-          style={{ marginTop: 3, marginLeft: 2 }}
-        >
-          ®
-        </T>
+      <View
+        style={{ flexDirection: 'row', alignItems: 'center', minHeight: 34 }}
+      >
+        <Wordmark height={20} color={isDark ? theme.ink : '#233b26'} />
       </View>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
         <Pressable
