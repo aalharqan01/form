@@ -61,8 +61,7 @@ import { ExercisePicker } from '../workout-panel';
 import ExerciseVideo from '../exercise-video';
 import { exerciseVideo } from '@/lib/video';
 import ProgressPanel from '../progress-panel';
-import ThemeControl from '../theme-control';
-import LanguageControl from '../language-control';
+import PreferencesMenu from './preferences-menu';
 import { useI18n } from '../i18n';
 import { useCoachingTransport } from './transport';
 import { Wordmark } from '../wordmark';
@@ -241,8 +240,7 @@ export default function CoachingWorkspace() {
           </button>
         </nav>
         <div className="co-sidebar-bottom">
-          <ThemeControl />
-          <LanguageControl />
+          <PreferencesMenu />
           <span className="co-pilot">{t('coach.pilot')}</span>
         </div>
       </aside>
