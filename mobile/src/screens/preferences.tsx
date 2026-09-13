@@ -1,11 +1,12 @@
 import { Share, View } from 'react-native';
-import { ChevronRight, Download, RefreshCw } from 'lucide-react-native';
+import { Download, RefreshCw } from 'lucide-react-native';
 import { today } from '../../../lib/fitness';
 import type { Training } from '../use-training';
 import { useTheme, type ThemePreference } from '../theme';
 import { useI18n } from '../i18n';
 import type { LanguagePreference } from '../../../lib/i18n';
-import { Body, Credits, Press, Segmented, Sheet, T } from '../ui';
+import { Body, Credits, Press, Segmented, Sheet, T, Forward } from '../ui';
+import { STATUS_KEYS } from '../shell';
 import type { Act } from './shared';
 
 export function PreferencesSheet({
@@ -54,7 +55,7 @@ export function PreferencesSheet({
           {subtitle}
         </Body>
       </View>
-      <ChevronRight size={17} color={theme.muted} />
+      <Forward size={17} color={theme.muted} />
     </Press>
   );
   return (
@@ -107,7 +108,9 @@ export function PreferencesSheet({
         {item(
           <RefreshCw size={21} color={theme.secondaryText} />,
           t('prefs.sync'),
-          training.status,
+          STATUS_KEYS[training.status]
+            ? t(STATUS_KEYS[training.status])
+            : training.status,
           () => act(training.refresh, t('prefs.refreshed')),
         )}
       </View>

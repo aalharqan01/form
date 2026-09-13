@@ -4,7 +4,6 @@ import {
   ArrowDownRight,
   ArrowUpRight,
   Check,
-  ChevronRight,
   ClipboardList,
   Minus,
 } from 'lucide-react-native';
@@ -28,6 +27,7 @@ import {
   Segmented,
   T,
   TextButton,
+  Forward,
 } from '../ui';
 import { NutritionCard, ProgramNote, SessionCard } from './assigned';
 import { StepGoalCard } from './steps';
@@ -438,7 +438,7 @@ export function CoachScreen({
             </Body>
             <SecondaryButton
               label={t('mycoach.openCheckin')}
-              icon={<ChevronRight size={17} color={theme.secondaryText} />}
+              icon={<Forward size={17} color={theme.secondaryText} />}
               onPress={() => setTab('checkins')}
             />
             <Divider style={{ marginVertical: 22 }} />
@@ -448,7 +448,7 @@ export function CoachScreen({
             </Body>
             <TextButton
               label={t('mycoach.viewProgram')}
-              icon={<ChevronRight size={16} color={theme.textButton} />}
+              icon={<Forward size={16} color={theme.textButton} />}
               onPress={() => setTab('program')}
             />
           </Card>

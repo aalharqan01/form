@@ -546,4 +546,10 @@ export const ar: Record<Key, string> = {
   'status.withdrawn': 'منسحب',
   'status.active': 'نشط',
   'status.ended': 'منتهٍ',
+  'assigned.exercisesSets': '{exercises} حركات · {sets} مجموعات',
+  'assigned.setsReps': '{sets} × {reps} تكرارات',
+  'assigned.restSeconds': 'راحة {seconds} ث',
+  'assigned.noRest': 'بلا راحة',
+  'weight.perWeek': '{amount} {unit} في الأسبوع',
+  'weight.latest': 'آخر تسجيل',
 };

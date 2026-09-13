@@ -5,7 +5,6 @@ import { captureRef } from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';
 import {
   ArrowUpRight,
-  ChevronRight,
   Flame,
   History,
   Plus,
@@ -37,6 +36,7 @@ import {
   Segmented,
   T,
   TextButton,
+  Forward,
 } from '../ui';
 import { Wordmark } from '../wordmark';
 import { minutesOf, skippedSets, type Act } from './shared';
@@ -426,7 +426,7 @@ export function YouScreen({
                   {last?.record && (
                     <Trophy size={17} color={theme.textButton} />
                   )}
-                  <ChevronRight size={18} color={theme.muted} />
+                  <Forward size={18} color={theme.muted} />
                 </Press>
               );
             })}
@@ -516,7 +516,7 @@ export function YouScreen({
                       {t('you.min', { minutes: minutesOf(w) })}
                     </Body>
                   </View>
-                  <ChevronRight size={13} color={theme.muted} />
+                  <Forward size={13} color={theme.muted} />
                 </Press>
               ))}
             </View>

@@ -131,8 +131,10 @@ export function SessionCard({
         </Eyebrow>
         <H3 size={18}>{session.name}</H3>
         <Body size={13}>
-          {session.exercises.length} exercises ·{' '}
-          {session.exercises.reduce((n, e) => n + e.sets, 0)} sets
+          {t('assigned.exercisesSets', {
+            exercises: session.exercises.length,
+            sets: session.exercises.reduce((n, e) => n + e.sets, 0),
+          })}
         </Body>
       </View>
       <View style={{ marginTop: 14 }}>
@@ -161,9 +163,18 @@ export function SessionCard({
                 {exercise.name}
               </T>
               <Body size={12}>
-                {exercise.sets} × {exercise.reps} reps
+                {t('assigned.setsReps', {
+                  sets: exercise.sets,
+                  reps: exercise.reps,
+                })}
                 {exercise.restSeconds !== undefined
-                  ? ` · ${exercise.restSeconds ? exercise.restSeconds + 's rest' : 'no rest'}`
+                  ? ` · ${
+                      exercise.restSeconds
+                        ? t('assigned.restSeconds', {
+                            seconds: exercise.restSeconds,
+                          })
+                        : t('assigned.noRest')
+                    }`
                   : ''}
               </Body>
             </View>

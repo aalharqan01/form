@@ -233,7 +233,7 @@ export function WeightScreen({
                 <T
                   size={17}
                   color={theme.placeholder}
-                  style={{ marginLeft: 10 }}
+                  style={{ marginStart: 10 }}
                 >
                   {unit}
                 </T>
@@ -271,7 +271,10 @@ export function WeightScreen({
                   line={13}
                   color={theme.scheme === 'dark' ? theme.green : '#598047'}
                 >
-                  {format(Math.abs(stats.rate))} {unit} / week
+                  {t('weight.perWeek', {
+                    amount: format(Math.abs(stats.rate)),
+                    unit,
+                  })}
                 </T>
               </View>
             ) : (
@@ -558,9 +561,11 @@ export function WeightScreen({
             </View>
           </Card>
         </Bezel>
-        <View style={{ flex: 1, gap: 18, paddingVertical: 13, paddingLeft: 6 }}>
+        <View
+          style={{ flex: 1, gap: 18, paddingVertical: 13, paddingStart: 6 }}
+        >
           <View style={{ gap: 4 }}>
-            <Body size={11}>Latest weigh-in</Body>
+            <Body size={11}>{t('weight.latest')}</Body>
             <T weight={500} size={22} line={26} tracking={-0.9}>
               {latest ? `${format(latest.kg)} ${unit}` : '—'}
             </T>

@@ -19,7 +19,13 @@ import {
   type TextStyle,
   type ViewStyle,
 } from 'react-native';
-import { Check, Dumbbell, X } from 'lucide-react-native';
+import {
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Dumbbell,
+  X,
+} from 'lucide-react-native';
 import imagePaths from '../../lib/exercise-images.json';
 import { exerciseFrames } from '../../lib/exercises';
 import { font, radius, useTheme, type Weight } from './theme';
@@ -27,7 +33,7 @@ import { useI18n } from './i18n';
 
 import { API_ORIGIN } from './account';
 export { API_ORIGIN };
-const native = Platform.OS !== 'web';
+export const native = Platform.OS !== 'web';
 export const easeOut = Easing.bezier(0.23, 1, 0.32, 1);
 
 /* ---------- Text ---------- */
@@ -50,6 +56,9 @@ export function T({
   ...rest
 }: TProps) {
   const { theme } = useTheme();
+  const { locale } = useI18n();
+  // Arabic glyphs sit taller and never take negative tracking.
+  const arabic = locale === 'ar';
   return (
     <Text
       {...rest}
@@ -57,9 +66,13 @@ export function T({
         font(weight),
         {
           fontSize: size,
-          lineHeight: line ?? Math.round(size * 1.35),
+          lineHeight: arabic
+            ? Math.max(line ?? 0, Math.round(size * 1.5))
+            : (line ?? Math.round(size * 1.35)),
           color: color ?? theme.ink,
-          letterSpacing: tracking ?? 0,
+          letterSpacing: arabic ? 0 : (tracking ?? 0),
+          // On the web each Text guesses its direction from its first letter; the interface decides instead.
+          writingDirection: arabic ? 'rtl' : 'ltr',
           textAlign: center ? 'center' : undefined,
         },
         style,
@@ -291,6 +304,19 @@ export function Press({
   );
 }
 
+/** A chevron that points forward in the reading direction. */
+export function Forward({
+  size = 17,
+  color,
+}: {
+  size?: number;
+  color: string;
+}) {
+  const { rtl } = useI18n();
+  const Icon = rtl ? ChevronLeft : ChevronRight;
+  return <Icon size={size} color={color} />;
+}
+
 /* ---------- Buttons ---------- */
 export function PrimaryButton({
   label,
@@ -325,8 +351,8 @@ export function PrimaryButton({
         alignItems: 'center',
         justifyContent: 'space-between',
         gap: small ? 8 : 24,
-        paddingLeft: small ? 15 : 22,
-        paddingRight: icon ? (small ? 5 : 7) : small ? 15 : 22,
+        paddingStart: small ? 15 : 22,
+        paddingEnd: icon ? (small ? 5 : 7) : small ? 15 : 22,
         alignSelf: full ? 'stretch' : 'flex-start',
       }}
     >
@@ -786,12 +812,13 @@ export function Segmented<V extends string | number>({
       {options.map((option) => {
         const selected = option.value === value;
         return (
-          <Pressable
+          <Press
             key={String(option.value)}
             accessibilityRole="button"
             accessibilityLabel={labelFor ? labelFor(option) : option.label}
             accessibilityState={{ selected }}
             onPress={() => onChange(option.value)}
+            scale={0.96}
             style={{
               flex: compact || scroll ? undefined : 1,
               minWidth: compact ? 34 : undefined,
@@ -821,7 +848,7 @@ export function Segmented<V extends string | number>({
             >
               {option.label}
             </T>
-          </Pressable>
+          </Press>
         );
       })}
     </View>
@@ -840,11 +867,12 @@ export function Chip({
 }) {
   const { theme } = useTheme();
   return (
-    <Pressable
+    <Press
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? label}
       accessibilityState={{ selected: !!selected }}
       onPress={onPress}
+      scale={0.95}
       style={{
         paddingHorizontal: 12,
         minHeight: 34,
@@ -856,7 +884,7 @@ export function Chip({
       <T size={12} line={16} color={selected ? '#fff' : theme.chipText}>
         {label}
       </T>
-    </Pressable>
+    </Press>
   );
 }
 
@@ -1131,7 +1159,7 @@ export function Sheet({
               keyboardShouldPersistTaps="handled"
               contentContainerStyle={{ padding: 23, paddingTop: 26, gap: 4 }}
             >
-              <View style={{ paddingRight: 36 }}>
+              <View style={{ paddingEnd: 36 }}>
                 <T weight={500} size={25} line={29} tracking={-1.25}>
                   {title}
                 </T>
@@ -1155,7 +1183,7 @@ export function Sheet({
               style={{
                 position: 'absolute',
                 top: 8,
-                right: 8,
+                end: 8,
                 width: 36,
                 height: 36,
                 borderRadius: 18,

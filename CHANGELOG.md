@@ -2,6 +2,15 @@
 
 Newest first. Each entry says what changed, how to run it, and what is still open, so a fresh `git pull` is enough to get going.
 
+## 13 September 2026 — instant language switch, Arabic text metrics, tactile controls
+
+### What changed
+
+- **Switching language is immediate** on the web app: the interface crossfades (260 ms, ease-out) into the new language and direction while the Preferences sheet stays open. On the native build the writing direction still flips on the next launch, which is a React Native limit.
+- **Arabic text** now sets its own direction on every label, so Latin exercise names and mixed lines sit on the correct side, headings drop the tight letter-spacing that Arabic never uses, and line height grows to 1.5× so tall glyphs are not clipped in buttons and pills.
+- **Buttons and controls** use logical padding (start/end) so icon slots and offsets mirror in Arabic; chevrons point forward in the reading direction; segmented controls and filter chips press with the same scale feedback as buttons.
+- Remaining English on the assigned session card (exercise and set counts, rest), the Weight tab (rate per week, latest weigh-in) and the Preferences sync status is translated.
+
 ## 13 September 2026 — Arabic, phase 2; developers are no longer their own client
 
 ### What changed

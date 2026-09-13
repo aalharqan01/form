@@ -43,6 +43,7 @@ import {
   TextButton,
 } from './src/ui';
 import { BottomNav, RestIsland, Topbar } from './src/shell';
+import { easeOut, native } from './src/ui';
 import { TrainScreen } from './src/screens/train';
 import { WorkoutScreen } from './src/screens/workout';
 import { WeightScreen } from './src/screens/weight';
@@ -58,7 +59,7 @@ import {
 
 function AppContent() {
   const { theme } = useTheme();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const training = useTraining();
   const { data } = training;
   const rest = useRest(data.active?.id);
@@ -125,182 +126,186 @@ function AppContent() {
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <ScrollView
-          ref={scroll}
-          style={{ flex: 1 }}
-          contentContainerStyle={{
-            paddingHorizontal: 20,
-            paddingTop: 23,
-            paddingBottom: 150,
-            width: '100%',
-            maxWidth: 600,
-            alignSelf: 'center',
-          }}
-          keyboardShouldPersistTaps="handled"
-          scrollEventThrottle={16}
-          onScroll={Animated.event(
-            [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-            {
-              useNativeDriver: false,
-            },
-          )}
-        >
-          <Topbar
-            status={training.status}
-            error={!!training.error}
-            onRefresh={() => act(training.refresh)}
-            onPreferences={() => setPreferences(true)}
-          />
-          <ErrorBanner
-            text={syncError}
-            onDismiss={error ? () => setError('') : undefined}
-          >
-            {!!training.error && (
-              <SecondaryButton
-                label={t('app.retry')}
-                height={38}
-                size={13}
-                onPress={() => act(training.refresh)}
-              />
+        <LocaleCrossfade locale={locale}>
+          <ScrollView
+            ref={scroll}
+            style={{ flex: 1 }}
+            contentContainerStyle={{
+              paddingHorizontal: 20,
+              paddingTop: 23,
+              paddingBottom: 150,
+              width: '100%',
+              maxWidth: 600,
+              alignSelf: 'center',
+            }}
+            keyboardShouldPersistTaps="handled"
+            scrollEventThrottle={16}
+            onScroll={Animated.event(
+              [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+              {
+                useNativeDriver: false,
+              },
             )}
-          </ErrorBanner>
-          <Notice text={notice} />
-          {training.conflict && (
-            <Card style={{ marginBottom: 18, gap: 12 }}>
-              <H2 size={20}>{t('app.conflictTitle')}</H2>
-              <Body size={14}>{t('app.conflictBody')}</Body>
-              <SecondaryButton
-                label={t('app.keepDevice')}
-                onPress={() => act(() => training.resolve(true))}
-              />
-              <TextButton
-                label={t('app.useServer')}
-                onPress={() => act(() => training.resolve(false))}
-              />
-            </Card>
-          )}
-          {!training.loaded ? (
-            <View
-              style={{
-                alignItems: 'center',
-                justifyContent: 'center',
-                minHeight: 420,
-                gap: 20,
-              }}
+          >
+            <Topbar
+              status={training.status}
+              error={!!training.error}
+              onRefresh={() => act(training.refresh)}
+              onPreferences={() => setPreferences(true)}
+            />
+            <ErrorBanner
+              text={syncError}
+              onDismiss={error ? () => setError('') : undefined}
             >
-              <T
-                weight={500}
-                size={60}
-                line={64}
-                tracking={-6}
-                color={theme.scheme === 'dark' ? theme.green : '#7f985b'}
+              {!!training.error && (
+                <SecondaryButton
+                  label={t('app.retry')}
+                  height={38}
+                  size={13}
+                  onPress={() => act(training.refresh)}
+                />
+              )}
+            </ErrorBanner>
+            <Notice text={notice} />
+            {training.conflict && (
+              <Card style={{ marginBottom: 18, gap: 12 }}>
+                <H2 size={20}>{t('app.conflictTitle')}</H2>
+                <Body size={14}>{t('app.conflictBody')}</Body>
+                <SecondaryButton
+                  label={t('app.keepDevice')}
+                  onPress={() => act(() => training.resolve(true))}
+                />
+                <TextButton
+                  label={t('app.useServer')}
+                  onPress={() => act(() => training.resolve(false))}
+                />
+              </Card>
+            )}
+            {!training.loaded ? (
+              <View
+                style={{
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  minHeight: 420,
+                  gap: 20,
+                }}
               >
-                f.
-              </T>
-              <H2 size={23}>
-                {training.error ? t('app.reconnect') : t('app.loading')}
-              </H2>
-              {training.error ? (
-                <Body size={14}>{t('app.retryHint')}</Body>
-              ) : (
-                <ActivityIndicator color={theme.green} />
-              )}
-            </View>
-          ) : (
-            <Reveal key={`${tab}-${data.active ? 'active' : 'idle'}`}>
-              {tab === 'train' && data.active ? (
-                <WorkoutScreen
-                  training={training}
-                  rest={rest}
-                  act={act}
-                  busy={busy}
-                  onFinished={() => navigate('train')}
-                  finishRef={finishRef}
+                <T
+                  weight={500}
+                  size={60}
+                  line={64}
+                  tracking={-6}
+                  color={theme.scheme === 'dark' ? theme.green : '#7f985b'}
+                >
+                  f.
+                </T>
+                <H2 size={23}>
+                  {training.error ? t('app.reconnect') : t('app.loading')}
+                </H2>
+                {training.error ? (
+                  <Body size={14}>{t('app.retryHint')}</Body>
+                ) : (
+                  <ActivityIndicator color={theme.green} />
+                )}
+              </View>
+            ) : (
+              <Reveal key={`${tab}-${data.active ? 'active' : 'idle'}`}>
+                {tab === 'train' && data.active ? (
+                  <WorkoutScreen
+                    training={training}
+                    rest={rest}
+                    act={act}
+                    busy={busy}
+                    onFinished={() => navigate('train')}
+                    finishRef={finishRef}
+                  />
+                ) : tab === 'train' ? (
+                  <TrainScreen
+                    training={training}
+                    act={act}
+                    busy={busy}
+                    onStart={start}
+                    onRepeat={repeat}
+                    navigate={navigate}
+                  />
+                ) : tab === 'weight' ? (
+                  <WeightScreen training={training} act={act} busy={busy} />
+                ) : tab === 'you' ? (
+                  <YouScreen
+                    training={training}
+                    act={act}
+                    busy={busy}
+                    onStart={() => start(null)}
+                    onRepeat={repeat}
+                  />
+                ) : (
+                  <CoachScreen
+                    training={training}
+                    act={act}
+                    busy={busy}
+                    onStart={start}
+                    scrollToEnd={() =>
+                      scroll.current?.scrollToEnd({ animated: false })
+                    }
+                  />
+                )}
+              </Reveal>
+            )}
+          </ScrollView>
+          {tab === 'train' && !!data.active && scrolled && (
+            <Reveal
+              y={-14}
+              duration={220}
+              style={{ position: 'absolute', top: 8, left: 18, right: 18 }}
+            >
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 12,
+                  paddingVertical: 8,
+                  paddingStart: 18,
+                  paddingEnd: 8,
+                  borderRadius: 24,
+                  backgroundColor: theme.navBackground,
+                  borderWidth: 1,
+                  borderColor: theme.navBorder,
+                  boxShadow:
+                    theme.scheme === 'dark'
+                      ? undefined
+                      : '0 8px 40px #23382016',
+                }}
+              >
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <T weight={500} size={15} line={19} numberOfLines={1}>
+                    {data.active.name || t('workout.defaultName')}
+                  </T>
+                  <Body size={11}>
+                    {duration(
+                      (rest.clock - Date.parse(data.active.startedAt)) / 1000,
+                    )}{' '}
+                    {t('app.elapsed')}
+                  </Body>
+                </View>
+                <PrimaryButton
+                  small
+                  label={t('app.finish')}
+                  accessibilityLabel={t('app.finishThis')}
+                  icon={<Check size={17} color={theme.primaryText} />}
+                  disabled={busy}
+                  onPress={() => finishRef.current?.()}
                 />
-              ) : tab === 'train' ? (
-                <TrainScreen
-                  training={training}
-                  act={act}
-                  busy={busy}
-                  onStart={start}
-                  onRepeat={repeat}
-                  navigate={navigate}
-                />
-              ) : tab === 'weight' ? (
-                <WeightScreen training={training} act={act} busy={busy} />
-              ) : tab === 'you' ? (
-                <YouScreen
-                  training={training}
-                  act={act}
-                  busy={busy}
-                  onStart={() => start(null)}
-                  onRepeat={repeat}
-                />
-              ) : (
-                <CoachScreen
-                  training={training}
-                  act={act}
-                  busy={busy}
-                  onStart={start}
-                  scrollToEnd={() =>
-                    scroll.current?.scrollToEnd({ animated: false })
-                  }
-                />
-              )}
+              </View>
             </Reveal>
           )}
-        </ScrollView>
-        {tab === 'train' && !!data.active && scrolled && (
-          <Reveal
-            y={-14}
-            duration={220}
-            style={{ position: 'absolute', top: 8, left: 18, right: 18 }}
-          >
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 12,
-                paddingVertical: 8,
-                paddingLeft: 18,
-                paddingRight: 8,
-                borderRadius: 24,
-                backgroundColor: theme.navBackground,
-                borderWidth: 1,
-                borderColor: theme.navBorder,
-                boxShadow:
-                  theme.scheme === 'dark' ? undefined : '0 8px 40px #23382016',
-              }}
-            >
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <T weight={500} size={15} line={19} numberOfLines={1}>
-                  {data.active.name || t('workout.defaultName')}
-                </T>
-                <Body size={11}>
-                  {duration(
-                    (rest.clock - Date.parse(data.active.startedAt)) / 1000,
-                  )}{' '}
-                  {t('app.elapsed')}
-                </Body>
-              </View>
-              <PrimaryButton
-                small
-                label={t('app.finish')}
-                accessibilityLabel={t('app.finishThis')}
-                icon={<Check size={17} color={theme.primaryText} />}
-                disabled={busy}
-                onPress={() => finishRef.current?.()}
-              />
-            </View>
-          </Reveal>
-        )}
-        <RestIsland rest={rest} />
-        <BottomNav
-          tab={tab}
-          onChange={navigate}
-          activeWorkout={!!data.active}
-          coached={coached}
-        />
+          <RestIsland rest={rest} />
+          <BottomNav
+            tab={tab}
+            onChange={navigate}
+            activeWorkout={!!data.active}
+            coached={coached}
+          />
+        </LocaleCrossfade>
       </KeyboardAvoidingView>
       <PreferencesSheet
         open={preferences}
@@ -309,6 +314,54 @@ function AppContent() {
         act={act}
       />
     </SafeAreaView>
+  );
+}
+
+/** Fades the interface in again when the language changes, so the switch reads as one motion rather than a jump. */
+function LocaleCrossfade({
+  locale,
+  children,
+}: {
+  locale: string;
+  children: React.ReactNode;
+}) {
+  const value = useRef(new Animated.Value(1)).current;
+  const first = useRef(true);
+  useEffect(() => {
+    if (first.current) {
+      first.current = false;
+      return;
+    }
+    value.setValue(0);
+    const animation = Animated.timing(value, {
+      toValue: 1,
+      duration: 260,
+      easing: easeOut,
+      useNativeDriver: native,
+    });
+    animation.start();
+    return () => animation.stop();
+  }, [locale, value]);
+  return (
+    <Animated.View
+      style={{
+        flex: 1,
+        opacity: value.interpolate({
+          inputRange: [0, 1],
+          outputRange: [0.35, 1],
+        }),
+        transform: [
+          {
+            scale: value.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0.985, 1],
+            }),
+          },
+        ],
+      }}
+    >
+      {children}
+    </Animated.View>
   );
 }
 

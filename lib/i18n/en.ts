@@ -572,5 +572,11 @@ export const en = {
   'status.withdrawn': 'Withdrawn',
   'status.active': 'Active',
   'status.ended': 'Ended',
+  'assigned.exercisesSets': '{exercises} exercises · {sets} sets',
+  'assigned.setsReps': '{sets} × {reps} reps',
+  'assigned.restSeconds': '{seconds}s rest',
+  'assigned.noRest': 'no rest',
+  'weight.perWeek': '{amount} {unit} / week',
+  'weight.latest': 'Latest weigh-in',
 } as const;
 export type Key = keyof typeof en;

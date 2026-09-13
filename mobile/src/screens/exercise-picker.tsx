@@ -79,7 +79,7 @@ export function PickerBody({
           onChangeText={setQuery}
           maxLength={100}
           autoCorrect={false}
-          style={{ paddingLeft: 43 }}
+          style={{ paddingStart: 43 }}
         />
         <View style={{ position: 'absolute', left: 15, pointerEvents: 'none' }}>
           <Search size={18} color={theme.muted} />
