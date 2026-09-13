@@ -539,7 +539,7 @@ export function YouScreen({
               ...d,
               workouts: d.workouts.filter((v) => v.id !== w.id),
             }));
-          }, 'Workout deleted.')
+          }, t('you.workoutDeleted'))
         }
       />
       <ExerciseProgressSheet

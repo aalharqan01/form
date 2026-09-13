@@ -10,6 +10,9 @@ Newest first. Each entry says what changed, how to run it, and what is still ope
 - **Arabic text** now sets its own direction on every label, so Latin exercise names and mixed lines sit on the correct side, headings drop the tight letter-spacing that Arabic never uses, and line height grows to 1.5× so tall glyphs are not clipped in buttons and pills.
 - **Buttons and controls** use logical padding (start/end) so icon slots and offsets mirror in Arabic; chevrons point forward in the reading direction; segmented controls and filter chips press with the same scale feedback as buttons.
 - Remaining English on the assigned session card (exercise and set counts, rest), the Weight tab (rate per week, latest weigh-in) and the Preferences sync status is translated.
+- **Button labels sit where they should in Arabic.** On the web the start/end padding of buttons and sheets was resolved as if the app were left-to-right, which pushed labels against the far edge; the app now tells react-native-web its direction. Signed numbers in the weekly averages keep the sign in front.
+- **Goal milestones, weekly averages, total change, estimate explanations,** the "no plans yet" starter block and the week-strip day letters are translated.
+- **Coach site on a phone:** the appearance and language controls now sit under the section strip, so a coach can switch to Arabic from a phone browser too.
 
 ## 13 September 2026 — Arabic, phase 2; developers are no longer their own client
 

@@ -841,8 +841,33 @@ html[data-theme='dark'] .co-card {
   }
   .co-sidebar > .co-logo,
   .co-sidebar > .co-overline,
-  .co-sidebar-bottom {
+  .co-pilot {
     display: none;
+  }
+  /* Appearance and language stay reachable on phones as one compact row. */
+  .co-sidebar-bottom {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--line);
+  }
+  .co-sidebar-bottom .theme-control {
+    flex: 1;
+    min-width: 0;
+  }
+  .co-sidebar-bottom .theme-control > span {
+    display: none;
+  }
+  .co-sidebar-bottom .theme-control > div {
+    margin-bottom: 0;
+    padding: 3px;
+    gap: 3px;
+  }
+  .co-sidebar-bottom .theme-control button {
+    padding: 8px 4px;
+    font-size: 12px;
+    white-space: nowrap;
   }
   .co-sidebar nav {
     display: flex;

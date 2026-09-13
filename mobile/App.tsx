@@ -59,7 +59,7 @@ import {
 
 function AppContent() {
   const { theme } = useTheme();
-  const { t, locale } = useI18n();
+  const { t, locale, rtl } = useI18n();
   const training = useTraining();
   const { data } = training;
   const rest = useRest(data.active?.id);
@@ -126,7 +126,7 @@ function AppContent() {
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <LocaleCrossfade locale={locale}>
+        <LocaleCrossfade locale={locale} rtl={rtl}>
           <ScrollView
             ref={scroll}
             style={{ flex: 1 }}
@@ -320,9 +320,11 @@ function AppContent() {
 /** Fades the interface in again when the language changes, so the switch reads as one motion rather than a jump. */
 function LocaleCrossfade({
   locale,
+  rtl,
   children,
 }: {
   locale: string;
+  rtl: boolean;
   children: React.ReactNode;
 }) {
   const value = useRef(new Animated.Value(1)).current;
@@ -342,8 +344,11 @@ function LocaleCrossfade({
     animation.start();
     return () => animation.stop();
   }, [locale, value]);
+  // react-native-web resolves start/end styles from the nearest `dir`, not the document.
+  const direction = { dir: rtl ? 'rtl' : 'ltr' } as object;
   return (
     <Animated.View
+      {...direction}
       style={{
         flex: 1,
         opacity: value.interpolate({

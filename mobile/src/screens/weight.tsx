@@ -33,6 +33,23 @@ import { weekOf, weeklyWeights } from '../../../lib/coaching';
 import type { Training } from '../use-training';
 import { font, useTheme } from '../theme';
 import { useI18n } from '../i18n';
+import type { Key } from '../../../lib/i18n';
+
+/** Estimate explanations come from the fitness library in English; map the known ones. */
+/** Signed numbers keep their sign in front even inside right-to-left text. */
+const NUMERIC = { writingDirection: 'ltr' } as const;
+
+const REASON_KEYS: Record<string, Key> = {
+  'Add at least 8 weigh-ins over 14 days.': 'weight.reasonMore',
+  'Set a goal to see an estimate.': 'weight.reasonGoal',
+  'Goal reached.': 'weight.reasonReached',
+  'Log a recent weigh-in to update the estimate.': 'weight.reasonRecent',
+  'Your recent trend is moving away from your goal.': 'weight.reasonAway',
+  'Your recent trend is fairly stable.': 'weight.reasonStable',
+  'Your trend is still too variable for an estimate.': 'weight.reasonVariable',
+  'Your goal is too far away for a useful estimate.': 'weight.reasonFar',
+  'Based on your recent trend; not a deadline.': 'weight.reasonBased',
+};
 import {
   Bezel,
   Body,
@@ -96,7 +113,7 @@ export function WeightScreen({
   busy: boolean;
 }) {
   const { theme } = useTheme();
-  const { t } = useI18n();
+  const { t, rtl } = useI18n();
   const { data, update } = training;
   const [range, setRange] = useState(30),
     [modal, setModal] = useState<'weight' | 'goal' | null>(null),
@@ -574,13 +591,13 @@ export function WeightScreen({
             </Body>
           </View>
           <View style={{ gap: 4 }}>
-            <Body size={11}>Total change</Body>
+            <Body size={11}>{t('weight.totalChange')}</Body>
             <T weight={500} size={22} line={26} tracking={-0.9}>
               {stats.points.length > 1
                 ? `${latest!.kg - stats.points[0].kg > 0 ? '+' : ''}${format(latest!.kg - stats.points[0].kg)} ${unit}`
                 : '—'}
             </T>
-            <Body size={10}>From your first weigh-in</Body>
+            <Body size={10}>{t('weight.sinceFirst')}</Body>
           </View>
         </View>
       </View>
@@ -618,12 +635,16 @@ export function WeightScreen({
         <Insight
           label={t('weight.estimate')}
           value={insights.estimate ? dateLabel(insights.estimate, true) : '—'}
-          note={insights.reason}
+          note={
+            REASON_KEYS[insights.reason]
+              ? t(REASON_KEYS[insights.reason])
+              : insights.reason
+          }
         />
       </View>
       {insights.milestones.length > 0 && (
         <Card padding={20} style={{ marginTop: 20 }}>
-          <H2 size={16}>Goal milestones</H2>
+          <H2 size={16}>{t('weight.milestones')}</H2>
           <View
             style={{
               flexDirection: 'row',
@@ -658,7 +679,7 @@ export function WeightScreen({
       )}
       {weeks.length > 1 && (
         <Card padding={20} style={{ marginTop: 20 }}>
-          <H2 size={16}>Weekly averages</H2>
+          <H2 size={16}>{t('weight.weeklyAverages')}</H2>
           <Body size={12} style={{ marginTop: 6 }}>
             {t('weight.weeklyNote')}
           </Body>
@@ -669,12 +690,18 @@ export function WeightScreen({
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}
               >
                 <Body size={13} style={{ flex: 1 }}>
-                  Week of {dateLabel(w.week)}
+                  {t('weight.weekOf', { date: dateLabel(w.week) })}
                 </Body>
-                <T weight={500} size={14} line={18}>
+                <T weight={500} size={14} line={18} style={NUMERIC}>
                   {format(w.averageKg)} {unit}
                 </T>
-                <Body size={13} style={{ width: 84, textAlign: 'right' }}>
+                <Body
+                  size={13}
+                  style={[
+                    NUMERIC,
+                    { width: 84, textAlign: rtl ? 'left' : 'right' },
+                  ]}
+                >
                   {signedKg(w.changeKg, unit)}
                 </Body>
               </View>
