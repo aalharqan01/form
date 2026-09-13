@@ -29,7 +29,7 @@ import {
 import imagePaths from '../../lib/exercise-images.json';
 import { exerciseFrames } from '../../lib/exercises';
 import { font, radius, useTheme, type Weight } from './theme';
-import { useI18n } from './i18n';
+import { SWITCH_OUT_MS, useI18n } from './i18n';
 
 import { API_ORIGIN } from './account';
 export { API_ORIGIN };
@@ -248,6 +248,91 @@ export function Reveal({
             },
           ],
         },
+      ]}
+    >
+      {children}
+    </Animated.View>
+  );
+}
+
+/**
+ * Two beats when the language changes: the current interface softens and
+ * blurs for a moment, the text and direction switch underneath, and the new
+ * interface settles in with an ease-out. One motion, not a jump. Also carries
+ * the writing direction, which react-native-web reads from the nearest `dir`.
+ */
+export function LocaleCrossfade({
+  children,
+  style,
+}: {
+  children: ReactNode;
+  style?: StyleProp<ViewStyle>;
+}) {
+  const { locale, rtl, switching } = useI18n();
+  const value = useRef(new Animated.Value(1)).current;
+  const first = useRef(true);
+  useEffect(() => {
+    if (!switching) return;
+    const animation = Animated.timing(value, {
+      toValue: 0,
+      duration: SWITCH_OUT_MS,
+      easing: Easing.bezier(0.4, 0, 1, 1),
+      useNativeDriver: native,
+    });
+    animation.start();
+    return () => animation.stop();
+  }, [switching, value]);
+  useEffect(() => {
+    if (first.current) {
+      first.current = false;
+      return;
+    }
+    value.setValue(0);
+    const animation = Animated.timing(value, {
+      toValue: 1,
+      duration: 380,
+      easing: easeOut,
+      useNativeDriver: native,
+    });
+    animation.start();
+    return () => animation.stop();
+  }, [locale, value]);
+  const direction = { dir: rtl ? 'rtl' : 'ltr' } as object;
+  const blur =
+    Platform.OS === 'web'
+      ? ({
+          filter: value.interpolate({
+            inputRange: [0, 1],
+            outputRange: ['blur(6px)', 'blur(0px)'],
+          }),
+        } as object)
+      : null;
+  return (
+    <Animated.View
+      {...direction}
+      style={[
+        style,
+        {
+          opacity: value.interpolate({
+            inputRange: [0, 1],
+            outputRange: [0.15, 1],
+          }),
+          transform: [
+            {
+              scale: value.interpolate({
+                inputRange: [0, 1],
+                outputRange: [0.97, 1],
+              }),
+            },
+            {
+              translateY: value.interpolate({
+                inputRange: [0, 1],
+                outputRange: [6, 0],
+              }),
+            },
+          ],
+        },
+        blur,
       ]}
     >
       {children}
@@ -1159,21 +1244,23 @@ export function Sheet({
               keyboardShouldPersistTaps="handled"
               contentContainerStyle={{ padding: 23, paddingTop: 26, gap: 4 }}
             >
-              <View style={{ paddingEnd: 36 }}>
-                <T weight={500} size={25} line={29} tracking={-1.25}>
-                  {title}
-                </T>
-                {description ? (
-                  typeof description === 'string' ? (
-                    <Body size={13} style={{ marginTop: 10 }}>
-                      {description}
-                    </Body>
-                  ) : (
-                    <View style={{ marginTop: 10 }}>{description}</View>
-                  )
-                ) : null}
-              </View>
-              {children}
+              <LocaleCrossfade style={{ gap: 4 }}>
+                <View style={{ paddingEnd: 36 }}>
+                  <T weight={500} size={25} line={29} tracking={-1.25}>
+                    {title}
+                  </T>
+                  {description ? (
+                    typeof description === 'string' ? (
+                      <Body size={13} style={{ marginTop: 10 }}>
+                        {description}
+                      </Body>
+                    ) : (
+                      <View style={{ marginTop: 10 }}>{description}</View>
+                    )
+                  ) : null}
+                </View>
+                {children}
+              </LocaleCrossfade>
             </ScrollView>
             <Pressable
               accessibilityRole="button"

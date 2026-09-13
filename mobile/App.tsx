@@ -43,7 +43,7 @@ import {
   TextButton,
 } from './src/ui';
 import { BottomNav, RestIsland, Topbar } from './src/shell';
-import { easeOut, native } from './src/ui';
+import { LocaleCrossfade } from './src/ui';
 import { TrainScreen } from './src/screens/train';
 import { WorkoutScreen } from './src/screens/workout';
 import { WeightScreen } from './src/screens/weight';
@@ -59,7 +59,7 @@ import {
 
 function AppContent() {
   const { theme } = useTheme();
-  const { t, locale, rtl } = useI18n();
+  const { t } = useI18n();
   const training = useTraining();
   const { data } = training;
   const rest = useRest(data.active?.id);
@@ -126,7 +126,7 @@ function AppContent() {
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <LocaleCrossfade locale={locale} rtl={rtl}>
+        <LocaleCrossfade style={{ flex: 1 }}>
           <ScrollView
             ref={scroll}
             style={{ flex: 1 }}
@@ -314,59 +314,6 @@ function AppContent() {
         act={act}
       />
     </SafeAreaView>
-  );
-}
-
-/** Fades the interface in again when the language changes, so the switch reads as one motion rather than a jump. */
-function LocaleCrossfade({
-  locale,
-  rtl,
-  children,
-}: {
-  locale: string;
-  rtl: boolean;
-  children: React.ReactNode;
-}) {
-  const value = useRef(new Animated.Value(1)).current;
-  const first = useRef(true);
-  useEffect(() => {
-    if (first.current) {
-      first.current = false;
-      return;
-    }
-    value.setValue(0);
-    const animation = Animated.timing(value, {
-      toValue: 1,
-      duration: 260,
-      easing: easeOut,
-      useNativeDriver: native,
-    });
-    animation.start();
-    return () => animation.stop();
-  }, [locale, value]);
-  // react-native-web resolves start/end styles from the nearest `dir`, not the document.
-  const direction = { dir: rtl ? 'rtl' : 'ltr' } as object;
-  return (
-    <Animated.View
-      {...direction}
-      style={{
-        flex: 1,
-        opacity: value.interpolate({
-          inputRange: [0, 1],
-          outputRange: [0.35, 1],
-        }),
-        transform: [
-          {
-            scale: value.interpolate({
-              inputRange: [0, 1],
-              outputRange: [0.985, 1],
-            }),
-          },
-        ],
-      }}
-    >
-      {children}
-    </Animated.View>
   );
 }
 
