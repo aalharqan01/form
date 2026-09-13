@@ -27,6 +27,16 @@ import {
 import type { Training } from '../use-training';
 import { useTheme } from '../theme';
 import { useI18n } from '../i18n';
+
+const DAY_KEYS = [
+  'day.mon',
+  'day.tue',
+  'day.wed',
+  'day.thu',
+  'day.fri',
+  'day.sat',
+  'day.sun',
+] as const;
 import {
   Bezel,
   Body,
@@ -383,10 +393,10 @@ export function TrainScreen({
                   line={14}
                   color={isToday ? theme.green : theme.chipText}
                 >
-                  {['M', 'T', 'W', 'T', 'F', 'S', 'S'][i]}
+                  {t(DAY_KEYS[i])}
                 </T>
                 <View
-                  accessibilityLabel={`${date.toLocaleDateString()}: ${has ? 'workout completed' : 'no workout'}`}
+                  accessibilityLabel={`${date.toLocaleDateString()}: ${has ? t('train.dayDone') : t('train.dayEmpty')}`}
                   style={{
                     width: 40,
                     height: 40,
@@ -540,7 +550,7 @@ export function TrainScreen({
               />
             </View>
             <View style={{ flex: 1 }}>
-              <H3>No plans yet</H3>
+              <H3>{t('train.noPlans')}</H3>
               <Body size={14} style={{ marginTop: 6 }}>
                 {t('train.noPlansHint')}
               </Body>
@@ -548,7 +558,7 @@ export function TrainScreen({
           </View>
         )}
       </View>
-      <Disclosure summary="Need a starting point?" style={{ marginTop: 20 }}>
+      <Disclosure summary={t('train.startingPoint')} style={{ marginTop: 20 }}>
         <Body size={13} style={{ paddingBottom: 10 }}>
           {t('train.starters')}
         </Body>

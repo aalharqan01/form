@@ -107,7 +107,7 @@ const TABS: { key: Tab; label: Key; Icon: typeof Dumbbell }[] = [
   { key: 'coach', label: 'tab.coach', Icon: Users },
 ];
 /** Sync status strings come from the training hook in English; map the known ones. */
-const STATUS_KEYS: Record<string, Key> = {
+export const STATUS_KEYS: Record<string, Key> = {
   Synced: 'shell.synced',
   Offline: 'shell.offline',
   'Syncing…': 'shell.saving',

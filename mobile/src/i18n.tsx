@@ -65,14 +65,17 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
   const locale = resolveLocale(preference, systemTags());
   const rtl = isRtl(locale);
   markArabic(locale === 'ar');
+  // start/end styles resolve against I18nManager on every platform, so it is
+  // set before the tree renders. Native layouts flip on the next launch; the
+  // web flips immediately once the document direction follows.
+  if (I18nManager.isRTL !== rtl) {
+    I18nManager.allowRTL(rtl);
+    I18nManager.forceRTL(rtl);
+  }
   useEffect(() => {
     if (Platform.OS === 'web' && typeof document !== 'undefined') {
       document.documentElement.lang = locale;
       document.documentElement.dir = rtl ? 'rtl' : 'ltr';
-    } else if (I18nManager.isRTL !== rtl) {
-      // Native layouts flip on the next launch; web flips immediately.
-      I18nManager.allowRTL(rtl);
-      I18nManager.forceRTL(rtl);
     }
   }, [locale, rtl]);
   const setPreference = useCallback((value: LanguagePreference) => {

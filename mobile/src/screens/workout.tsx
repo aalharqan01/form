@@ -881,7 +881,7 @@ export function WorkoutScreen({
         />
         <View
           style={{
-            marginLeft: 'auto',
+            marginStart: 'auto',
             flexDirection: 'row',
             alignItems: 'center',
             gap: 8,
