@@ -6,7 +6,7 @@ An installable workout and weight tracker with a coach–trainee Marketplace. Bu
 
 The latest `main` is always deployed to **https://form-dev.al3kbari131.workers.dev**. It sits behind Cloudflare Access: enter your email on the login page, click **Send me a code**, and paste the code from the email. Only addresses on the Access policy get in; ask Hassan to add yours.
 
-Every developer who signs in gets the same setup as the local launcher, created automatically on the first visit: you are the coach **That Guy** with sample clients, and you own two fixture trainees you can open the app as. Nothing is shared between developers.
+Every developer who signs in gets the same setup as the local launcher, created automatically on the first visit: you are the coach **That Guy** with sample clients, your own account is a coached client of That Guy, and you own two fixture trainees you can open the app as. Nothing is shared between developers.
 
 | What you want to see | Open |
 | --- | --- |
@@ -14,6 +14,7 @@ Every developer who signs in gets the same setup as the local launcher, created 
 | Trainee app as the coached client (Abdullah, program assigned, 8 weeks of history) | `/app/?role=coached` |
 | Trainee app as the independent trainee (Sara, free tier, 10 weeks of history) | `/app/?role=solo` |
 | All three side by side at phone size | `/__dev/phones` |
+| Trainee app as yourself, coached by That Guy | `/app/` |
 | Trainee web tracker as yourself | `/` |
 
 Assign a workout as the coach, complete it as Abdullah, and the coach sees it, exactly like the local preview. Data lives in the development database only; nothing here touches production, and production never enables these preview roles.

@@ -4,8 +4,8 @@ import { seedStatements } from './seed-sql.ts';
 
 /**
  * Developer preview on the development site. Every signed-in developer is the
- * coach That Guy with sample clients, plus two private fixture trainees they
- * can open the app as: one coached by their own coach profile and one without
+ * coach That Guy with sample clients and is also a client of that coach, plus
+ * two private fixture trainees they can open the app as: one coached by their own coach profile and one without
  * a coach. The Worker maps `?role=coached|solo` to these identities; this
  * module creates their rows the first time the developer signs in.
  */
@@ -38,13 +38,16 @@ export async function ensureDeveloperFixtures(
   user: ChatGPTUser,
 ) {
   const developer = developerOf(user.userId);
+  const prefix = `dev-${hash(developer)}`;
+  // The self-membership is the last row the seed adds; every statement is
+  // idempotent, so an older partial set is completed rather than duplicated.
   const exists = await db
-    .prepare('SELECT 1 AS ok FROM coach_profiles WHERE user_id=?')
-    .bind(developer)
+    .prepare('SELECT 1 AS ok FROM coaching_memberships WHERE id=?')
+    .bind(`${prefix}-membership-self`)
     .first();
   if (exists) return false;
   const statements = seedStatements({
-    prefix: `dev-${hash(developer)}`,
+    prefix,
     coach: { id: developer, name: COACH_NAME },
     client: {
       id: previewUserId(developer, 'coached'),
@@ -52,6 +55,9 @@ export async function ensureDeveloperFixtures(
       name: PREVIEW_NAMES.coached,
     },
     solo: { id: previewUserId(developer, 'solo') },
+    // The developer's own account is also a client of That Guy, so /app/
+    // without a role shows the coached experience for whoever signs in.
+    self: { id: developer, email: user.email, name: user.displayName },
     refresh: false,
   });
   await db.batch(statements.map((sql) => db.prepare(sql)));
