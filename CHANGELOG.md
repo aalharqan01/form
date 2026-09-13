@@ -2,6 +2,14 @@
 
 Newest first. Each entry says what changed, how to run it, and what is still open, so a fresh `git pull` is enough to get going.
 
+## 13 September 2026 — Arabic, phase 1
+
+### What changed
+
+- **Language switch.** The app's Preferences and the coach sidebar offer Device / English / العربية. The choice is remembered; "Device" follows the phone or browser language. Arabic turns the layout right-to-left (immediately on the web, on the next launch for the native app) and uses IBM Plex Sans Arabic alongside Outfit.
+- **Translated so far:** tab bar, top bar, rest timer, Preferences, the Train tab (next session, body weight, plans), the assigned program, steps, the You tab, and the coach sidebar. Dictionaries live in `lib/i18n/en.ts` and `lib/i18n/ar.ts`; a unit test fails if an English key has no Arabic. Numbers, dates and API messages are intentionally left as they are.
+- **Next session** now follows the plan after the one you did last, in your plan order, wrapping around.
+
 ## 13 September 2026 — next plan rotates; Arabic plan
 
 ### What changed

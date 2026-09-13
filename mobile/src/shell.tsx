@@ -21,6 +21,8 @@ import { Press, T, easeOut } from './ui';
 const native = Platform.OS !== 'web';
 import { duration, type Tab } from './screens/shared';
 import { Wordmark } from './wordmark';
+import { useI18n } from './i18n';
+import type { Key } from '../../lib/i18n';
 
 export function Topbar({
   status,
@@ -34,6 +36,7 @@ export function Topbar({
   onPreferences: () => void;
 }) {
   const { theme } = useTheme();
+  const { t } = useI18n();
   const isDark = theme.scheme === 'dark';
   return (
     <View
@@ -52,7 +55,7 @@ export function Topbar({
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Refresh training data"
+          accessibilityLabel={t('shell.refresh')}
           onPress={onRefresh}
           style={{
             flexDirection: 'row',
@@ -67,12 +70,12 @@ export function Topbar({
             <CloudCheck size={16} color={theme.muted} />
           )}
           <T size={10} line={13} color={error ? theme.danger : theme.muted}>
-            {status}
+            {STATUS_KEYS[status] ? t(STATUS_KEYS[status]) : status}
           </T>
         </Pressable>
         <Press
           accessibilityRole="button"
-          accessibilityLabel="Open preferences"
+          accessibilityLabel={t('shell.openPreferences')}
           onPress={onPreferences}
           scale={0.92}
           style={{
@@ -97,12 +100,18 @@ export function Topbar({
   );
 }
 
-const TABS: { key: Tab; label: string; Icon: typeof Dumbbell }[] = [
-  { key: 'train', label: 'Train', Icon: BicepsFlexed },
-  { key: 'weight', label: 'Weight', Icon: ChartNoAxesCombined },
-  { key: 'you', label: 'You', Icon: CircleUserRound },
-  { key: 'coach', label: 'My coach', Icon: Users },
+const TABS: { key: Tab; label: Key; Icon: typeof Dumbbell }[] = [
+  { key: 'train', label: 'tab.train', Icon: BicepsFlexed },
+  { key: 'weight', label: 'tab.weight', Icon: ChartNoAxesCombined },
+  { key: 'you', label: 'tab.you', Icon: CircleUserRound },
+  { key: 'coach', label: 'tab.coach', Icon: Users },
 ];
+/** Sync status strings come from the training hook in English; map the known ones. */
+const STATUS_KEYS: Record<string, Key> = {
+  Synced: 'shell.synced',
+  Offline: 'shell.offline',
+  'Syncing…': 'shell.saving',
+};
 export function navInset(bottom: number) {
   return Math.max(14, bottom);
 }
@@ -118,6 +127,7 @@ export function BottomNav({
   coached: boolean;
 }) {
   const { theme } = useTheme();
+  const { t } = useI18n();
   const insets = useSafeAreaInsets();
   // Train sits in the middle as a raised circle; the other tabs split around it.
   const others = TABS.filter(
@@ -133,7 +143,7 @@ export function BottomNav({
       <Pressable
         key={key}
         accessibilityRole="tab"
-        accessibilityLabel={label}
+        accessibilityLabel={t(label)}
         accessibilityState={{ selected }}
         onPress={() => onChange(key)}
         style={{
@@ -151,7 +161,7 @@ export function BottomNav({
           color={selected ? theme.green : theme.navText}
         />
         <T size={11} line={13} color={selected ? theme.green : theme.navText}>
-          {label}
+          {t(label)}
         </T>
       </Pressable>
     );
@@ -159,7 +169,7 @@ export function BottomNav({
   return (
     <View
       accessibilityRole="tablist"
-      accessibilityLabel="Main navigation"
+      accessibilityLabel={t('shell.mainNavigation')}
       style={{
         position: 'absolute',
         left: 18,
@@ -180,8 +190,10 @@ export function BottomNav({
       </View>
       <Pressable
         accessibilityRole="tab"
-        accessibilityLabel="Train"
-        accessibilityHint={activeWorkout ? 'Workout in progress' : undefined}
+        accessibilityLabel={t('tab.train')}
+        accessibilityHint={
+          activeWorkout ? t('shell.workoutInProgress') : undefined
+        }
         accessibilityState={{ selected: trainSelected }}
         onPress={() => onChange('train')}
         style={({ pressed }) => ({
@@ -206,7 +218,7 @@ export function BottomNav({
             style={{
               position: 'absolute',
               top: 6,
-              right: 6,
+              end: 6,
               width: 9,
               height: 9,
               borderRadius: 5,
@@ -226,6 +238,7 @@ export function BottomNav({
 
 export function RestIsland({ rest }: { rest: Rest }) {
   const { theme } = useTheme();
+  const { t } = useI18n();
   const insets = useSafeAreaInsets();
   const finished = !!rest.end && rest.remaining === 0;
   const active = !!rest.end;
@@ -258,7 +271,7 @@ export function RestIsland({ rest }: { rest: Rest }) {
   const adjust = (label: string, seconds: number) => (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`${seconds < 0 ? 'Reduce' : 'Increase'} rest by 15 seconds`}
+      accessibilityLabel={seconds < 0 ? t('rest.reduce') : t('rest.increase')}
       onPress={() => rest.adjust(seconds)}
       style={{
         minHeight: 40,
@@ -317,21 +330,21 @@ export function RestIsland({ rest }: { rest: Rest }) {
           numberOfLines={1}
         >
           {finished
-            ? 'READY FOR YOUR NEXT SET'
+            ? t('rest.ready')
             : rest.paused
-              ? 'REST PAUSED'
-              : 'REST TIMER'}
+              ? t('rest.paused')
+              : t('rest.timer')}
           {rest.name && !finished ? ` · ${rest.name.toUpperCase()}` : ''}
         </T>
         <T
-          accessibilityLabel="Rest countdown"
+          accessibilityLabel={t('rest.countdown')}
           weight={500}
           size={finished ? 19 : 23}
           line={28}
           tracking={-0.9}
           color="#fff"
         >
-          {finished ? 'Rest complete' : duration(rest.remaining)}
+          {finished ? t('rest.complete') : duration(rest.remaining)}
         </T>
       </View>
       {!finished && (
@@ -343,9 +356,7 @@ export function RestIsland({ rest }: { rest: Rest }) {
       {!finished && (
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={
-            rest.paused ? 'Resume rest timer' : 'Pause rest timer'
-          }
+          accessibilityLabel={rest.paused ? t('rest.resume') : t('rest.pause')}
           onPress={rest.paused ? rest.resume : rest.pause}
           hitSlop={8}
           style={{
@@ -364,7 +375,7 @@ export function RestIsland({ rest }: { rest: Rest }) {
       )}
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="Skip rest timer"
+        accessibilityLabel={t('rest.skip')}
         onPress={rest.skip}
         hitSlop={8}
         style={{

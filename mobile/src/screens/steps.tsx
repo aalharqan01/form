@@ -12,6 +12,7 @@ import { request } from '../api';
 import type { Member } from '../../../lib/coaching';
 import type { Training } from '../use-training';
 import { useTheme } from '../theme';
+import { useI18n } from '../i18n';
 import {
   Body,
   Card,
@@ -38,6 +39,7 @@ export function StepsCard({
   busy: boolean;
 }) {
   const { theme } = useTheme();
+  const { t } = useI18n();
   const { data, update } = training;
   // A coached trainee shares one goal with the coach (either can change it);
   // an independent trainee keeps a personal goal in the log.
@@ -103,18 +105,18 @@ export function StepsCard({
     const n = Number(value.replace(/[^0-9]/g, ''));
     if (modal === 'goal') {
       if (!Number.isInteger(n) || n < 500 || n > 100000) {
-        setFormError('Enter a daily goal between 500 and 100,000 steps.');
+        setFormError(t('steps.goalError'));
         return;
       }
       act(
         () => saveGoal(n),
-        shared ? 'Step goal saved. Your coach can see it.' : 'Step goal saved.',
+        shared ? t('steps.goalSavedShared') : t('steps.goalSaved'),
       );
       setModal(null);
       return;
     }
     if (!value.trim() || !Number.isInteger(n) || n < 0 || n > 200000) {
-      setFormError('Enter the steps for the day, up to 200,000.');
+      setFormError(t('steps.countError'));
       return;
     }
     if (
@@ -122,7 +124,7 @@ export function StepsCard({
       Number.isNaN(Date.parse(when)) ||
       when > date
     ) {
-      setFormError('Enter a date as YYYY-MM-DD, today or earlier.');
+      setFormError(t('steps.dateError'));
       return;
     }
     act(
@@ -134,7 +136,7 @@ export function StepsCard({
             { date: when, count: n },
           ].sort((a, b) => a.date.localeCompare(b.date)),
         })),
-      'Steps saved.',
+      t('steps.saved'),
     );
     setModal(null);
   };
@@ -146,7 +148,7 @@ export function StepsCard({
           <Footprints size={18} strokeWidth={1.4} color={theme.featureLabel} />
         }
       >
-        STEPS
+        {t('steps.eyebrow')}
       </SectionLabel>
       <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 9 }}>
         <T weight={500} size={45} line={48} tracking={-3.4}>
@@ -160,14 +162,16 @@ export function StepsCard({
       </View>
       <Body size={12}>
         {count === null
-          ? 'Nothing logged today.'
+          ? t('steps.nothingToday')
           : goal
             ? progress >= 1
-              ? 'Goal reached today.'
-              : `${Math.round(progress * 100)}% of today’s goal`
-            : 'Today'}
+              ? t('steps.goalReached')
+              : t('steps.percentOfGoal', {
+                  percent: Math.round(progress * 100),
+                })
+            : t('steps.today')}
         {week.average !== null
-          ? ` · ${week.average.toLocaleString()} avg over ${week.days} ${week.days === 1 ? 'day' : 'days'}`
+          ? ` · ${t('steps.average', { average: week.average.toLocaleString(), days: week.days, noun: week.days === 1 ? t('steps.day') : t('steps.days') })}`
           : ''}
       </Body>
       {goal ? (
@@ -204,13 +208,13 @@ export function StepsCard({
         }}
       >
         <TextButton
-          label="Log steps"
+          label={t('steps.log')}
           size={13}
           onPress={() => open('log')}
           style={{ flex: 1, justifyContent: 'space-between', minHeight: 38 }}
         />
         <TextButton
-          label={goal ? 'Edit goal' : 'Set goal'}
+          label={goal ? t('steps.editGoal') : t('steps.setGoal')}
           size={13}
           onPress={() => open('goal')}
         />
@@ -221,19 +225,21 @@ export function StepsCard({
       <Sheet
         open={modal !== null}
         onClose={() => setModal(null)}
-        title={modal === 'goal' ? 'Daily step goal' : 'Log steps'}
+        title={modal === 'goal' ? t('steps.goalTitle') : t('steps.logTitle')}
         description={
           modal === 'goal'
             ? shared
-              ? `A target for every day, shared with ${shared.coachName}. Either of you can change it.`
-              : 'A target for every day.'
-            : 'Enter the steps your phone or watch counted for the day.'
+              ? t('steps.goalSharedHint', { coach: shared.coachName })
+              : t('steps.goalHint')
+            : t('steps.logHint')
         }
       >
-        <Field label={modal === 'goal' ? 'Steps per day' : 'Steps'}>
+        <Field label={modal === 'goal' ? t('steps.perDay') : t('steps.steps')}>
           <Input
             large
-            accessibilityLabel={modal === 'goal' ? 'Steps per day' : 'Steps'}
+            accessibilityLabel={
+              modal === 'goal' ? t('steps.perDay') : t('steps.steps')
+            }
             keyboardType="number-pad"
             inputMode="numeric"
             value={value}
@@ -243,15 +249,15 @@ export function StepsCard({
         </Field>
         {modal === 'log' && phone !== null && (
           <TextButton
-            label={`Use today’s count from this phone: ${phone.toLocaleString()}`}
+            label={t('steps.usePhone', { count: phone.toLocaleString() })}
             size={13}
             onPress={() => setValue(String(phone))}
           />
         )}
         {modal === 'log' && (
-          <Field label="Date" hint="YYYY-MM-DD">
+          <Field label={t('steps.date')} hint="YYYY-MM-DD">
             <Input
-              accessibilityLabel="Date"
+              accessibilityLabel={t('steps.date')}
               value={when}
               onChangeText={setWhen}
               maxLength={10}
@@ -273,14 +279,14 @@ export function StepsCard({
         <View style={{ marginTop: 22, gap: 6 }}>
           <PrimaryButton
             full
-            label={modal === 'goal' ? 'Save goal' : 'Save steps'}
+            label={modal === 'goal' ? t('steps.saveGoal') : t('steps.save')}
             icon={<Plus size={19} color={theme.primaryText} />}
             disabled={busy}
             onPress={save}
           />
           {modal === 'goal' && goal != null && (
             <TextButton
-              label="Remove goal"
+              label={t('steps.removeGoal')}
               onPress={() => {
                 act(() => saveGoal(null));
                 setModal(null);
@@ -300,14 +306,15 @@ export function StepGoalCard({
   member: Pick<Member, 'stepGoal' | 'stats'>;
 }) {
   const { theme } = useTheme();
+  const { t } = useI18n();
   const average = member.stats?.stepsAverage ?? null;
   const days = member.stats?.stepsDays ?? 0;
   return (
     <Card style={{ marginTop: 14 }}>
       <Eyebrow size={12} color={theme.muted} style={{ marginBottom: 12 }}>
-        DAILY STEPS
+        {t('steps.cardEyebrow')}
       </Eyebrow>
-      <H2 size={22}>Step goal</H2>
+      <H2 size={22}>{t('steps.cardTitle')}</H2>
       <View
         style={{
           flexDirection: 'row',
@@ -321,14 +328,14 @@ export function StepGoalCard({
             [
               member.stepGoal ? member.stepGoal.toLocaleString() : '—',
               member.stepGoal ? 'steps' : '',
-              'Goal per day',
+              t('steps.goalPerDay'),
             ],
             [
               average === null ? '—' : average.toLocaleString(),
               average === null ? '' : 'steps',
-              'Average · 7 days',
+              t('steps.average7'),
             ],
-            [String(days), 'of 7', 'Days logged'],
+            [String(days), t('steps.of7'), t('steps.daysLogged')],
           ] as const
         ).map(([value, unit, label]) => (
           <View key={label} style={{ minWidth: '40%', flex: 1 }}>
@@ -346,9 +353,7 @@ export function StepGoalCard({
         ))}
       </View>
       <Body size={13} style={{ marginTop: 14 }}>
-        {member.stepGoal
-          ? 'Change the goal from the Steps card on the Train tab; your coach sees the change.'
-          : 'Set a goal from the Steps card on the Train tab, or ask your coach.'}
+        {member.stepGoal ? t('steps.changeHint') : t('steps.setHint')}
       </Body>
     </Card>
   );

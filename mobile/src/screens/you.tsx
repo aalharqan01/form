@@ -23,6 +23,7 @@ import {
 } from '../../../lib/fitness';
 import type { Training } from '../use-training';
 import { useTheme } from '../theme';
+import { useI18n } from '../i18n';
 import {
   Body,
   Card,
@@ -80,6 +81,7 @@ function ShareCard({
   cardRef: React.RefObject<View | null>;
 }) {
   const { theme } = useTheme();
+  const { t } = useI18n();
   const top = workout.exercises.slice(0, 5);
   return (
     <View
@@ -163,13 +165,14 @@ function WeeklyBars({
   unit: string;
 }) {
   const { theme } = useTheme();
+  const { t } = useI18n();
   const max = Math.max(3, ...counts.map((c) => c.count));
   const width = 280,
     height = 90,
     gap = 8,
     bar = (width - gap * (counts.length - 1)) / counts.length;
   return (
-    <View accessibilityLabel={`Sessions per week, last ${counts.length} weeks`}>
+    <View accessibilityLabel={t('you.chartLabel', { count: counts.length })}>
       <Svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`}>
         {counts.map((c, i) => {
           const h = c.count ? Math.max(6, (c.count / max) * (height - 22)) : 4;
@@ -195,9 +198,9 @@ function WeeklyBars({
           marginTop: 2,
         }}
       >
-        <Body size={11}>{counts.length} weeks ago</Body>
+        <Body size={11}>{t('you.weeksAgo', { count: counts.length })}</Body>
         <Body size={11}>{unit}</Body>
-        <Body size={11}>This week</Body>
+        <Body size={11}>{t('you.thisWeekShort')}</Body>
       </View>
     </View>
   );
@@ -217,6 +220,7 @@ export function YouScreen({
   onRepeat: (workout: Workout) => void;
 }) {
   const { theme } = useTheme();
+  const { t } = useI18n();
   const { data, update } = training;
   const [detail, setDetail] = useState<Workout | null>(null),
     [progress, setProgress] = useState<string | null>(null),
@@ -238,10 +242,7 @@ export function YouScreen({
     const web = Platform.OS === 'web' && typeof navigator !== 'undefined';
     if (web && !navigator.share) {
       // Browsers without the share sheet get the summary on the clipboard.
-      act(
-        () => navigator.clipboard.writeText(text),
-        'Copied the workout summary. Paste it anywhere.',
-      );
+      act(() => navigator.clipboard.writeText(text), t('you.copied'));
       return;
     }
     setSharing(w);
@@ -261,7 +262,7 @@ export function YouScreen({
           });
           await Sharing.shareAsync(uri, {
             mimeType: 'image/png',
-            dialogTitle: 'Share workout',
+            dialogTitle: t('you.shareTitle'),
           });
           return;
         }
@@ -273,7 +274,11 @@ export function YouScreen({
   };
   return (
     <>
-      <PageHeading eyebrow="YOU" first="Your" second="journey." />
+      <PageHeading
+        eyebrow={t('you.eyebrow')}
+        first={t('you.headingFirst')}
+        second={t('you.headingSecond')}
+      />
       <View
         style={{
           flexDirection: 'row',
@@ -283,7 +288,7 @@ export function YouScreen({
         }}
       >
         <View
-          accessibilityLabel={`Initials ${initialsOf(name)}`}
+          accessibilityLabel={t('you.initials', { initials: initialsOf(name) })}
           style={{
             width: 56,
             height: 56,
@@ -301,9 +306,9 @@ export function YouScreen({
           <H2 size={22}>{name}</H2>
           <Body size={13} style={{ marginTop: 2 }}>
             {first
-              ? `Training since ${dateLabel(first, true)}`
-              : 'No workouts yet'}
-            {streak > 1 ? ` · ${streak}-week streak` : ''}
+              ? t('you.trainingSince', { date: dateLabel(first, true) })
+              : t('you.noWorkouts')}
+            {streak > 1 ? ` · ${t('you.streak', { weeks: streak })}` : ''}
           </Body>
         </View>
         {streak > 1 && <Flame size={22} color={theme.green} />}
@@ -320,11 +325,15 @@ export function YouScreen({
       >
         {(
           [
-            ['WORKOUTS', String(data.workouts.length), ''],
-            ['THIS WEEK', String(counts.at(-1)?.count ?? 0), ''],
-            ['STREAK', String(streak), streak === 1 ? ' wk' : ' wks'],
+            [t('you.workouts'), String(data.workouts.length), ''],
+            [t('you.thisWeek'), String(counts.at(-1)?.count ?? 0), ''],
             [
-              'VOLUME',
+              t('you.streakLabel'),
+              String(streak),
+              streak === 1 ? t('you.wk') : t('you.wks'),
+            ],
+            [
+              t('you.volume'),
               (data.workouts.reduce((a, w) => a + volume(w), 0) / 1000).toFixed(
                 1,
               ),
@@ -361,9 +370,11 @@ export function YouScreen({
             marginBottom: 14,
           }}
         >
-          <H3 size={16}>Sessions per week</H3>
+          <H3 size={16}>{t('you.sessionsPerWeek')}</H3>
           <Body size={12}>
-            {counts.reduce((a, c) => a + c.count, 0)} in 8 weeks
+            {t('you.inWeeks', {
+              count: counts.reduce((a, c) => a + c.count, 0),
+            })}
           </Body>
         </View>
         <WeeklyBars counts={counts} unit="" />
@@ -371,8 +382,8 @@ export function YouScreen({
       <View style={{ marginTop: 22, marginBottom: 12 }}>
         <Segmented
           options={[
-            { value: 'workouts', label: 'Workouts' },
-            { value: 'exercises', label: 'Exercises' },
+            { value: 'workouts', label: t('you.tabWorkouts') },
+            { value: 'exercises', label: t('you.tabExercises') },
           ]}
           value={view}
           onChange={setView}
@@ -382,7 +393,7 @@ export function YouScreen({
       {view === 'exercises' ? (
         !names.length ? (
           <Body size={14} style={{ paddingVertical: 10 }}>
-            Complete a workout to see exercise trends and personal records.
+            {t('you.noProgress')}
           </Body>
         ) : (
           <View style={{ gap: 10 }}>
@@ -393,7 +404,7 @@ export function YouScreen({
                 <Press
                   key={n}
                   accessibilityRole="button"
-                  accessibilityLabel={`Progress for ${n}`}
+                  accessibilityLabel={t('you.progressFor', { name: n })}
                   onPress={() => setProgress(n)}
                   scale={0.985}
                   style={{
@@ -410,7 +421,7 @@ export function YouScreen({
                       {n}
                     </T>
                     <Body size={12} style={{ marginTop: 5 }}>
-                      {p.length} sessions
+                      {t('you.sessionsCount', { count: p.length })}
                     </Body>
                   </View>
                   {last?.record && (
@@ -425,10 +436,10 @@ export function YouScreen({
       ) : (
         <>
           <SectionTitle
-            title="Workouts"
+            title={t('you.tabWorkouts')}
             right={
               <TextButton
-                label={data.active ? 'Resume' : 'New workout'}
+                label={data.active ? t('you.resume') : t('you.newWorkout')}
                 size={12}
                 icon={<Plus size={16} color={theme.textButton} />}
                 disabled={busy}
@@ -445,13 +456,13 @@ export function YouScreen({
                 strokeWidth={1.2}
                 color={theme.routineMarkText}
               />
-              <H2 size={24}>No workouts yet</H2>
+              <H2 size={24}>{t('you.emptyTitle')}</H2>
               <Body size={14} center>
-                Finish your first workout to start your journey.
+                {t('you.emptyBody')}
               </Body>
               <View style={{ marginTop: 10 }}>
                 <PrimaryButton
-                  label="Start workout"
+                  label={t('you.startWorkout')}
                   icon={<ArrowUpRight size={20} color={theme.primaryText} />}
                   onPress={onStart}
                 />
@@ -463,7 +474,10 @@ export function YouScreen({
                 <Press
                   key={w.id}
                   accessibilityRole="button"
-                  accessibilityLabel={`View ${w.name}, ${dateLabel(w.startedAt, true)}`}
+                  accessibilityLabel={t('you.view', {
+                    name: w.name,
+                    date: dateLabel(w.startedAt, true),
+                  })}
                   onPress={() => setDetail(w)}
                   scale={0.985}
                   style={{
@@ -480,11 +494,18 @@ export function YouScreen({
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <H3 size={16}>{w.name}</H3>
                     <Body size={12} style={{ marginTop: 4 }}>
-                      {w.exercises.length} exercises · {completedSets(w)} sets
+                      {t('train.exercisesSets', {
+                        exercises: w.exercises.length,
+                        sets: completedSets(w),
+                      })}
                     </Body>
                     {w.endedEarly && (
                       <Body size={12} color={theme.amberText}>
-                        {`Finished early · ${skippedSets(w)} skipped ${skippedSets(w) === 1 ? 'set' : 'sets'}`}
+                        {t('you.finishedEarly', {
+                          count: skippedSets(w),
+                          noun:
+                            skippedSets(w) === 1 ? t('you.set') : t('you.sets'),
+                        })}
                       </Body>
                     )}
                   </View>
@@ -492,7 +513,9 @@ export function YouScreen({
                     <T weight={500} size={13} line={17}>
                       {volume(w).toLocaleString()} kg
                     </T>
-                    <Body size={10}>{minutesOf(w)} min</Body>
+                    <Body size={10}>
+                      {t('you.min', { minutes: minutesOf(w) })}
+                    </Body>
                   </View>
                   <ChevronRight size={13} color={theme.muted} />
                 </Press>

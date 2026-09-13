@@ -1,11 +1,18 @@
 import type { Metadata, Viewport } from 'next';
-import { Outfit, Geist_Mono } from 'next/font/google';
+import { Outfit, Geist_Mono, IBM_Plex_Sans_Arabic } from 'next/font/google';
 import './globals.css';
 
 // Outfit: geometric, rounded, close to the wordmark's letterforms.
 const sans = Outfit({
   variable: '--font-sans-family',
   subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+});
+
+// Arabic companion to Outfit, applied when the document is right-to-left.
+const arabic = IBM_Plex_Sans_Arabic({
+  variable: '--font-arabic-family',
+  subsets: ['arabic'],
   weight: ['400', '500', '600', '700'],
 });
 
@@ -46,11 +53,11 @@ export default function RootLayout({
         <script
           dangerouslySetInnerHTML={{
             __html:
-              "try{var t=localStorage.getItem('form-theme')||'system';document.documentElement.dataset.theme=t==='system'?(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):t}catch(e){}",
+              "try{var t=localStorage.getItem('form-theme')||'system';document.documentElement.dataset.theme=t==='system'?(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):t;var l=localStorage.getItem('form-language')||'system';if(l==='system'){var n=(navigator.languages||[navigator.language||'en'])[0]||'en';l=n.toLowerCase().indexOf('ar')===0?'ar':'en'}document.documentElement.lang=l;document.documentElement.dir=l==='ar'?'rtl':'ltr'}catch(e){}",
           }}
         />
       </head>
-      <body className={`${sans.variable} ${geistMono.variable} antialiased`}>
+      <body className={`${sans.variable} ${arabic.variable} ${geistMono.variable} antialiased`}>
         {children}
       </body>
     </html>

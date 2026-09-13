@@ -14,7 +14,7 @@
     "lint": "oxlint",
     "format": "oxfmt",
     "db:generate": "drizzle-kit generate",
-    "test": "node --experimental-strip-types --test tests/fitness.test.mjs tests/coaching.test.mjs",
+    "test": "node --experimental-strip-types --test tests/fitness.test.mjs tests/coaching.test.mjs tests/i18n.test.mjs",
     "test:api": "node --experimental-strip-types tests/api-check.mjs",
     "setup": "npm ci && npm run db:local",
     "db:local": "wrangler d1 migrations apply DB --local --config wrangler.local.json",

@@ -403,7 +403,7 @@ test('weekly session counts and streaks use local Monday weeks', async () => {
   assert.equal(weeklyStreak([at(30)], now), 0);
 });
 
-test('the next plan is the one trained least recently, never-trained plans first', async () => {
+test('the next plan follows the plan of the last workout, in plan order', async () => {
   const { nextRoutine } = await import('../lib/fitness.ts');
   const plan = (name) => ({ id: name, name, exercises: [] });
   const upper = plan('Upper body'),
@@ -423,15 +423,20 @@ test('the next plan is the one trained least recently, never-trained plans first
   assert.equal(
     nextRoutine(
       [upper, lower, full],
-      [w('Upper body', 11), w('Lower body', 12)],
+      [w('Lower body', 12), w('Upper body', 11)],
     ),
     full,
   );
   assert.equal(
     nextRoutine(
       [upper, lower, full],
-      [w('Upper body', 11), w('Lower body', 12), w('Full body', 13)],
+      [w('Full body', 13), w('Lower body', 12)],
     ),
     upper,
+  );
+  // A workout that is not one of the plans is skipped in favour of the last plan-based one.
+  assert.equal(
+    nextRoutine([upper, lower], [w('Upper body', 11), w('Quick arms', 12)]),
+    lower,
   );
 });

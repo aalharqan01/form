@@ -17,6 +17,13 @@ import {
   Outfit_600SemiBold,
   Outfit_700Bold,
 } from '@expo-google-fonts/outfit';
+import {
+  IBMPlexSansArabic_400Regular,
+  IBMPlexSansArabic_500Medium,
+  IBMPlexSansArabic_600SemiBold,
+  IBMPlexSansArabic_700Bold,
+} from '@expo-google-fonts/ibm-plex-sans-arabic';
+import { LocaleProvider } from './src/i18n';
 import { randomUUID } from 'expo-crypto';
 import type { Routine, Workout } from '../lib/fitness';
 import { routineFromWorkout } from '../lib/training';
@@ -317,13 +324,19 @@ export default function App() {
     Outfit_500Medium,
     Outfit_600SemiBold,
     Outfit_700Bold,
+    IBMPlexSansArabic_400Regular,
+    IBMPlexSansArabic_500Medium,
+    IBMPlexSansArabic_600SemiBold,
+    IBMPlexSansArabic_700Bold,
   });
   markFontsReady(loaded);
   if (!loaded && !error) return null;
   return (
     <SafeAreaProvider>
       <ThemeProvider>
-        <AppContent />
+        <LocaleProvider>
+          <AppContent />
+        </LocaleProvider>
       </ThemeProvider>
     </SafeAreaProvider>
   );

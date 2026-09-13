@@ -26,6 +26,7 @@ import {
 } from '../../../lib/fitness';
 import type { Training } from '../use-training';
 import { useTheme } from '../theme';
+import { useI18n } from '../i18n';
 import {
   Bezel,
   Body,
@@ -68,6 +69,7 @@ export function TrainScreen({
   navigate: (tab: 'weight' | 'you') => void;
 }) {
   const { theme } = useTheme();
+  const { t } = useI18n();
   const { data, update } = training;
   const [editor, setEditor] = useState<{ routine: Routine | null } | null>(
       null,
@@ -117,7 +119,11 @@ export function TrainScreen({
     .join(' ');
   return (
     <>
-      <PageHeading eyebrow="TRAINING" first="Your" second="training." />
+      <PageHeading
+        eyebrow={t('train.eyebrow')}
+        first={t('train.headingFirst')}
+        second={t('train.headingSecond')}
+      />
       <AssignedWorkouts training={training} busy={busy} onStart={onStart} />
       <View style={{ gap: 16 }}>
         <Bezel>
@@ -140,12 +146,12 @@ export function TrainScreen({
                     tracking={0.8}
                     color={theme.featureLabel}
                   >
-                    STRENGTH
+                    {t('train.strength')}
                   </T>
                 </View>
               }
             >
-              YOUR NEXT SESSION
+              {t('train.nextSession')}
             </SectionLabel>
             <View
               style={{ flexDirection: 'row', alignItems: 'center', gap: 20 }}
@@ -157,18 +163,20 @@ export function TrainScreen({
                 tracking={-1.65}
                 style={{ flex: 1 }}
               >
-                {next ? next.name : 'Start a workout.'}
+                {next ? next.name : t('train.startAWorkout')}
               </T>
               {next && next.exercises.length > 0 && (
                 <View
-                  accessibilityLabel={`${Math.min(3, next.exercises.length)} of the session's exercises`}
+                  accessibilityLabel={t('train.sessionExercises', {
+                    count: Math.min(3, next.exercises.length),
+                  })}
                   style={{ flexDirection: 'row', alignItems: 'center' }}
                 >
                   {next.exercises.slice(0, 3).map((e, i) => (
                     <View
                       key={e.name + i}
                       style={{
-                        marginLeft: i ? -14 : 0,
+                        marginStart: i ? -14 : 0,
                         borderRadius: 14,
                         borderWidth: 2,
                         borderColor: theme.feature,
@@ -183,8 +191,12 @@ export function TrainScreen({
             </View>
             <Body size={14} color={theme.featureText} style={{ marginTop: 14 }}>
               {next
-                ? `${next.exercises.length} exercises · ${nextSets} sets · about ${nextMinutes} min`
-                : 'Build a plan that works for you.\nKeep every set in one place.'}
+                ? t('train.sessionMeta', {
+                    exercises: next.exercises.length,
+                    sets: nextSets,
+                    minutes: nextMinutes,
+                  })
+                : t('train.emptyPitch')}
             </Body>
             {nextMuscles.length > 0 && (
               <View
@@ -220,7 +232,7 @@ export function TrainScreen({
             <View style={{ marginTop: 30, marginBottom: 4 }}>
               <PrimaryButton
                 full
-                label="Start workout"
+                label={t('train.startWorkout')}
                 icon={
                   <ArrowUpRight
                     size={22}
@@ -246,7 +258,7 @@ export function TrainScreen({
                 />
               }
             >
-              BODY WEIGHT
+              {t('train.bodyWeight')}
             </SectionLabel>
             {stats.latest ? (
               <View
@@ -267,13 +279,13 @@ export function TrainScreen({
                       {data.unit}
                     </T>
                   </View>
-                  <Body size={12}>Smoothed weight</Body>
+                  <Body size={12}>{t('train.smoothedWeight')}</Body>
                 </View>
                 <Svg
                   width={120}
                   height={58}
                   viewBox="0 0 240 65"
-                  accessibilityLabel="Smoothed weight trend"
+                  accessibilityLabel={t('train.weightTrend')}
                 >
                   <Path
                     d={sparkPath}
@@ -287,10 +299,10 @@ export function TrainScreen({
             ) : (
               <View>
                 <T weight={500} size={29} line={33} tracking={-1.2}>
-                  Weight tracker
+                  {t('train.weightTracker')}
                 </T>
                 <Body size={12} style={{ marginTop: 6 }}>
-                  Log your body weight.
+                  {t('train.logBodyWeight')}
                 </Body>
               </View>
             )}
@@ -303,7 +315,9 @@ export function TrainScreen({
               }}
             >
               <TextButton
-                label={stats.latest ? 'See your progress' : 'Log your weight'}
+                label={
+                  stats.latest ? t('train.seeProgress') : t('train.logWeight')
+                }
                 size={13}
                 onPress={() => navigate('weight')}
                 style={{
@@ -339,12 +353,13 @@ export function TrainScreen({
             gap: 10,
           }}
         >
-          <Eyebrow size={9}>THIS WEEK</Eyebrow>
+          <Eyebrow size={9}>{t('train.thisWeek')}</Eyebrow>
           <T weight={500} size={16} line={20} tracking={-0.5}>
-            {weekly.length} {weekly.length === 1 ? 'session' : 'sessions'}{' '}
-            <T size={16} color={theme.headingSpan}>
-              and counting.
-            </T>
+            {t('train.sessionsCounting', {
+              count: weekly.length,
+              noun:
+                weekly.length === 1 ? t('train.session') : t('train.sessions'),
+            })}
           </T>
         </View>
         <View
@@ -412,12 +427,12 @@ export function TrainScreen({
         </View>
       </View>
       <SectionTitle
-        title="Your plans"
+        title={t('train.yourPlans')}
         count={data.routines.length}
         style={{ marginTop: 0 }}
         right={
           <TextButton
-            label="Create plan"
+            label={t('train.createPlan')}
             size={12}
             icon={<Plus size={17} color={theme.textButton} />}
             disabled={data.routines.length >= 100}
@@ -455,25 +470,27 @@ export function TrainScreen({
             <View style={{ flex: 1, minWidth: 0 }}>
               <H3 size={16}>{r.name}</H3>
               <Body size={12} style={{ marginTop: 3 }}>
-                {r.exercises.length} exercises ·{' '}
-                {r.exercises.reduce((a, e) => a + e.sets, 0)} sets
+                {t('train.exercisesSets', {
+                  exercises: r.exercises.length,
+                  sets: r.exercises.reduce((a, e) => a + e.sets, 0),
+                })}
               </Body>
             </View>
             <IconButton
               icon={<Pencil size={15} color={theme.muted} />}
-              accessibilityLabel={`Edit ${r.name}`}
+              accessibilityLabel={t('train.editPlan', { name: r.name })}
               size={38}
               onPress={() => setEditor({ routine: r })}
             />
             <IconButton
               icon={<Trash2 size={15} color={theme.muted} />}
-              accessibilityLabel={`Delete ${r.name}`}
+              accessibilityLabel={t('train.deletePlan', { name: r.name })}
               size={38}
               onPress={() => setRemove(r)}
             />
             <Press
               accessibilityRole="button"
-              accessibilityLabel={`Start ${r.name}`}
+              accessibilityLabel={t('train.startPlan', { name: r.name })}
               disabled={busy}
               onPress={() => onStart(r)}
               scale={0.9}
@@ -525,7 +542,7 @@ export function TrainScreen({
             <View style={{ flex: 1 }}>
               <H3>No plans yet</H3>
               <Body size={14} style={{ marginTop: 6 }}>
-                Add your exercises, set targets, and make it repeatable.
+                {t('train.noPlansHint')}
               </Body>
             </View>
           </View>
@@ -533,14 +550,14 @@ export function TrainScreen({
       </View>
       <Disclosure summary="Need a starting point?" style={{ marginTop: 20 }}>
         <Body size={13} style={{ paddingBottom: 10 }}>
-          Starter plans to adapt. Change the exercises and targets to suit you.
+          {t('train.starters')}
         </Body>
         <View style={{ gap: 12 }}>
           {STARTERS.map((r) => (
             <Press
               key={r.id}
               accessibilityRole="button"
-              accessibilityLabel={`Use starter ${r.name}`}
+              accessibilityLabel={t('train.useStarter', { name: r.name })}
               onPress={() => setEditor({ routine: { ...r, id: randomUUID() } })}
               scale={0.985}
               style={{
@@ -591,7 +608,7 @@ export function TrainScreen({
         >
           <View style={{ flex: 1 }}>
             <Eyebrow size={9} style={{ marginBottom: 9 }}>
-              LAST SESSION
+              {t('train.lastSession')}
             </Eyebrow>
             <H3>{lastWorkout.name}</H3>
             <Body size={12} style={{ marginTop: 4 }}>
@@ -602,7 +619,7 @@ export function TrainScreen({
             </Body>
           </View>
           <TextButton
-            label="View session"
+            label={t('train.viewSession')}
             size={12}
             icon={<ArrowUpRight size={16} color={theme.textButton} />}
             onPress={() => setDetail(lastWorkout)}
@@ -623,7 +640,7 @@ export function TrainScreen({
                     ? d.routines.map((v) => (v.id === r.id ? r : v))
                     : [...d.routines, r],
                 })),
-              'Plan saved.',
+              t('train.planSaved'),
             )
           }
         />
@@ -631,12 +648,12 @@ export function TrainScreen({
       <Sheet
         open={!!remove}
         onClose={() => setRemove(null)}
-        title="Delete this plan?"
-        description="Your completed workouts will be kept."
+        title={t('train.deletePlanTitle')}
+        description={t('train.deletePlanBody')}
       >
         <View style={{ marginTop: 18 }}>
           <DangerButton
-            label="Delete plan"
+            label={t('train.deletePlanButton')}
             onPress={() => {
               const target = remove;
               setRemove(null);
@@ -666,7 +683,7 @@ export function TrainScreen({
               ...d,
               workouts: d.workouts.filter((v) => v.id !== w.id),
             }));
-          }, 'Workout deleted.')
+          }, t('train.workoutDeleted'))
         }
       />
     </>

@@ -4,6 +4,10 @@
   color: var(--foreground, #243b2b);
   font-family: var(--font-sans-family), sans-serif;
 }
+:root[dir='rtl'] .co-shell {
+  font-family: var(--font-arabic-family), var(--font-sans-family), sans-serif;
+  letter-spacing: 0;
+}
 .co-sidebar {
   width: 238px;
   position: fixed;
