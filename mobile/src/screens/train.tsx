@@ -22,6 +22,7 @@ import {
   volume,
   type Routine,
   type Workout,
+  nextRoutine,
 } from '../../../lib/fitness';
 import type { Training } from '../use-training';
 import { useTheme } from '../theme';
@@ -86,7 +87,7 @@ export function TrainScreen({
     d.setDate(d.getDate() + i);
     return d;
   });
-  const next = data.routines[0];
+  const next = nextRoutine(data.routines, data.workouts);
   const nextSets = next ? next.exercises.reduce((a, e) => a + e.sets, 0) : 0;
   // Roughly 40 s of work per set plus the rest target.
   const nextMinutes = next

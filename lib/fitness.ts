@@ -325,6 +325,26 @@ export function resumeWorkout(workout: Workout, now = new Date()): Workout {
     pausedSeconds: Math.round(pausedSeconds(workout, now.getTime())),
   };
 }
+/**
+ * The plan to suggest next: the one trained least recently, with plans never
+ * trained first, so a two-plan split alternates and a three-day split rotates.
+ * Ties keep the user's plan order.
+ */
+export function nextRoutine(
+  routines: Routine[],
+  workouts: Pick<Workout, 'name' | 'startedAt'>[],
+) {
+  if (!routines.length) return null;
+  const last = new Map<string, string>();
+  for (const w of workouts) {
+    const key = w.name.trim().toLowerCase();
+    if (!last.has(key) || last.get(key)! < w.startedAt)
+      last.set(key, w.startedAt);
+  }
+  return routines
+    .map((r, i) => ({ r, i, at: last.get(r.name.trim().toLowerCase()) ?? '' }))
+    .sort((a, b) => (a.at === b.at ? a.i - b.i : a.at < b.at ? -1 : 1))[0].r;
+}
 /** Local calendar date key for a Date. */
 function localKey(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
