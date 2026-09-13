@@ -151,7 +151,7 @@ test('dated weigh-ins show arithmetic weekly change to trainee and coach; coachi
       .toBe(-0.5);
     await page.getByRole('tab', { name: 'My coach', exact: true }).click();
     await expect(
-      page.getByText('Nutrition & steps', { exact: true }),
+      page.getByText('Calorie & macro targets', { exact: true }),
     ).toBeVisible();
     await page.getByRole('button', { name: 'Messages', exact: true }).click();
     await page

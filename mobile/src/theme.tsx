@@ -176,10 +176,10 @@ export const ease = { out: [0.23, 1, 0.32, 1] as const };
 
 export type Weight = 400 | 500 | 600 | 700;
 const families: Record<Weight, string> = {
-  400: 'Geist_400Regular',
-  500: 'Geist_500Medium',
-  600: 'Geist_600SemiBold',
-  700: 'Geist_700Bold',
+  400: 'Outfit_400Regular',
+  500: 'Outfit_500Medium',
+  600: 'Outfit_600SemiBold',
+  700: 'Outfit_700Bold',
 };
 let fontsReady = false;
 export function markFontsReady(ready: boolean) {
@@ -207,7 +207,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     let alive = true;
     void AsyncStorage.getItem(THEME_KEY)
       .then((saved) => {
-        if (alive && (saved === 'light' || saved === 'dark' || saved === 'system'))
+        if (
+          alive &&
+          (saved === 'light' || saved === 'dark' || saved === 'system')
+        )
           setPreferenceState(saved);
       })
       .catch(() => {});
@@ -217,7 +220,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }, []);
   const value = useMemo(() => {
     const resolved =
-      preference === 'system' ? (system === 'dark' ? 'dark' : 'light') : preference;
+      preference === 'system'
+        ? system === 'dark'
+          ? 'dark'
+          : 'light'
+        : preference;
     return {
       theme: resolved === 'dark' ? dark : light,
       preference,
@@ -227,7 +234,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       },
     };
   }, [preference, system]);
-  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
+  return (
+    <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
+  );
 }
 export function useTheme() {
   return useContext(ThemeContext);

@@ -143,6 +143,7 @@ test('coach-client lifecycle enforces identity, consent, ownership, persistence 
     '0003_normal_thunderbird.sql',
     '0004_coach_workout_templates.sql',
     '0005_coaching_media.sql',
+    '0006_step_goal.sql',
   ])
     db.sql.exec(await readFile('drizzle/' + name, 'utf8'));
   async function call(who, body, query = '', origin) {
@@ -452,18 +453,75 @@ test('coach-client lifecycle enforces identity, consent, ownership, persistence 
     ).status,
     200,
   );
+  // Step goal: either side sets it, bounds apply, and the other side sees it.
+  const rev = async () =>
+    (await call(coach, null, '?member=' + memberId)).body.member.revision;
   assert.equal(
     (
       await call(coach, {
-        action: 'nutrition',
+        action: 'step-goal',
         memberId,
-        nutrition: { ...nutrition, steps: 100 },
-        revision: (
-          await call(coach, null, '?member=' + memberId)
-        ).body.member.revision,
+        stepGoal: 100,
+        revision: await rev(),
       })
     ).status,
     400,
+  );
+  assert.equal(
+    (
+      await call(coach, {
+        action: 'step-goal',
+        memberId,
+        stepGoal: 9000,
+        revision: await rev(),
+      })
+    ).status,
+    200,
+  );
+  assert.equal(
+    (await call(trainee, null, '?member=' + memberId)).body.member.stepGoal,
+    9000,
+  );
+  assert.equal(
+    (
+      await call(trainee, {
+        action: 'step-goal',
+        memberId,
+        stepGoal: 7500,
+        revision: await rev(),
+      })
+    ).status,
+    200,
+  );
+  assert.equal(
+    (await call(coach, null, '?member=' + memberId)).body.member.stepGoal,
+    7500,
+  );
+  assert.equal(
+    (
+      await call(stranger, {
+        action: 'step-goal',
+        memberId,
+        stepGoal: 7500,
+        revision: await rev(),
+      })
+    ).status,
+    404,
+  );
+  assert.equal(
+    (
+      await call(coach, {
+        action: 'step-goal',
+        memberId,
+        stepGoal: null,
+        revision: await rev(),
+      })
+    ).status,
+    200,
+  );
+  assert.equal(
+    (await call(coach, null, '?member=' + memberId)).body.member.stepGoal,
+    null,
   );
 
   assert.equal(
@@ -852,6 +910,7 @@ test('private reusable templates enforce ownership and revision checks without s
     '0003_normal_thunderbird',
     '0004_coach_workout_templates',
     '0005_coaching_media',
+    '0006_step_goal',
   ])
     db.sql.exec(await readFile(`drizzle/${name}.sql`, 'utf8'));
   const call = async (who, body, query = '') => {
@@ -1036,6 +1095,7 @@ test('shared media is scoped to its membership and progress photos post into the
     '0003_normal_thunderbird',
     '0004_coach_workout_templates',
     '0005_coaching_media',
+    '0006_step_goal',
   ])
     db.sql.exec(await readFile(`drizzle/${name}.sql`, 'utf8'));
   const now = new Date().toISOString();
@@ -1270,6 +1330,7 @@ test('the development site creates each developer their own coach, clients and f
     '0003_normal_thunderbird.sql',
     '0004_coach_workout_templates.sql',
     '0005_coaching_media.sql',
+    '0006_step_goal.sql',
   ])
     db.sql.exec(await readFile('drizzle/' + name, 'utf8'));
   const dev = { ...coach, userId: 'cf-access:dev-one' };

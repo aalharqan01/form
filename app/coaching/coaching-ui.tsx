@@ -53,6 +53,7 @@ import {
 } from '@/lib/fitness';
 import ExerciseThumbnail, { ExerciseCredits } from '../exercise-thumbnail';
 import Nutrition from './nutrition';
+import Steps from './steps';
 import { Conversation } from './conversation';
 import WeightComparison, { weightChange } from './weight-comparison';
 import VideoUpload from '../video-upload';
@@ -867,6 +868,7 @@ export function AssignedWorkouts({
         <section key={m.id}>
           <p className="co-overline">{m.coachName}</p>
           <Nutrition targets={m.nutrition} />
+          <Steps member={m} />
           {!m.program ? (
             <p className="co-muted">Your coach is preparing your program.</p>
           ) : (
@@ -1166,19 +1168,6 @@ function ClientDetail({
                   </strong>
                   <small>Completed · last 7 calendar days (UTC)</small>
                 </div>
-                <div>
-                  <span>Steps · daily average</span>
-                  <strong>
-                    {m.stats?.stepsAverage == null
-                      ? '—'
-                      : m.stats.stepsAverage.toLocaleString()}
-                  </strong>
-                  <small>
-                    {m.stats?.stepsDays
-                      ? `${m.stats.stepsDays} of the last 7 days logged${m.nutrition?.steps ? ` · goal ${m.nutrition.steps.toLocaleString()}` : ''}`
-                      : 'No steps logged in the last 7 days'}
-                  </small>
-                </div>
                 <button
                   type="button"
                   className="co-weight-metric"
@@ -1214,6 +1203,20 @@ function ClientDetail({
                         act({
                           action: 'nutrition',
                           nutrition,
+                          revision: m.revision,
+                        })
+                    : undefined
+                }
+              />
+              <Steps
+                member={m}
+                busy={busy}
+                onSave={
+                  isCoach
+                    ? (stepGoal) =>
+                        act({
+                          action: 'step-goal',
+                          stepGoal,
                           revision: m.revision,
                         })
                     : undefined

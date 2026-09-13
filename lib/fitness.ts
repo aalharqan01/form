@@ -47,7 +47,12 @@ export type Routine = {
 };
 export type WeighIn = { date: string; kg: number; note: string };
 /** Steps walked on one day, logged by hand or read from the phone. */
-export type StepEntry = { date: string; count: number };
+export type StepEntry = {
+  date: string;
+  count: number;
+  /** Where the count came from; absent means typed in by hand. */
+  source?: 'manual' | 'health';
+};
 export type FitnessData = {
   version: 1;
   weights: WeighIn[];
@@ -417,7 +422,8 @@ export function validateData(d: unknown): d is FitnessData {
             validDate(e.date) &&
             Number.isInteger(e.count) &&
             e.count >= 0 &&
-            e.count <= 200000,
+            e.count <= 200000 &&
+            (e.source === undefined || ['manual', 'health'].includes(e.source)),
         ) &&
         new Set(v.steps.map((e) => e.date)).size === v.steps.length)) &&
     (v.stepGoal === undefined ||

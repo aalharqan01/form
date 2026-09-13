@@ -52,11 +52,11 @@ export function seedStatements(plan: SeedPlan): string[] {
     status: 'active' | 'requested',
   ) =>
     `INSERT OR IGNORE INTO coaching_memberships
-(id,coach_id,trainee_id,email,name,status,token_hash,expires_at,offer,intake,program,nutrition,revision,created_at,accepted_at,open_key)
+(id,coach_id,trainee_id,email,name,status,token_hash,expires_at,offer,intake,program,nutrition,step_goal,revision,created_at,accepted_at,open_key)
 VALUES (${quote(id)},${quote(plan.coach.id)},${traineeId === null ? 'NULL' : quote(traineeId)},${quote(email)},${quote(name)},${quote(status)},${quote(`${prefix}-fixture-${id}`)},
 '2099-01-01T00:00:00.000Z',${json(profile.offers[0])},
 ${json({ ...INTAKE, goals: status === 'active' ? 'Build strength' : 'Lose weight and feel stronger' })},
-${status === 'active' ? json(program) : "'null'"},'null',0,${quote(stamp)},${status === 'active' ? quote(stamp) : 'NULL'},${quote(`${plan.coach.id}:${traineeId ?? email}`)});
+${status === 'active' ? json(program) : "'null'"},'null',${status === 'active' ? 8500 : 'NULL'},0,${quote(stamp)},${status === 'active' ? quote(stamp) : 'NULL'},${quote(`${plan.coach.id}:${traineeId ?? email}`)});
 ${refresh ? `UPDATE coaching_memberships SET name=${quote(name)}, program=${status === 'active' ? json(program) : "'null'"}, revision=revision+1 WHERE id=${quote(id)};` : `UPDATE coaching_memberships SET program=${json(program)}, revision=revision+1 WHERE id=${quote(id)} AND status='active' AND program='null';`}`;
   const lines = [
     `INSERT OR IGNORE INTO coach_profiles (user_id,profile,revision,updated_at) VALUES (${quote(plan.coach.id)},${json(profile)},0,${quote(stamp)});`,

@@ -43,6 +43,13 @@
       "when": 1789212864258,
       "tag": "0005_coaching_media",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1789278196128,
+      "tag": "0006_step_goal",
+      "breakpoints": true
     }
   ]
 }

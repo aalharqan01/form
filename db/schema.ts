@@ -33,6 +33,8 @@ export const coachingMemberships = sqliteTable('coaching_memberships', {
   intake: text('intake').notNull().default('{}'),
   program: text('program').notNull().default('null'),
   nutrition: text('nutrition').notNull().default('null'),
+  /** Daily step goal agreed for this membership; coach or trainee can set it. */
+  stepGoal: integer('step_goal'),
   revision: integer('revision').notNull().default(0),
   coachReadAt: text('coach_read_at').notNull().default(''),
   traineeReadAt: text('trainee_read_at').notNull().default(''),

@@ -25,8 +25,8 @@ export default function Nutrition({
     <section className="co-card nutrition-card">
       <div className="co-section-line">
         <div>
-          <p className="co-overline">DAILY TARGETS</p>
-          <h2>Nutrition & steps</h2>
+          <p className="co-overline">DAILY NUTRITION</p>
+          <h2>Calorie & macro targets</h2>
         </div>
         {onSave && (
           <Button className="secondary" onClick={() => setEditing(true)}>
@@ -42,9 +42,6 @@ export default function Nutrition({
               [targets.protein, 'g', 'Protein'],
               [targets.carbs, 'g', 'Carbs'],
               [targets.fat, 'g', 'Fat'],
-              ...(targets.steps
-                ? [[targets.steps.toLocaleString(), 'steps', 'Steps']]
-                : []),
             ].map(([v, u, l]) => (
               <div key={l}>
                 <span>{l}</span>
@@ -66,22 +63,19 @@ export default function Nutrition({
       )}
       <Dialog open={editing} onOpenChange={setEditing}>
         <DialogContent className="form-dialog co-dialog">
-          <DialogTitle>Daily targets</DialogTitle>
+          <DialogTitle>Daily nutrition targets</DialogTitle>
           <DialogDescription>
-            Calories, macros and a step goal your trainee sees each day.
+            These are the targets your trainee will see each day.
           </DialogDescription>
           <form
             onSubmit={async (e) => {
               e.preventDefault();
               const data = new FormData(e.currentTarget);
-              const rawSteps = data.get('steps');
-              const steps = typeof rawSteps === 'string' ? rawSteps.trim() : '';
               const value = {
                 calories: Number(data.get('calories')),
                 protein: Number(data.get('protein')),
                 carbs: Number(data.get('carbs')),
                 fat: Number(data.get('fat')),
-                ...(steps ? { steps: Number(steps) } : {}),
                 notes: (data.get('notes') as string) ?? '',
               };
               if (await onSave?.(value)) {
@@ -114,18 +108,6 @@ export default function Nutrition({
                 </label>
               ))}
             </div>
-            <label>
-              Daily steps
-              <Input
-                name="steps"
-                type="number"
-                min={500}
-                max={100000}
-                step={100}
-                placeholder="Leave empty for no step goal"
-                defaultValue={targets?.steps}
-              />
-            </label>
             <label>
               Coach notes
               <Textarea

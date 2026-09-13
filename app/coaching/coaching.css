@@ -2,7 +2,7 @@
   min-height: 100dvh;
   background: var(--background, #f6f7f4);
   color: var(--foreground, #243b2b);
-  font-family: var(--font-geist-sans), sans-serif;
+  font-family: var(--font-sans-family), sans-serif;
 }
 .co-sidebar {
   width: 238px;
@@ -1247,9 +1247,42 @@ html[data-theme='dark'] .co-card {
   gap: 16px;
   margin-top: 20px;
 }
-/* Client overview: four tiles when steps are shown */
-.co-metrics:has(> :nth-child(4)) {
-  grid-template-columns: 1fr 1.1fr 1fr 1.2fr;
+/* Daily steps card */
+.steps-card {
+  margin-bottom: 24px;
+}
+.steps-values {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 16px;
+  margin-top: 20px;
+}
+.steps-values span,
+.steps-values strong {
+  display: block;
+}
+.steps-values span {
+  font-size: 14px;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.steps-values strong {
+  font-size: 26px;
+  font-weight: 500;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+}
+.steps-values small {
+  font-size: 13px;
+  color: var(--muted);
+  font-weight: 400;
+  letter-spacing: 0;
+}
+.steps-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
 }
 .nutrition-values span,
 .nutrition-values strong {

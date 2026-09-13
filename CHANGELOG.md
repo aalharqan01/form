@@ -2,6 +2,19 @@
 
 Newest first. Each entry says what changed, how to run it, and what is still open, so a fresh `git pull` is enough to get going.
 
+## 13 September 2026 — shared step goal, Outfit typeface, new tab bar
+
+### What changed
+
+- **Step goal is its own thing.** It left the nutrition targets. Each active membership carries one daily step goal (`step_goal`, migration 0006) that the coach sets from a "Daily steps" card on the client overview, or the trainee sets from the Steps card in the app; each side sees the other's change. Independent trainees keep a personal goal in their log. The coach overview tile is gone; the card shows goal, 7-day average and days logged, on the website and under My coach in the app.
+- **Typeface.** The app and website now use Outfit (geometric, rounded) to sit with the wordmark; Geist Mono stays for code. Removed the Geist font package from the app.
+- **Tab bar.** Train is a raised green circle in the centre of the bar with a flexed-arm icon; the other tabs sit either side. A brand-green ring marks it selected, and a dot shows a workout in progress.
+- Step entries accept an optional `source` (`manual` or `health`) so counts from Apple Health / Health Connect can be tagged later.
+
+### How to run
+
+`npm run dev:roles` applies migration 0006. Run `npm --prefix mobile ci` after pulling for the font change.
+
 ## 13 September 2026 — FORM wordmark, daily steps
 
 ### What changed
