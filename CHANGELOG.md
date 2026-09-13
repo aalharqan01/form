@@ -12,7 +12,7 @@ Newest first. Each entry says what changed, how to run it, and what is still ope
 - Remaining English on the assigned session card (exercise and set counts, rest), the Weight tab (rate per week, latest weigh-in) and the Preferences sync status is translated.
 - **Button labels sit where they should in Arabic.** On the web the start/end padding of buttons and sheets was resolved as if the app were left-to-right, which pushed labels against the far edge; the app now tells react-native-web its direction. Signed numbers in the weekly averages keep the sign in front.
 - **Goal milestones, weekly averages, total change, estimate explanations,** the "no plans yet" starter block and the week-strip day letters are translated.
-- **Coach site on a phone:** the appearance and language controls now sit under the section strip, so a coach can switch to Arabic from a phone browser too.
+- **Coach site preferences** (appearance and language) now live behind one Preferences button: at the bottom of the sidebar on desktop and as a gear at the end of the section strip on phones. The panel scales in from the button and closes on outside click or Escape.
 
 ## 13 September 2026 — Arabic, phase 2; developers are no longer their own client
 

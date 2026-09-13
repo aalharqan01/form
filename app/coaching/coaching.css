@@ -63,7 +63,69 @@
 .co-sidebar-bottom {
   margin-top: auto;
   display: grid;
-  gap: 22px;
+  gap: 14px;
+}
+.co-prefs {
+  position: relative;
+}
+.co-prefs-button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 13px 15px;
+  border: 0;
+  border-radius: 14px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 14px;
+  text-align: start;
+  transition:
+    background-color 160ms ease,
+    color 160ms ease,
+    transform 160ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+.co-prefs-button:hover,
+.co-prefs-button[aria-expanded='true'] {
+  background: var(--surface-soft, #eff3ed);
+  color: var(--foreground);
+}
+.co-prefs-button:active {
+  transform: scale(0.97);
+}
+.co-prefs-panel {
+  position: absolute;
+  inset-inline-start: 0;
+  bottom: calc(100% + 10px);
+  width: 232px;
+  padding: 18px 18px 4px;
+  border-radius: 18px;
+  background: var(--surface, #fff);
+  border: 1px solid var(--line);
+  box-shadow: 0 18px 48px #18332114;
+  transform-origin: bottom left;
+  transition:
+    opacity 180ms cubic-bezier(0.23, 1, 0.32, 1),
+    transform 180ms cubic-bezier(0.23, 1, 0.32, 1);
+  z-index: 20;
+}
+:root[dir='rtl'] .co-prefs-panel {
+  transform-origin: bottom right;
+}
+.co-prefs-panel:not([data-open]) {
+  opacity: 0;
+  transform: scale(0.96) translateY(4px);
+}
+.co-prefs-panel[data-open] {
+  opacity: 1;
+  transform: none;
+  @starting-style {
+    opacity: 0;
+    transform: scale(0.96) translateY(4px);
+  }
+}
+.co-prefs-panel .theme-control > div {
+  margin-bottom: 14px;
 }
 .co-pilot {
   font-size: 12px;
@@ -845,29 +907,40 @@ html[data-theme='dark'] .co-card {
     display: none;
   }
   /* Appearance and language stay reachable on phones as one compact row. */
-  .co-sidebar-bottom {
+  /* One gear at the end of the strip; the panel drops below it. */
+  .co-sidebar {
     display: flex;
-    gap: 8px;
-    margin-top: 10px;
-    padding-top: 10px;
-    border-top: 1px solid var(--line);
+    flex-direction: row;
+    align-items: center;
   }
-  .co-sidebar-bottom .theme-control {
+  .co-sidebar nav {
     flex: 1;
     min-width: 0;
   }
-  .co-sidebar-bottom .theme-control > span {
+  .co-sidebar-bottom {
+    display: block;
+    margin: 0 0 0 6px;
+  }
+  .co-prefs-button {
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    justify-content: center;
+    border-radius: 12px;
+  }
+  .co-prefs-button > span {
     display: none;
   }
-  .co-sidebar-bottom .theme-control > div {
-    margin-bottom: 0;
-    padding: 3px;
-    gap: 3px;
+  .co-prefs-panel {
+    inset-inline-start: auto;
+    inset-inline-end: 0;
+    bottom: auto;
+    top: calc(100% + 10px);
+    width: 240px;
+    transform-origin: top right;
   }
-  .co-sidebar-bottom .theme-control button {
-    padding: 8px 4px;
-    font-size: 12px;
-    white-space: nowrap;
+  :root[dir='rtl'] .co-prefs-panel {
+    transform-origin: top left;
   }
   .co-sidebar nav {
     display: flex;
