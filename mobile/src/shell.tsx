@@ -6,7 +6,6 @@ import {
   CircleAlert,
   CloudCheck,
   Dumbbell,
-  History,
   Settings2,
   Timer,
   Users,
@@ -14,6 +13,7 @@ import {
   Pause,
   Play,
   BicepsFlexed,
+  CircleUserRound,
 } from 'lucide-react-native';
 import type { Rest } from './use-rest';
 import { useTheme } from './theme';
@@ -100,7 +100,7 @@ export function Topbar({
 const TABS: { key: Tab; label: string; Icon: typeof Dumbbell }[] = [
   { key: 'train', label: 'Train', Icon: BicepsFlexed },
   { key: 'weight', label: 'Weight', Icon: ChartNoAxesCombined },
-  { key: 'history', label: 'History', Icon: History },
+  { key: 'you', label: 'You', Icon: CircleUserRound },
   { key: 'coach', label: 'My coach', Icon: Users },
 ];
 export function navInset(bottom: number) {

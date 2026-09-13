@@ -9,7 +9,7 @@ test('trainee navigation, independent sets and rest timer survive reopening and 
   const clean = await fixture(request);
   try {
     await page.goto('http://127.0.0.1:8081/');
-    for (const name of ['Train', 'Weight', 'History', 'My coach'])
+    for (const name of ['Train', 'Weight', 'You', 'My coach'])
       await expect(page.getByRole('tab', { name, exact: true })).toBeVisible();
     await page
       .getByRole('button', { name: 'Start workout', exact: true })
@@ -297,7 +297,7 @@ test('trainee finishes early with completed work and skipped sets visible to the
     expect(
       workout.exercises[0].sets.filter((v: { done: boolean }) => !v.done),
     ).toHaveLength(skipped);
-    await page.getByRole('tab', { name: 'History', exact: true }).click();
+    await page.getByRole('tab', { name: 'You', exact: true }).click();
     await expect(
       page
         .getByRole('button', { name: /^View Technique practice/ })

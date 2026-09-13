@@ -375,3 +375,30 @@ test('daily steps validate, merge by date, and average over logged days only', a
   assert.deepEqual(stepsAverage(ok.steps, 1, now), { days: 1, average: 4000 });
   assert.deepEqual(stepsAverage([], 7, now), { days: 0, average: null });
 });
+
+test('weekly session counts and streaks use local Monday weeks', async () => {
+  const { weeklySessionCounts, weeklyStreak, startOfWeek } =
+    await import('../lib/fitness.ts');
+  const now = new Date(2026, 8, 13, 12); // Sunday 13 Sep 2026
+  const monday = startOfWeek(now);
+  assert.equal(monday.getDay(), 1);
+  assert.equal(monday.getDate(), 7);
+  const at = (daysAgo, hour = 10) => {
+    const d = new Date(now);
+    d.setDate(d.getDate() - daysAgo);
+    d.setHours(hour, 0, 0, 0);
+    return { startedAt: d.toISOString() };
+  };
+  const workouts = [at(0), at(2), at(8), at(16), at(30)];
+  const counts = weeklySessionCounts(workouts, 4, now);
+  assert.deepEqual(
+    counts.map((c) => c.count),
+    [0, 1, 1, 2],
+  );
+  assert.equal(counts.at(-1).week, '2026-09-07');
+  assert.equal(weeklyStreak(workouts, now), 3);
+  // A quiet current week keeps last week's streak alive.
+  assert.equal(weeklyStreak([at(8), at(16)], now), 2);
+  assert.equal(weeklyStreak([], now), 0);
+  assert.equal(weeklyStreak([at(30)], now), 0);
+});

@@ -9,6 +9,7 @@ import {
   Timer,
   Bookmark,
 } from 'lucide-react';
+import { ALL_EXERCISES, EQUIPMENT_OPTIONS } from '@/lib/exercises';
 import ExerciseThumbnail, { ExerciseCredits } from './exercise-thumbnail';
 import ExerciseVideo from './exercise-video';
 import { Button } from '@/components/ui/button';
@@ -25,7 +26,6 @@ import {
   type Routine,
   type Workout,
   type LiftSet,
-  EXERCISES,
   id,
   volume,
   completedSets,
@@ -102,7 +102,7 @@ export function ExercisePicker({
   const [query, setQuery] = useState(''),
     [muscle, setMuscle] = useState('All'),
     [equipment, setEquipment] = useState('All');
-  const list = EXERCISES.filter(
+  const list = ALL_EXERCISES.filter(
     ([n, m, eq]) =>
       `${n} ${m} ${eq}`.toLowerCase().includes(query.trim().toLowerCase()) &&
       (muscle === 'All' || m === muscle) &&
@@ -118,8 +118,8 @@ export function ExercisePicker({
       <DialogContent className="form-dialog picker-dialog">
         <DialogTitle>Add exercise</DialogTitle>
         <DialogDescription>
-          {EXERCISES.length} exercises. Filter by muscle and equipment, or add
-          your own.
+          {ALL_EXERCISES.length} exercises. Filter by muscle and equipment, or
+          add your own.
         </DialogDescription>
         <div className="search-input">
           <Search size={18} />
@@ -158,7 +158,7 @@ export function ExercisePicker({
             value={equipment}
             onChange={(e) => setEquipment(e.target.value)}
           >
-            {['All', ...new Set(EXERCISES.map((e) => e[2]))].map((e) => (
+            {['All', ...EQUIPMENT_OPTIONS].map((e) => (
               <option key={e} value={e}>
                 {e === 'All' ? 'All equipment' : e}
               </option>
@@ -195,7 +195,7 @@ export function ExercisePicker({
             </button>
           ))}
           {query.trim() &&
-            !EXERCISES.some(
+            !ALL_EXERCISES.some(
               ([n]) => n.toLowerCase() === query.trim().toLowerCase(),
             ) && (
               <button

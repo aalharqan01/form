@@ -1,8 +1,10 @@
 import { Dumbbell } from 'lucide-react';
 import imagePaths from '@/lib/exercise-images.json';
+import { exerciseFrames, EXERCISE_SOURCE } from '@/lib/exercises';
 /* oxlint-disable nextjs/no-img-element */
 export default function ExerciseThumbnail({ name }: { name: string }) {
-  const source = (imagePaths as Record<string, string>)[name];
+  const source =
+    (imagePaths as Record<string, string>)[name] ?? exerciseFrames(name)[0];
   return (
     <span
       className={`exercise-thumbnail ${source ? 'has-image' : ''}`}
@@ -26,7 +28,11 @@ export default function ExerciseThumbnail({ name }: { name: string }) {
 export function ExerciseCredits() {
   return (
     <small className="exercise-credits">
-      Illustrations:{' '}
+      Exercise data and photos:{' '}
+      <a href={EXERCISE_SOURCE.url} target="_blank" rel="noreferrer">
+        {EXERCISE_SOURCE.name}
+      </a>{' '}
+      (public domain) · Illustrations:{' '}
       <a
         href="https://github.com/everkinetic/data"
         target="_blank"
