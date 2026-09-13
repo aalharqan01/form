@@ -29,6 +29,7 @@ import {
   TextButton,
 } from '../ui';
 import { NutritionCard, ProgramNote, SessionCard } from './assigned';
+import { StepGoalCard } from './steps';
 import { ConversationScreen } from './conversation';
 import type { Act } from './shared';
 
@@ -343,19 +344,6 @@ export function CoachScreen({
               suffix={`/${m.stats?.due ?? 0}`}
               small="Completed · last 7 calendar days (UTC)"
             />
-            <Metric
-              label="Steps · daily average"
-              value={
-                m.stats?.stepsAverage == null
-                  ? '—'
-                  : m.stats.stepsAverage.toLocaleString()
-              }
-              small={
-                m.stats?.stepsDays
-                  ? `${m.stats.stepsDays} of the last 7 days logged${m.nutrition?.steps ? ` · goal ${m.nutrition.steps.toLocaleString()}` : ''}`
-                  : 'No steps logged in the last 7 days'
-              }
-            />
             <View
               style={{
                 minWidth: '100%',
@@ -398,6 +386,7 @@ export function CoachScreen({
             </View>
           </View>
           <NutritionCard targets={m.nutrition} />
+          <StepGoalCard member={m} />
           <Card style={{ marginTop: 14 }}>
             <View
               style={{

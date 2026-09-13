@@ -50,9 +50,9 @@ export function NutritionCard({
   return (
     <Card style={{ marginTop: 14 }}>
       <Eyebrow size={12} color={theme.muted} style={{ marginBottom: 12 }}>
-        DAILY TARGETS
+        DAILY NUTRITION
       </Eyebrow>
-      <H2 size={22}>Nutrition & steps</H2>
+      <H2 size={22}>Calorie & macro targets</H2>
       {targets ? (
         <>
           <View
@@ -69,10 +69,7 @@ export function NutritionCard({
                 [targets.protein, 'g', 'Protein'],
                 [targets.carbs, 'g', 'Carbs'],
                 [targets.fat, 'g', 'Fat'],
-                ...(targets.steps
-                  ? [[targets.steps.toLocaleString(), 'steps', 'Steps']]
-                  : []),
-              ] as [string | number, string, string][]
+              ] as const
             ).map(([value, unit, label]) => (
               <View key={label} style={{ minWidth: '40%', flex: 1 }}>
                 <Body size={13}>{label}</Body>
@@ -90,7 +87,7 @@ export function NutritionCard({
         </>
       ) : (
         <Body size={14} style={{ marginTop: 10 }}>
-          Your coach hasn’t set daily targets yet.
+          Your coach hasn’t set nutrition targets yet.
         </Body>
       )}
     </Card>

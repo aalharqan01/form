@@ -6,6 +6,7 @@ import {
   isNutrition,
   isProgram,
   isIntake,
+  isStepGoal,
   OCCUPYING_STATUSES,
   isPhotoView,
   photoViewLabel,
@@ -29,6 +30,7 @@ type Row = {
   intake: string;
   program: string;
   nutrition: string;
+  step_goal: number | null;
   revision: number;
   coach_read_at: string;
   trainee_read_at: string;
@@ -74,6 +76,7 @@ function publicMember(r: Row, coachName = ''): Member {
     intake: JSON.parse(r.intake) as Intake,
     program: JSON.parse(r.program) as Program | null,
     nutrition: JSON.parse(r.nutrition ?? 'null'),
+    stepGoal: r.step_goal ?? null,
     revision: r.revision,
     created_at: r.created_at,
     accepted_at: r.accepted_at,
@@ -588,6 +591,27 @@ export async function handleCoaching(
       ensure(
         result.meta.changes,
         'Targets changed elsewhere. Reload before saving.',
+        409,
+      );
+      return json({ ok: true });
+    }
+    if (b.action === 'step-goal') {
+      // Either side of an active membership can set the daily step goal; the
+      // other side sees the change on their next load.
+      ensure(
+        b.stepGoal === null || isStepGoal(b.stepGoal),
+        'Enter a daily step goal between 500 and 100,000, or clear it.',
+      );
+      ensure(Number.isInteger(b.revision), 'Reload this client.', 409);
+      const result = await db
+        .prepare(
+          "UPDATE coaching_memberships SET step_goal=?,revision=revision+1 WHERE id=? AND status='active' AND revision=?",
+        )
+        .bind(b.stepGoal, r.id, b.revision)
+        .run();
+      ensure(
+        result.meta.changes,
+        'The step goal changed elsewhere. Reload before saving.',
         409,
       );
       return json({ ok: true });

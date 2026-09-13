@@ -1,0 +1,1 @@
+ALTER TABLE `coaching_memberships` ADD `step_goal` integer;

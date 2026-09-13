@@ -8,12 +8,16 @@ import {
   today,
   type FitnessData,
 } from '../../../lib/fitness';
+import { request } from '../api';
+import type { Member } from '../../../lib/coaching';
 import type { Training } from '../use-training';
 import { useTheme } from '../theme';
 import {
   Body,
   Card,
+  Eyebrow,
   Field,
+  H2,
   Input,
   PrimaryButton,
   SectionLabel,
@@ -35,8 +39,11 @@ export function StepsCard({
 }) {
   const { theme } = useTheme();
   const { data, update } = training;
-  const coachGoal = training.detail?.member.nutrition?.steps ?? null;
-  const goal = coachGoal ?? data.stepGoal ?? null;
+  // A coached trainee shares one goal with the coach (either can change it);
+  // an independent trainee keeps a personal goal in the log.
+  const member = training.detail?.member ?? null;
+  const shared = member?.status === 'active' ? member : null;
+  const goal = shared ? shared.stepGoal : (data.stepGoal ?? null);
   const date = today();
   const count = stepsOn(data, date);
   const week = stepsAverage(data.steps);
@@ -67,6 +74,17 @@ export function StepsCard({
       alive = false;
     };
   }, [modal]);
+  const saveGoal = async (value: number | null) => {
+    if (shared) {
+      await request('/api/coaching', {
+        action: 'step-goal',
+        memberId: shared.id,
+        stepGoal: value,
+        revision: shared.revision,
+      });
+      await training.refreshCoach();
+    } else await update((d) => ({ ...d, stepGoal: value }));
+  };
   const open = (kind: 'log' | 'goal') => {
     setFormError('');
     setWhen(date);
@@ -88,7 +106,10 @@ export function StepsCard({
         setFormError('Enter a daily goal between 500 and 100,000 steps.');
         return;
       }
-      act(() => update((d) => ({ ...d, stepGoal: n })), 'Step goal saved.');
+      act(
+        () => saveGoal(n),
+        shared ? 'Step goal saved. Your coach can see it.' : 'Step goal saved.',
+      );
       setModal(null);
       return;
     }
@@ -188,17 +209,11 @@ export function StepsCard({
           onPress={() => open('log')}
           style={{ flex: 1, justifyContent: 'space-between', minHeight: 38 }}
         />
-        {coachGoal ? (
-          <Body size={12}>
-            Goal from {training.detail?.member.coachName ?? 'your coach'}
-          </Body>
-        ) : (
-          <TextButton
-            label={goal ? 'Edit goal' : 'Set goal'}
-            size={13}
-            onPress={() => open('goal')}
-          />
-        )}
+        <TextButton
+          label={goal ? 'Edit goal' : 'Set goal'}
+          size={13}
+          onPress={() => open('goal')}
+        />
         <View style={{ pointerEvents: 'none' }}>
           <ArrowUpRight size={18} color={theme.textButton} />
         </View>
@@ -209,7 +224,9 @@ export function StepsCard({
         title={modal === 'goal' ? 'Daily step goal' : 'Log steps'}
         description={
           modal === 'goal'
-            ? 'A target for every day. Your coach’s target replaces it while you are coached.'
+            ? shared
+              ? `A target for every day, shared with ${shared.coachName}. Either of you can change it.`
+              : 'A target for every day.'
             : 'Enter the steps your phone or watch counted for the day.'
         }
       >
@@ -261,17 +278,78 @@ export function StepsCard({
             disabled={busy}
             onPress={save}
           />
-          {modal === 'goal' && data.stepGoal != null && (
+          {modal === 'goal' && goal != null && (
             <TextButton
               label="Remove goal"
               onPress={() => {
-                act(() => update((d) => ({ ...d, stepGoal: null })));
+                act(() => saveGoal(null));
                 setModal(null);
               }}
             />
           )}
         </View>
       </Sheet>
+    </Card>
+  );
+}
+
+/** The shared step goal and last week's average, as shown under My coach. */
+export function StepGoalCard({
+  member,
+}: {
+  member: Pick<Member, 'stepGoal' | 'stats'>;
+}) {
+  const { theme } = useTheme();
+  const average = member.stats?.stepsAverage ?? null;
+  const days = member.stats?.stepsDays ?? 0;
+  return (
+    <Card style={{ marginTop: 14 }}>
+      <Eyebrow size={12} color={theme.muted} style={{ marginBottom: 12 }}>
+        DAILY STEPS
+      </Eyebrow>
+      <H2 size={22}>Step goal</H2>
+      <View
+        style={{
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          gap: 16,
+          marginTop: 20,
+        }}
+      >
+        {(
+          [
+            [
+              member.stepGoal ? member.stepGoal.toLocaleString() : '—',
+              member.stepGoal ? 'steps' : '',
+              'Goal per day',
+            ],
+            [
+              average === null ? '—' : average.toLocaleString(),
+              average === null ? '' : 'steps',
+              'Average · 7 days',
+            ],
+            [String(days), 'of 7', 'Days logged'],
+          ] as const
+        ).map(([value, unit, label]) => (
+          <View key={label} style={{ minWidth: '40%', flex: 1 }}>
+            <Body size={13}>{label}</Body>
+            <T weight={500} size={26} line={30} tracking={-0.8}>
+              {value}
+              {unit ? (
+                <T size={14} color={theme.muted}>
+                  {' '}
+                  {unit}
+                </T>
+              ) : null}
+            </T>
+          </View>
+        ))}
+      </View>
+      <Body size={13} style={{ marginTop: 14 }}>
+        {member.stepGoal
+          ? 'Change the goal from the Steps card on the Train tab; your coach sees the change.'
+          : 'Set a goal from the Steps card on the Train tab, or ask your coach.'}
+      </Body>
     </Card>
   );
 }

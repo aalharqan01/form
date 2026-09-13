@@ -91,10 +91,11 @@ export type NutritionTargets = {
   protein: number;
   carbs: number;
   fat: number;
-  /** Daily step target set by the coach, if any. */
-  steps?: number;
   notes: string;
 };
+/** A daily step goal agreed for a membership; coach or trainee can set it. */
+export const isStepGoal = (v: unknown): v is number =>
+  Number.isInteger(v) && (v as number) >= 500 && (v as number) <= 100000;
 export function isNutrition(v: unknown): v is NutritionTargets {
   const n = v as NutritionTargets;
   return (
@@ -105,13 +106,13 @@ export function isNutrition(v: unknown): v is NutritionTargets {
     [n.protein, n.carbs, n.fat].every(
       (x) => Number.isFinite(x) && x >= 0 && x <= 1500,
     ) &&
-    (n.steps === undefined ||
-      (Number.isInteger(n.steps) && n.steps >= 500 && n.steps <= 100000)) &&
     text(n.notes, 2000, false)
   );
 }
 export type Member = {
   nutrition?: NutritionTargets | null;
+  /** Daily step goal for this membership, set by the coach or the trainee. */
+  stepGoal: number | null;
   id: string;
   coach_id: string;
   trainee_id: string | null;

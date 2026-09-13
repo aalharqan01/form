@@ -118,7 +118,7 @@ Keep deployment secrets in the hosting platform or ignored local environment fil
 
 ## Brand
 
-The wordmark masters live in `public/brand/` (`form-wordmark.svg` on light, `form-wordmark-dark.svg` on dark). In code use `Wordmark` from `app/wordmark.tsx` (web) or `mobile/src/wordmark.tsx` (app); it takes a `height` and follows the current text colour. Brand green is `#70c37b`, ink `#081a0d`, app green `#245b3e`, page background `#f6f7f4`.
+The wordmark masters live in `public/brand/` (`form-wordmark.svg` on light, `form-wordmark-dark.svg` on dark). In code use `Wordmark` from `app/wordmark.tsx` (web) or `mobile/src/wordmark.tsx` (app); it takes a `height` and follows the current text colour. The typeface is Outfit on both surfaces. Brand green is `#70c37b`, ink `#081a0d`, app green `#245b3e`, page background `#f6f7f4`.
 
 ## Project map
 

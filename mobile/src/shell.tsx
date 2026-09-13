@@ -13,6 +13,7 @@ import {
   X,
   Pause,
   Play,
+  BicepsFlexed,
 } from 'lucide-react-native';
 import type { Rest } from './use-rest';
 import { useTheme } from './theme';
@@ -97,7 +98,7 @@ export function Topbar({
 }
 
 const TABS: { key: Tab; label: string; Icon: typeof Dumbbell }[] = [
-  { key: 'train', label: 'Train', Icon: Dumbbell },
+  { key: 'train', label: 'Train', Icon: BicepsFlexed },
   { key: 'weight', label: 'Weight', Icon: ChartNoAxesCombined },
   { key: 'history', label: 'History', Icon: History },
   { key: 'coach', label: 'My coach', Icon: Users },
@@ -118,7 +119,43 @@ export function BottomNav({
 }) {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
-  const tabs = coached ? TABS : TABS.filter((item) => item.key !== 'coach');
+  // Train sits in the middle as a raised circle; the other tabs split around it.
+  const others = TABS.filter(
+    (item) => item.key !== 'train' && (coached || item.key !== 'coach'),
+  );
+  const left = others.slice(0, Math.ceil(others.length / 2));
+  const right = others.slice(left.length);
+  const train = TABS[0];
+  const trainSelected = tab === 'train';
+  const renderTab = ({ key, label, Icon }: (typeof TABS)[number]) => {
+    const selected = tab === key;
+    return (
+      <Pressable
+        key={key}
+        accessibilityRole="tab"
+        accessibilityLabel={label}
+        accessibilityState={{ selected }}
+        onPress={() => onChange(key)}
+        style={{
+          flex: 1,
+          alignItems: 'center',
+          gap: 5,
+          paddingVertical: 10,
+          borderRadius: 19,
+          backgroundColor: selected ? theme.navSelected : 'transparent',
+        }}
+      >
+        <Icon
+          size={20}
+          strokeWidth={1.5}
+          color={selected ? theme.green : theme.navText}
+        />
+        <T size={11} line={13} color={selected ? theme.green : theme.navText}>
+          {label}
+        </T>
+      </Pressable>
+    );
+  };
   return (
     <View
       accessibilityRole="tablist"
@@ -129,6 +166,7 @@ export function BottomNav({
         right: 18,
         bottom: navInset(insets.bottom),
         flexDirection: 'row',
+        alignItems: 'center',
         padding: 6,
         borderRadius: 24,
         backgroundColor: theme.navBackground,
@@ -137,54 +175,51 @@ export function BottomNav({
         boxShadow: theme.scheme === 'dark' ? undefined : '0 8px 40px #23382016',
       }}
     >
-      {tabs.map(({ key, label, Icon }) => {
-        const selected = tab === key;
-        return (
-          <Pressable
-            key={key}
-            accessibilityRole="tab"
-            accessibilityLabel={label}
-            accessibilityState={{ selected }}
-            onPress={() => onChange(key)}
+      <View style={{ flex: 1, flexDirection: 'row' }}>
+        {left.map(renderTab)}
+      </View>
+      <Pressable
+        accessibilityRole="tab"
+        accessibilityLabel="Train"
+        accessibilityHint={activeWorkout ? 'Workout in progress' : undefined}
+        accessibilityState={{ selected: trainSelected }}
+        onPress={() => onChange('train')}
+        style={({ pressed }) => ({
+          width: 62,
+          height: 62,
+          marginTop: -22,
+          marginHorizontal: 8,
+          borderRadius: 31,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: theme.green,
+          borderWidth: 4,
+          borderColor: trainSelected ? '#70c37b' : theme.navBackground,
+          transform: [{ scale: pressed ? 0.94 : 1 }],
+          boxShadow:
+            theme.scheme === 'dark' ? undefined : '0 10px 24px #24583d40',
+        })}
+      >
+        <train.Icon size={26} strokeWidth={1.7} color={theme.primaryText} />
+        {activeWorkout && (
+          <View
             style={{
-              flex: 1,
-              alignItems: 'center',
-              gap: 5,
-              paddingVertical: 10,
-              borderRadius: 19,
-              backgroundColor: selected ? theme.navSelected : 'transparent',
+              position: 'absolute',
+              top: 6,
+              right: 6,
+              width: 9,
+              height: 9,
+              borderRadius: 5,
+              backgroundColor: '#70c37b',
+              borderWidth: 2,
+              borderColor: theme.navBackground,
             }}
-          >
-            <View>
-              <Icon
-                size={20}
-                strokeWidth={1.5}
-                color={selected ? theme.green : theme.navText}
-              />
-              {key === 'train' && activeWorkout && (
-                <View
-                  style={{
-                    position: 'absolute',
-                    top: -2,
-                    right: -6,
-                    width: 6,
-                    height: 6,
-                    borderRadius: 3,
-                    backgroundColor: theme.green,
-                  }}
-                />
-              )}
-            </View>
-            <T
-              size={11}
-              line={13}
-              color={selected ? theme.green : theme.navText}
-            >
-              {label}
-            </T>
-          </Pressable>
-        );
-      })}
+          />
+        )}
+      </Pressable>
+      <View style={{ flex: 1, flexDirection: 'row' }}>
+        {right.map(renderTab)}
+      </View>
     </View>
   );
 }
