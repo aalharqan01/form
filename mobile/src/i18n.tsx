@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
@@ -20,6 +21,8 @@ import {
 import { markArabic } from './theme';
 
 const LANGUAGE_KEY = 'form-language';
+/** How long the interface fades out before the language changes. */
+export const SWITCH_OUT_MS = 150;
 function systemTags(): string[] {
   try {
     if (typeof navigator !== 'undefined' && navigator.languages?.length)
@@ -37,12 +40,15 @@ const Context = createContext<{
   rtl: boolean;
   preference: LanguagePreference;
   setPreference: (value: LanguagePreference) => void;
+  /** True for the short beat between choosing a language and the text changing. */
+  switching: boolean;
   t: Translate;
 }>({
   locale: 'en',
   rtl: false,
   preference: 'system',
   setPreference: () => {},
+  switching: false,
   t: (key, vars) => translate('en', key, vars),
 });
 
@@ -78,19 +84,42 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
       document.documentElement.dir = rtl ? 'rtl' : 'ltr';
     }
   }, [locale, rtl]);
-  const setPreference = useCallback((value: LanguagePreference) => {
-    setPreferenceState(value);
-    void AsyncStorage.setItem(LANGUAGE_KEY, value).catch(() => {});
-  }, []);
+  const [switching, setSwitching] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const setPreference = useCallback(
+    (value: LanguagePreference) => {
+      void AsyncStorage.setItem(LANGUAGE_KEY, value).catch(() => {});
+      const next = resolveLocale(value, systemTags());
+      if (next === locale) {
+        setPreferenceState(value);
+        return;
+      }
+      // Let the old language fade before the new one settles in.
+      setSwitching(true);
+      if (timer.current) clearTimeout(timer.current);
+      timer.current = setTimeout(() => {
+        setPreferenceState(value);
+        setSwitching(false);
+      }, SWITCH_OUT_MS);
+    },
+    [locale],
+  );
+  useEffect(
+    () => () => {
+      if (timer.current) clearTimeout(timer.current);
+    },
+    [],
+  );
   const value = useMemo(
     () => ({
       locale,
       rtl,
       preference,
       setPreference,
+      switching,
       t: (key: Key, vars?: Vars) => translate(locale, key, vars),
     }),
-    [locale, rtl, preference, setPreference],
+    [locale, rtl, preference, setPreference, switching],
   );
   return <Context.Provider value={value}>{children}</Context.Provider>;
 }
