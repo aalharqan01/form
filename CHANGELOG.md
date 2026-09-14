@@ -18,7 +18,7 @@ Newest first. Each entry says what changed, how to run it, and what is still ope
 - **Rest sheet** shows five presets in one row (30 s to 3 min) and the seconds field for anything else.
 - **Minimize the workout** with the chevron next to Finish (also in the floating header while scrolled) and look around the app; a green island above the tab bar shows the name, clock and sets, and taps back into the workout. It rises above the rest timer when both are showing.
 - **Removing a set** fades it and folds the row away so the rows below settle up; the × is a small soft circle at the end of the row.
-- **Sheets close with a short exit** instead of vanishing; they also rise slightly as they open. The plan editor keeps that exit too, and switching between the plan and the exercise picker inside it slides in.
+- **Sheets close with a short exit** instead of vanishing; they also rise slightly as they open. The exit plays outside the modal so a closing sheet never holds onto focus. The plan editor keeps that exit too, and switching between the plan and the exercise picker inside it slides in.
 - Full-width sheet buttons (Save workout, Save rest, Save) centre their label with the icon kept at the end.
 - **"Plans" are now "saved workouts"** everywhere in the app (English and Arabic): "Saved workouts" on the Train tab, "Create workout", "Save to my workouts". The You tab's feed of completed sessions is labelled "History" so the two never read alike.
 - **Share a saved workout** from its card: a message with one line per exercise (sets × reps, rest) and a FORM tagline goes to the phone's share sheet (WhatsApp, email and the rest); browsers without a share sheet copy it to the clipboard.
