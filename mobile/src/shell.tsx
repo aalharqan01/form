@@ -105,8 +105,10 @@ export function Topbar({
 const TABS: { key: Tab; label: Key; Icon: typeof Dumbbell }[] = [
   { key: 'train', label: 'tab.train', Icon: BicepsFlexed },
   { key: 'weight', label: 'tab.weight', Icon: ChartNoAxesCombined },
-  { key: 'you', label: 'tab.you', Icon: CircleUserRound },
+  // My coach sits beside Weight for coached trainees, so You stays at the end
+  // whether or not a coach is present.
   { key: 'coach', label: 'tab.coach', Icon: Users },
+  { key: 'you', label: 'tab.you', Icon: CircleUserRound },
 ];
 /** Sync status strings come from the training hook in English; map the known ones. */
 export const STATUS_KEYS: Record<string, Key> = {

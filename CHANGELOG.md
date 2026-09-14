@@ -25,6 +25,7 @@ Newest first. Each entry says what changed, how to run it, and what is still ope
 - **Finish sheet** buttons line up: Save, then Keep training full width, End without saving centred beneath.
 - **Plans:** sets are the only required number; reps and rest are optional (reps left blank means the trainee decides each set, rest falls back to the exercise default). The plan editor gets the same ⋯ options per exercise (superset, remove), an Arrange button with drag handles, and superset tags.
 - Set rows fade in as they are added; menu items stagger in; every control presses in.
+- Tab bar order for coached trainees is Weight, My coach, Train, You; trainees without a coach keep Weight, Train, You.
 - **Smoother animations:** quick edits no longer mark the whole app busy (only actions that take longer than 150 ms do), the clock ticks once a second instead of twice, and typed set values are kept locally so a re-render never snaps a field back mid-keystroke. The development build is still unminified; the deployed build is noticeably smoother.
 
 ## 13 September 2026 — instant language switch, Arabic text metrics, tactile controls
