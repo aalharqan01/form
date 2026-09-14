@@ -6,7 +6,7 @@ Newest first. Each entry says what changed, how to run it, and what is still ope
 
 ### What changed
 
-- **Set rows are typed, not stepped.** The +/− bars under weight and reps are gone; each set is one 48 px row with two fields you type into (they highlight green on focus), the done check, and a bordered remove button that is now easy to see and hit.
+- **Set rows are typed, not stepped.** The +/− bars under weight and reps are gone; each set is one 48 px row with two fields you type into, the done check, and a quiet remove button at the end.
 - **Warm-up sets go first.** "+ Warm-up" inserts ahead of the first working set, and working sets are numbered by their own order, so a warm-up no longer shifts set 1 to 2. Tapping the set number (which toggles working ↔ warm-up) presses in like every other button.
 - **Undoing a completed set stops its rest timer.** Before, the countdown kept running after the check was cleared.
 - **Focus / All exercises** control is sized to its labels instead of leaving empty space.
@@ -26,7 +26,7 @@ Newest first. Each entry says what changed, how to run it, and what is still ope
 - **Plans:** sets are the only required number; reps and rest are optional (reps left blank means the trainee decides each set, rest falls back to the exercise default). The plan editor gets the same ⋯ options per exercise (superset, remove), an Arrange button with drag handles, and superset tags.
 - Set rows fade in as they are added; menu items stagger in; every control presses in.
 - Tab bar order for coached trainees is Weight, My coach, Train, You; trainees without a coach keep Weight, Train, You.
-- **Smoother animations:** quick edits no longer mark the whole app busy (only actions that take longer than 150 ms do), the clock ticks once a second instead of twice, and typed set values are kept locally so a re-render never snaps a field back mid-keystroke. The development build is still unminified; the deployed build is noticeably smoother.
+- **Smoother animations:** quick edits no longer mark the whole app busy (only actions that take longer than 150 ms do) and the clock ticks once a second instead of twice. The development build is still unminified; the deployed build is noticeably smoother.
 
 ## 13 September 2026 — instant language switch, Arabic text metrics, tactile controls
 
