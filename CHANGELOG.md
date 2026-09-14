@@ -2,6 +2,12 @@
 
 Newest first. Each entry says what changed, how to run it, and what is still open, so a fresh `git pull` is enough to get going.
 
+## 14 September 2026 — removing a set feels immediate
+
+### What changed
+
+- **Removing a set** now leaves the log the instant you press × (or swipe, or hold the number); a ghost of the row folds away in 160 ms while the rest of the app already reflects the change. Before, the fold played first and the removal waited for it, which read as lag.
+
 ## 14 September 2026 — active workout card, saved workouts and sharing
 
 ### What changed
