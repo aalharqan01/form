@@ -199,6 +199,8 @@ function CheckButton({
   );
 }
 
+const AnimatedTextInput = Animated.createAnimatedComponent(TextInput);
+
 function SetField({
   value,
   label,
@@ -213,13 +215,23 @@ function SetField({
   keyboard: 'decimal-pad' | 'number-pad';
 }) {
   const { theme } = useTheme();
-  const [focused, setFocused] = useState(false);
+  // Focus is shown through an animated border rather than state: a re-render
+  // between focus and the first keystroke would reset the field's selection.
+  const focus = useRef(new Animated.Value(0)).current;
+  const setFocus = (to: number) =>
+    Animated.timing(focus, {
+      toValue: to,
+      duration: 140,
+      easing: easeOut,
+      useNativeDriver: false,
+    }).start();
   // Typed text is kept locally so a re-render mid-keystroke never snaps the
   // field back to the last saved value.
   const [draft, setDraft] = useState(value);
   useEffect(() => setDraft(value), [value]);
+  const resting = done ? '#759764' : theme.soft;
   return (
-    <TextInput
+    <AnimatedTextInput
       accessibilityLabel={label}
       keyboardType={keyboard}
       inputMode={keyboard === 'decimal-pad' ? 'decimal' : 'numeric'}
@@ -232,8 +244,8 @@ function SetField({
         setDraft(next);
         onChange(next);
       }}
-      onFocus={() => setFocused(true)}
-      onBlur={() => setFocused(false)}
+      onFocus={() => setFocus(1)}
+      onBlur={() => setFocus(0)}
       style={[
         font(500),
         {
@@ -246,7 +258,10 @@ function SetField({
           color: done ? theme.setDoneText : theme.ink,
           backgroundColor: done ? theme.setDone : theme.soft,
           borderWidth: 1.5,
-          borderColor: focused ? theme.green : done ? '#759764' : 'transparent',
+          borderColor: focus.interpolate({
+            inputRange: [0, 1],
+            outputRange: [resting, theme.green],
+          }),
           paddingHorizontal: 4,
         },
       ]}
