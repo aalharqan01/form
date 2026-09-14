@@ -46,6 +46,7 @@ for (const width of [1440, 390]) {
     page.on('pageerror', (error) => errors.push(error.message));
     try {
       await page.screenshot({
+        animations: 'disabled',
         path: info.outputPath('english-clients.png'),
         fullPage: true,
       });
@@ -66,6 +67,7 @@ for (const width of [1440, 390]) {
         expect(sidebar!.x).toBeGreaterThan(content!.x + content!.width - 1);
       }
       await page.screenshot({
+        animations: 'disabled',
         path: info.outputPath('arabic-clients.png'),
         fullPage: true,
       });
@@ -93,6 +95,7 @@ for (const width of [1440, 390]) {
         .click();
       await expect(page.getByLabel('يوم التدريب').first()).toHaveValue('1');
       await page.screenshot({
+        animations: 'disabled',
         path: info.outputPath('arabic-program.png'),
         fullPage: false,
       });
@@ -167,6 +170,7 @@ for (const width of [1440, 390]) {
       await page.keyboard.press('Escape');
       await fits(page);
       await page.screenshot({
+        animations: 'disabled',
         path: info.outputPath('english-templates.png'),
         fullPage: true,
       });
@@ -177,6 +181,7 @@ for (const width of [1440, 390]) {
       await expect(page.getByLabel('التخصصات', { exact: true })).toBeVisible();
       await fits(page);
       await page.screenshot({
+        animations: 'disabled',
         path: info.outputPath('arabic-profile.png'),
         fullPage: true,
       });
