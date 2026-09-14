@@ -1,36 +1,39 @@
+import { useI18n } from '@/app/i18n';
 import { weeklyWeights } from '@/lib/coaching';
 import { type WeighIn, dateLabel } from '@/lib/fitness';
-export function weightChange(value: number | null | undefined) {
+export function weightChange(
+  value: number | null | undefined,
+  t: ReturnType<typeof useI18n>['t'],
+) {
   return value == null
-    ? 'No previous week to compare'
+    ? t('mycoach.noCompare')
     : Math.abs(value) < 0.05
-      ? 'No change vs previous week'
-      : `${Math.abs(value).toFixed(1)} kg ${value > 0 ? 'gain' : 'loss'} vs previous week`;
+      ? t('coachWeb.weightNoChange')
+      : t('coachWeb.weightChange', {
+          change: t(value > 0 ? 'mycoach.gain' : 'mycoach.loss', {
+            amount: Math.abs(value).toFixed(1),
+          }),
+        });
 }
 export default function WeightComparison({ weights }: { weights: WeighIn[] }) {
+  const { t } = useI18n();
   const weeks = weeklyWeights(weights);
   return (
     <section className="weight-comparison">
-      <h3>Weekly weight changes</h3>
-      <p className="co-muted">
-        Monday–Sunday (UTC). The current week includes weigh-ins so far. Average
-        change compares consecutive weeks; daily change is the first to last
-        reading within a week.
-      </p>
+      <h3>{t('coachWeb.weeklyChanges')}</h3>
+      <p className="co-muted">{t('coachWeb.weeklyChangesHint')}</p>
       {!weeks.length ? (
-        <p className="co-muted">
-          Weekly comparisons appear when weigh-ins are shared.
-        </p>
+        <p className="co-muted">{t('coachWeb.weeklyChangesEmpty')}</p>
       ) : (
         <div className="co-table-scroll">
-          <table>
+          <table className="co-numeric-table">
             <thead>
               <tr>
-                <th>Week of</th>
-                <th>Average</th>
-                <th>Average change</th>
-                <th>First → last</th>
-                <th>Entries</th>
+                <th>{t('coachWeb.week')}</th>
+                <th>{t('coachWeb.average')}</th>
+                <th>{t('coachWeb.averageChange')}</th>
+                <th>{t('coachWeb.firstLast')}</th>
+                <th>{t('coachWeb.entries')}</th>
               </tr>
             </thead>
             <tbody>

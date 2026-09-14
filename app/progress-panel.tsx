@@ -1,4 +1,6 @@
 'use client';
+import { useI18n } from '@/app/i18n';
+
 import { useState } from 'react';
 import { Trophy, ChevronRight } from 'lucide-react';
 import {
@@ -16,6 +18,7 @@ import {
 // SVG data charts need an image role for assistive technology.
 /* oxlint-disable jsx-a11y/prefer-tag-over-role */
 export default function ProgressPanel({ data }: { data: FitnessData }) {
+  const { t } = useI18n();
   const [selected, setSelected] = useState<string | null>(null),
     [metric, setMetric] = useState<'kg' | 'volume' | 'reps'>('kg');
   const names = [
@@ -36,13 +39,11 @@ export default function ProgressPanel({ data }: { data: FitnessData }) {
   return (
     <>
       <div className="section-title">
-        <h2>Exercise progress</h2>
-        <span className="small-muted">Working sets only</span>
+        <h2>{t('coachWeb.exerciseProgress')}</h2>
+        <span className="small-muted">{t('coachWeb.workingSets')}</span>
       </div>
       {!names.length ? (
-        <p className="empty-line">
-          Complete a workout to see exercise trends and personal records.
-        </p>
+        <p className="empty-line">{t('you.noProgress')}</p>
       ) : (
         <div className="progress-list">
           {names.map((n) => {
@@ -59,7 +60,9 @@ export default function ProgressPanel({ data }: { data: FitnessData }) {
               >
                 <div>
                   <strong>{n}</strong>
-                  <small>{p.length} sessions</small>
+                  <small>
+                    {p.length} {t('mycoach.sessions')}
+                  </small>
                 </div>
                 {last?.record && <Trophy size={17} />}
                 <ChevronRight size={18} />
@@ -76,15 +79,12 @@ export default function ProgressPanel({ data }: { data: FitnessData }) {
       >
         <DialogContent className="form-dialog progress-dialog">
           <DialogTitle>{selected}</DialogTitle>
-          <DialogDescription>
-            Best working-set load, reps at that load, and total working-set
-            volume.
-          </DialogDescription>
+          <DialogDescription>{t('history.progressHint')}</DialogDescription>
           <div className="range-switch">
             {[
-              ['kg', 'Weight'],
-              ['reps', 'Reps'],
-              ['volume', 'Volume'],
+              ['kg', t('history.weight')],
+              ['reps', t('coachWeb.reps')],
+              ['volume', t('history.volume')],
             ].map(([key, label]) => (
               <button
                 key={key}
@@ -98,7 +98,16 @@ export default function ProgressPanel({ data }: { data: FitnessData }) {
           <svg
             viewBox="0 0 510 215"
             role="img"
-            aria-label={`${metric} progress across ${points.length} workouts`}
+            aria-label={t('coachWeb.chartDescription', {
+              metric: t(
+                metric === 'kg'
+                  ? 'history.weight'
+                  : metric === 'reps'
+                    ? 'coachWeb.reps'
+                    : 'history.volume',
+              ),
+              count: points.length,
+            })}
           >
             <line x1="35" x2="480" y1="178" y2="178" stroke="var(--line)" />
             <path
@@ -133,7 +142,7 @@ export default function ProgressPanel({ data }: { data: FitnessData }) {
           </svg>
           <div className="exercise-record">
             <Trophy size={20} />
-            <span>Best load</span>
+            <span>{t('history.bestLoad')}</span>
             <strong>
               {displayWeight(
                 Math.max(0, ...points.map((p) => p.kg)),
@@ -156,7 +165,7 @@ export default function ProgressPanel({ data }: { data: FitnessData }) {
                 </strong>
                 {((metric === 'kg' && p.record) ||
                   (metric === 'volume' && p.volumeRecord)) && (
-                  <span className="pr-badge">PR</span>
+                  <span className="pr-badge">{t('coachWeb.record')}</span>
                 )}
               </div>
             ))}

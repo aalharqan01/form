@@ -11,7 +11,16 @@ const client = 'http://127.0.0.1:3101';
 const coach = 'http://127.0.0.1:3100';
 const quote = (value: unknown) =>
   "'" + String(value).replaceAll("'", "''") + "'";
-export async function fixture(request: APIRequestContext) {
+export async function fixture(
+  request: APIRequestContext,
+  endpoints = { coach, client },
+) {
+  const { coach, client } = endpoints;
+  if (
+    ![coach, client].every((url) => /^http:\/\/127\.0\.0\.1:\d+$/.test(url))
+  ) {
+    throw new Error('Local fixtures only');
+  }
   const saved = await (await request.get(client + '/api/data')).json();
   expect(saved.userKey).toBe('local-form-client');
   const detail: MemberDetail = await (

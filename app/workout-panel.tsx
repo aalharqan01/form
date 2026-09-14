@@ -1,4 +1,6 @@
 'use client';
+import { useI18n } from '@/app/i18n';
+import { muscleLabel, equipmentLabel } from '@/lib/i18n/ui-labels';
 import { useEffect, useState, useMemo } from 'react';
 import {
   Plus,
@@ -99,12 +101,15 @@ export function ExercisePicker({
   onClose: () => void;
   onPick: (name: string, muscle: string) => void;
 }) {
+  const { t } = useI18n();
   const [query, setQuery] = useState(''),
     [muscle, setMuscle] = useState('All'),
     [equipment, setEquipment] = useState('All');
   const list = ALL_EXERCISES.filter(
     ([n, m, eq]) =>
-      `${n} ${m} ${eq}`.toLowerCase().includes(query.trim().toLowerCase()) &&
+      `${n} ${m} ${eq} ${muscleLabel(m, t)} ${equipmentLabel(eq, t)}`
+        .toLowerCase()
+        .includes(query.trim().toLowerCase()) &&
       (muscle === 'All' || m === muscle) &&
       (equipment === 'All' || eq === equipment),
   );
@@ -116,16 +121,15 @@ export function ExercisePicker({
       }}
     >
       <DialogContent className="form-dialog picker-dialog">
-        <DialogTitle>Add exercise</DialogTitle>
+        <DialogTitle>{t('picker.title')}</DialogTitle>
         <DialogDescription>
-          {ALL_EXERCISES.length} exercises. Filter by muscle and equipment, or
-          add your own.
+          {t('picker.description', { count: ALL_EXERCISES.length })}
         </DialogDescription>
         <div className="search-input">
           <Search size={18} />
           <Input
-            aria-label="Search exercises"
-            placeholder="Search exercises"
+            aria-label={t('picker.search')}
+            placeholder={t('picker.search')}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             maxLength={100}
@@ -148,33 +152,29 @@ export function ExercisePicker({
               aria-pressed={muscle === m}
               onClick={() => setMuscle(m)}
             >
-              {m}
+              {muscleLabel(m, t)}
             </button>
           ))}
         </div>
         <label className="exercise-equipment">
-          Equipment
+          {t('mycoach.equipment')}
           <select
             value={equipment}
             onChange={(e) => setEquipment(e.target.value)}
           >
             {['All', ...EQUIPMENT_OPTIONS].map((e) => (
               <option key={e} value={e}>
-                {e === 'All' ? 'All equipment' : e}
+                {equipmentLabel(e, t)}
               </option>
             ))}
           </select>
         </label>
         <ExerciseCredits />
         <p className="exercise-results" aria-live="polite">
-          {list.length} exercises found
+          {t('picker.found', { count: list.length })}
         </p>
         <div className="exercise-options">
-          {!list.length && (
-            <p className="co-muted">
-              No matches. Try another search or change the filters.
-            </p>
-          )}
+          {!list.length && <p className="co-muted">{t('picker.noMatches')}</p>}
           {list.map(([n, m, eq]) => (
             <button
               type="button"
@@ -188,7 +188,7 @@ export function ExercisePicker({
               <span>
                 <strong>{n}</strong>
                 <small>
-                  {m} · {eq}
+                  {muscleLabel(m, t)} · {equipmentLabel(eq, t)}
                 </small>
               </span>
               <Plus size={19} />
@@ -209,8 +209,10 @@ export function ExercisePicker({
                   <Plus size={21} />
                 </span>
                 <span>
-                  <strong>Add “{query.trim()}”</strong>
-                  <small>Custom exercise</small>
+                  <strong>
+                    {t('picker.addQuoted', { name: query.trim() })}
+                  </strong>
+                  <small>{t('picker.custom')}</small>
                 </span>
               </button>
             )}

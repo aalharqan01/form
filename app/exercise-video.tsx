@@ -1,4 +1,6 @@
 'use client';
+import { useI18n } from '@/app/i18n';
+
 import { useState } from 'react';
 import { exerciseVideo } from '@/lib/video';
 import './exercise-video.css';
@@ -9,22 +11,18 @@ export default function ExerciseVideo({
   url: string;
   name: string;
 }) {
+  const { t } = useI18n();
   const source = exerciseVideo(url);
   const [failedUrl, setFailedUrl] = useState('');
   if (!source)
-    return (
-      <p className="exercise-video-hint">
-        Use a YouTube, Vimeo or direct MP4/WebM video URL to play the
-        demonstration here.
-      </p>
-    );
+    return <p className="exercise-video-hint">{t('coachWeb.videoHint')}</p>;
   return (
     <figure className="exercise-video">
       {source.kind === 'embed' ? (
         <iframe
           key={source.src}
           src={source.src}
-          title={`${name} demonstration`}
+          title={t('coachWeb.demoFor', { name })}
           loading="lazy"
           allow="encrypted-media; fullscreen; picture-in-picture"
           allowFullScreen
@@ -39,14 +37,14 @@ export default function ExerciseVideo({
           controls
           playsInline
           preload="metadata"
-          aria-label={`${name} demonstration`}
+          aria-label={t('coachWeb.demoFor', { name })}
           onError={() => setFailedUrl(url)}
         />
       )}
       <figcaption>
         {failedUrl === url
-          ? 'Video unavailable. Ask your coach to update the demonstration.'
-          : `${name} · Demonstration`}
+          ? t('coachWeb.videoUnavailable')
+          : t('coachWeb.demoFor', { name })}
       </figcaption>
     </figure>
   );

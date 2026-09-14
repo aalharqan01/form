@@ -27,7 +27,6 @@ import {
 import {
   type CoachingState,
   type MarketplaceCoach,
-  memberStatus,
   type Member,
   type MemberDetail,
   type CoachProfile,
@@ -55,6 +54,11 @@ import ExerciseThumbnail, { ExerciseCredits } from '../exercise-thumbnail';
 import Nutrition from './nutrition';
 import Steps from './steps';
 import { Conversation } from './conversation';
+import {
+  memberStatusLabel,
+  weekdayLabel,
+  muscleLabel,
+} from '@/lib/i18n/ui-labels';
 import WeightComparison, { weightChange } from './weight-comparison';
 import VideoUpload from '../video-upload';
 import { ExercisePicker } from '../workout-panel';
@@ -125,12 +129,10 @@ function useCoaching() {
   return { state, error, busy, reload, mutate };
 }
 function WeeklyChange({ value }: { value: number | null | undefined }) {
+  const { t } = useI18n();
   if (value == null)
     return (
-      <strong
-        className="co-metric-change flat"
-        title="No previous week to compare"
-      >
+      <strong className="co-metric-change flat" title={t('mycoach.noCompare')}>
         —
       </strong>
     );
@@ -138,7 +140,7 @@ function WeeklyChange({ value }: { value: number | null | undefined }) {
   return (
     <strong
       className={`co-metric-change ${flat ? 'flat' : value > 0 ? 'up' : 'down'}`}
-      aria-label={weightChange(value)}
+      aria-label={weightChange(value, t)}
     >
       {flat ? '0.0' : `${value > 0 ? '+' : '−'}${Math.abs(value).toFixed(1)}`}
       <em> kg</em>
@@ -184,7 +186,14 @@ export default function CoachingWorkspace() {
     // Total places across packages with a client limit, if the coach set any.
     limited = (state?.profile?.offers ?? []).filter((o) => o.capacity),
     placesNote = limited.length
-      ? `${clients.filter((m) => limited.some((o) => o.id === m.offer.id) && ['requested', 'awaiting_payment', 'active'].includes(m.status)).length} of ${limited.reduce((n, o) => n + (o.capacity ?? 0), 0)} places taken`
+      ? t('coachWeb.places', {
+          used: clients.filter(
+            (m) =>
+              limited.some((o) => o.id === m.offer.id) &&
+              ['requested', 'awaiting_payment', 'active'].includes(m.status),
+          ).length,
+          total: limited.reduce((n, o) => n + (o.capacity ?? 0), 0),
+        })
       : null,
     needs = (m: Member) =>
       m.status === 'requested' ||
@@ -259,23 +268,22 @@ export default function CoachingWorkspace() {
         </header>
         <ErrorNote text={c.error} />
         {!state ? (
-          <Empty title="Loading your workspace">
-            <Button onClick={() => void c.reload()}>Retry</Button>
+          <Empty title={t('coachWeb.loadingWorkspace')}>
+            <Button onClick={() => void c.reload()}>
+              {t('mycoach.retry')}
+            </Button>
           </Empty>
         ) : !state.profile ? (
           <>
             <div className="co-heading">
               <div>
-                <p className="co-overline">YOUR COACHING BUSINESS</p>
+                <p className="co-overline">{t('coachWeb.business')}</p>
                 <h1>
-                  Make room
+                  {t('coachWeb.welcomeFirst')}
                   <br />
-                  for your clients.
+                  {t('coachWeb.welcomeSecond')}
                 </h1>
-                <p>
-                  Set up your profile and packages, then list your services in
-                  the Marketplace.
-                </p>
+                <p>{t('coachWeb.setupIntro')}</p>
               </div>
               <div className="co-heading-mark">
                 <Users size={54} strokeWidth={1} />
@@ -309,12 +317,9 @@ export default function CoachingWorkspace() {
           <>
             <div className="co-heading">
               <div>
-                <p className="co-overline">YOUR OFFERING</p>
-                <h1>Profile & packages</h1>
-                <p>
-                  Define your packages and choose when to appear in the
-                  Marketplace.
-                </p>
+                <p className="co-overline">{t('coachWeb.offering')}</p>
+                <h1>{t('coachWeb.profileTitle')}</h1>
+                <p>{t('coachWeb.offeringIntro')}</p>
               </div>
             </div>
             <ProfileEditor
@@ -338,11 +343,14 @@ export default function CoachingWorkspace() {
                 <p className="co-overline">
                   {state.profile.name.toUpperCase()}
                 </p>
-                <h1>Your clients.</h1>
+                <h1>{t('coachWeb.clientsTitle')}</h1>
                 <p>
                   {active.length
-                    ? `${active.length} active client${active.length === 1 ? '' : 's'}. ${clients.filter(needs).length} need attention.`
-                    : 'Your next coaching relationship starts here.'}
+                    ? t('coachWeb.activeSummary', {
+                        active: active.length,
+                        attention: clients.filter(needs).length,
+                      })
+                    : t('coachWeb.clientsIntro')}
                 </p>
               </div>
               <Button
@@ -350,7 +358,7 @@ export default function CoachingWorkspace() {
                 onClick={() => setSection('offering')}
                 disabled={!state.profile.offers.length}
               >
-                Manage listing{' '}
+                {t('coachWeb.listing')}{' '}
                 <span className="button-orb">
                   <Plus size={18} />
                 </span>
@@ -361,19 +369,18 @@ export default function CoachingWorkspace() {
                 <ClipboardList size={22} />
                 <div>
                   <strong>
-                    {clients.filter((m) => m.status === 'requested').length} new
-                    coaching request(s)
+                    {t('coachWeb.requestCount', {
+                      count: clients.filter((m) => m.status === 'requested')
+                        .length,
+                    })}
                   </strong>
-                  <p>
-                    Review the trainee’s intake, then accept or decline.
-                    Membership starts after payment.
-                  </p>
+                  <p>{t('coachWeb.reviewIntro')}</p>
                 </div>
                 <Button
                   className="secondary"
                   onClick={() => setView('requests')}
                 >
-                  Review requests
+                  {t('coachWeb.reviewRequests')}
                 </Button>
               </div>
             )}
@@ -382,32 +389,32 @@ export default function CoachingWorkspace() {
                 aria-pressed={view === 'all'}
                 onClick={() => setView('all')}
               >
-                <span>Active clients</span>
+                <span>{t('coachWeb.activeClients')}</span>
                 <strong>{active.length.toString().padStart(2, '0')}</strong>
-                <small>{placesNote ?? 'Current coaching relationships'}</small>
+                <small>{placesNote ?? t('coachWeb.relationships')}</small>
               </button>
               <button
                 aria-pressed={view === 'attention'}
                 onClick={() => setView('attention')}
               >
-                <span>Needs attention</span>
+                <span>{t('coachWeb.attention')}</span>
                 <strong>
                   {clients.filter(needs).length.toString().padStart(2, '0')}
                 </strong>
-                <small>Check-ins, messages & missed sessions</small>
+                <small>{t('coachWeb.attentionHint')}</small>
               </button>
               <button
                 aria-pressed={view === 'requests'}
                 onClick={() => setView('requests')}
               >
-                <span>New requests</span>
+                <span>{t('coachWeb.newRequests')}</span>
                 <strong>
                   {clients
                     .filter((m) => m.status === 'requested')
                     .length.toString()
                     .padStart(2, '0')}
                 </strong>
-                <small>Awaiting your decision</small>
+                <small>{t('coachWeb.awaitingDecision')}</small>
               </button>
             </div>
             <div className="co-list-toolbar">
@@ -416,28 +423,28 @@ export default function CoachingWorkspace() {
                   aria-pressed={view === 'all'}
                   onClick={() => setView('all')}
                 >
-                  All clients
+                  {t('coachWeb.allClients')}
                 </button>
                 <button
                   aria-pressed={view === 'attention'}
                   onClick={() => setView('attention')}
                 >
-                  Needs attention
+                  {t('coachWeb.attention')}
                 </button>
                 <button
                   aria-pressed={view === 'requests'}
                   onClick={() => setView('requests')}
                 >
-                  New requests
+                  {t('coachWeb.newRequests')}
                 </button>
               </div>
               <label className="co-search">
                 <Search size={17} />
                 <Input
-                  aria-label="Search clients"
+                  aria-label={t('coachWeb.searchClients')}
                   value={filter}
                   onChange={(e) => setFilter(e.target.value)}
-                  placeholder="Find a client"
+                  placeholder={t('coachWeb.findClient')}
                 />
               </label>
             </div>
@@ -445,14 +452,14 @@ export default function CoachingWorkspace() {
               <Empty
                 title={
                   clients.length
-                    ? 'No matching clients'
-                    : 'Your first request starts in the Marketplace'
+                    ? t('coachWeb.noClients')
+                    : t('coachWeb.firstRequest')
                 }
               >
                 <p>
                   {clients.length
-                    ? 'Try another name or view all clients.'
-                    : 'List your packages so trainees can find you. New requests appear here for you to accept or decline.'}
+                    ? t('coachWeb.searchHint')
+                    : t('coachWeb.listHint')}
                 </p>
                 {!clients.length && (
                   <Button
@@ -460,7 +467,8 @@ export default function CoachingWorkspace() {
                     onClick={() => setSection('offering')}
                     disabled={!state.profile.offers.length}
                   >
-                    Manage listing <Plus size={17} />
+                    {t('coachWeb.listing')}
+                    <Plus size={17} />
                   </Button>
                 )}
               </Empty>
@@ -484,9 +492,9 @@ export default function CoachingWorkspace() {
                       <small>
                         {m.status === 'active'
                           ? m.stats?.lastWorkout
-                            ? `${m.offer.name} · trained ${dateLabel(m.stats.lastWorkout)}`
-                            : `${m.offer.name} · no workouts yet`
-                          : `${m.offer.name} · ${memberStatus(m.status)}`}
+                            ? `${m.offer.name} · ${t('coachWeb.lastSession', { date: dateLabel(m.stats.lastWorkout) })}`
+                            : `${m.offer.name} · ${t('mycoach.noWorkouts')}`
+                          : `${m.offer.name} · ${memberStatusLabel(m.status, t)}`}
                       </small>
                     </span>
                     {m.status === 'active' && (
@@ -494,9 +502,14 @@ export default function CoachingWorkspace() {
                         <span>
                           <strong>
                             {m.stats?.completed ?? 0}
-                            <em> of {m.stats?.due ?? 0}</em>
+                            <em>
+                              {' '}
+                              {t('coachWeb.ofTotal', {
+                                total: m.stats?.due ?? 0,
+                              })}
+                            </em>
                           </strong>
-                          <small>sessions · 7 days</small>
+                          <small>{t('coachWeb.sessions7')}</small>
                         </span>
                         <span>
                           <strong
@@ -515,16 +528,18 @@ export default function CoachingWorkspace() {
                               : `${m.stats.averageChangeKg > 0 ? '+' : '−'}${Math.abs(m.stats.averageChangeKg).toFixed(1)}`}
                             {m.stats?.averageChangeKg != null && <em> kg</em>}
                           </strong>
-                          <small>weight · this week</small>
+                          <small>{t('coachWeb.weightWeek')}</small>
                         </span>
                       </span>
                     )}
                     {m.pending > 0 ? (
                       <span className="co-badge amber">
-                        {m.pending} check-in{m.pending > 1 ? 's' : ''}
+                        {t('coachWeb.pendingCount', { count: m.pending })}
                       </span>
                     ) : m.unread > 0 ? (
-                      <span className="co-badge amber">{m.unread} unread</span>
+                      <span className="co-badge amber">
+                        {t('coachWeb.unreadCount', { count: m.unread })}
+                      </span>
                     ) : null}
                     <ChevronRight size={18} className="co-client-chevron" />
                   </button>
@@ -539,16 +554,13 @@ export default function CoachingWorkspace() {
   );
 }
 function BillingNote() {
+  const { t } = useI18n();
   return (
     <div className="co-billing-note">
       <Wallet size={20} strokeWidth={1.5} />
       <div>
-        <strong>Payment setup pending</strong>
-        <p>
-          Trainees can request packages and coaches can review them. Accepted
-          requests remain pending payment. Checkout and payouts are not
-          connected yet.
-        </p>
+        <strong>{t('coachWeb.paymentPending')}</strong>
+        <p>{t('coachWeb.paymentHint')}</p>
       </div>
     </div>
   );
@@ -564,6 +576,7 @@ function ProfileEditor({
   busy: boolean;
   onSave: (p: CoachProfile, revision: number) => Promise<boolean>;
 }) {
+  const { t } = useI18n();
   const [p, setP] = useState<CoachProfile>(
       profile ?? {
         name: '',
@@ -573,11 +586,10 @@ function ProfileEditor({
         offers: [
           {
             id: id(),
-            name: 'Personal coaching',
+            name: '',
             price: 0,
             currency: 'QAR',
-            description:
-              'Weekly check-in, a personalised training program and messaging.',
+            description: '',
             responseHours: 48,
           },
         ],
@@ -601,75 +613,70 @@ function ProfileEditor({
       }}
     >
       <section className="co-card">
-        <p className="co-overline">01 / ABOUT YOU</p>
-        <h2>Coach profile</h2>
+        <p className="co-overline">{t('coachWeb.aboutYou')}</p>
+        <h2>{t('coachWeb.coachProfile')}</h2>
         <label className="co-consent">
           <input
             type="checkbox"
             checked={p.listed ?? false}
             onChange={(e) => field('listed', e.target.checked)}
           />
-          <span>
-            List my profile and packages in the Marketplace. Packages must have
-            a price greater than zero.
-          </span>
+          <span>{t('coachWeb.listConsent')}</span>
         </label>
         <label>
-          Name
+          {t('coachWeb.name')}
           <Input
             required
             maxLength={100}
             value={p.name}
             onChange={(e) => field('name', e.target.value)}
-            placeholder="Your coaching name"
+            placeholder={t('coachWeb.coachName')}
           />
         </label>
         <div className="co-form-grid">
           <label>
-            Based in
+            {t('coachWeb.basedIn')}
             <select
               value={p.country}
               onChange={(e) => field('country', e.target.value)}
             >
-              <option value="QA">Qatar</option>
-              <option value="SA">Saudi Arabia</option>
+              <option value="QA">{t('mycoach.qatar')}</option>
+              <option value="SA">{t('mycoach.saudi')}</option>
             </select>
           </label>
           <label>
-            Specialties
+            {t('coachWeb.specialties')}
             <Input
               maxLength={300}
               value={p.specialties}
               onChange={(e) => field('specialties', e.target.value)}
-              placeholder="Strength, fat loss, mobility…"
+              placeholder={t('coachWeb.specialtiesHint')}
             />
           </label>
         </div>
         <label>
-          About your coaching
+          {t('coachWeb.aboutCoaching')}
           <Textarea
+            dir="auto"
             maxLength={2000}
             value={p.bio}
             onChange={(e) => field('bio', e.target.value)}
-            placeholder="Your approach and who you work with"
+            placeholder={t('coachWeb.approachHint')}
           />
         </label>
-        <p className="co-muted">
-          Clients see this profile in the Marketplace when you list your
-          services.
-        </p>
+        <p className="co-muted">{t('coachWeb.profileHint')}</p>
       </section>
       <section className="co-card">
-        <p className="co-overline">02 / PACKAGES</p>
-        <h2>What clients receive</h2>
+        <p className="co-overline">{t('coachWeb.packages')}</p>
+        <h2>{t('coachWeb.packageBenefits')}</h2>
         {p.offers.map((o, i) => (
           <div className="co-offer-editor" key={o.id}>
             <div className="co-section-line">
-              <strong>Package {i + 1}</strong>
+              <strong>{t('coachWeb.packageNumber', { number: i + 1 })}</strong>
               <Button
                 type="button"
                 variant="ghost"
-                aria-label={`Remove ${o.name}`}
+                aria-label={t('coachWeb.removePackage', { name: o.name })}
                 onClick={() =>
                   field(
                     'offers',
@@ -681,9 +688,10 @@ function ProfileEditor({
               </Button>
             </div>
             <label>
-              Package name
+              {t('coachWeb.packageName')}
               <Input
                 required
+                placeholder={t('coachWeb.defaultPackage')}
                 value={o.name}
                 maxLength={100}
                 onChange={(e) =>
@@ -698,7 +706,7 @@ function ProfileEditor({
             </label>
             <div className="co-form-grid">
               <label>
-                Monthly package price
+                {t('coachWeb.monthlyPrice')}
                 <Input
                   type="number"
                   required
@@ -719,7 +727,7 @@ function ProfileEditor({
                 />
               </label>
               <label>
-                Currency
+                {t('coachWeb.currency')}
                 <select
                   value={o.currency}
                   onChange={(e) =>
@@ -737,10 +745,12 @@ function ProfileEditor({
               </label>
             </div>
             <label>
-              Included services
+              {t('coachWeb.services')}
               <Textarea
+                dir="auto"
                 required
                 maxLength={2000}
+                placeholder={t('coachWeb.defaultServices')}
                 value={o.description}
                 onChange={(e) =>
                   field(
@@ -753,7 +763,7 @@ function ProfileEditor({
               />
             </label>
             <label>
-              Expected reply within (hours)
+              {t('coachWeb.responseHours')}
               <Input
                 required
                 type="number"
@@ -773,12 +783,12 @@ function ProfileEditor({
               />
             </label>
             <label>
-              Client limit
+              {t('coachWeb.capacity')}
               <Input
                 type="number"
                 min={1}
                 max={500}
-                placeholder="Unlimited"
+                placeholder={t('coachWeb.unlimited')}
                 value={o.capacity ?? ''}
                 onChange={(e) =>
                   field(
@@ -793,9 +803,7 @@ function ProfileEditor({
                   )
                 }
               />
-              <small className="co-muted">
-                Requests close once this many clients are on the package.
-              </small>
+              <small className="co-muted">{t('coachWeb.capacityHint')}</small>
             </label>
           </div>
         ))}
@@ -818,14 +826,15 @@ function ProfileEditor({
           }
         >
           <Plus size={17} />
-          Add package
+          {t('coachWeb.addPackage')}
         </Button>
-        <p className="co-muted">
-          Changes apply to new requests. Existing requests keep their agreed
-          package and price.
-        </p>
+        <p className="co-muted">{t('coachWeb.packageChangeHint')}</p>
         <Button disabled={busy} className="primary full" type="submit">
-          {busy ? 'Saving…' : saved ? 'Saved' : 'Save profile & packages'}
+          {busy
+            ? t('shell.saving')
+            : saved
+              ? t('coachWeb.saved')
+              : t('coachWeb.saveProfile')}
           <Check size={18} />
         </Button>
       </section>
@@ -945,6 +954,7 @@ export function MyCoach({
 }: {
   onStart: (routine: Routine, membershipId: string) => void;
 }) {
+  const { t } = useI18n();
   const c = useCoaching(),
     [selected, setSelected] = useState<string | null>(null);
   if (selected && c.state)
@@ -998,7 +1008,9 @@ export function MyCoach({
               onClick={() => setSelected(m.id)}
             >
               <div className="co-section-line">
-                <span className="co-badge">{memberStatus(m.status)}</span>
+                <span className="co-badge">
+                  {memberStatusLabel(m.status, t)}
+                </span>
                 <ChevronRight size={19} />
               </div>
               <h2>{m.coachName}</h2>
@@ -1029,6 +1041,7 @@ function ClientDetail({
   onBack: () => void;
   onStart?: (r: Routine, membershipId: string) => void;
 }) {
+  const { t } = useI18n();
   const api = useCoachingTransport();
   const [detail, setDetail] = useState<MemberDetail | null>(null),
     [error, setError] = useState(''),
@@ -1090,11 +1103,11 @@ function ClientDetail({
       <>
         <Button className="text-button" onClick={onBack}>
           <ArrowLeft size={17} />
-          Back
+          {t('chat.back')}
         </Button>
         <ErrorNote text={error} />
-        <Empty title="Loading client">
-          <Button onClick={() => void load()}>Retry</Button>
+        <Empty title={t('coachWeb.loadingClient')}>
+          <Button onClick={() => void load()}>{t('mycoach.retry')}</Button>
         </Empty>
       </>
     );
@@ -1102,17 +1115,17 @@ function ClientDetail({
     <div className="co-detail">
       <Button className="text-button co-back" onClick={onBack}>
         <ArrowLeft size={17} />
-        {isCoach ? 'All clients' : 'My coaches'}
+        {isCoach ? t('coachWeb.allClients') : t('coachWeb.myCoaches')}
       </Button>
       <div className="co-heading">
         <div>
           <p className="co-overline">
-            {isCoach ? 'CLIENT OVERVIEW' : 'YOUR COACH'}
+            {isCoach ? t('coachWeb.clientOverview') : t('mycoach.yourCoach')}
           </p>
           <h1>{isCoach ? m.name : m.coachName}</h1>
           <p>
             {m.offer.name}{' '}
-            <span className="co-badge">{memberStatus(m.status)}</span>
+            <span className="co-badge">{memberStatusLabel(m.status, t)}</span>
           </p>
         </div>
         {isCoach && m.status === 'active' && (
@@ -1123,7 +1136,9 @@ function ClientDetail({
               setEditing(true);
             }}
           >
-            {m.program ? 'Edit program' : 'Assign program'}
+            {m.program
+              ? t('coachWeb.editProgram')
+              : t('coachWeb.assignProgram')}
             <Plus size={17} />
           </Button>
         )}
@@ -1135,11 +1150,14 @@ function ClientDetail({
         <>
           <div className="co-detail-tabs range-switch">
             {[
-              ['overview', 'Overview'],
-              ['program', 'Program'],
-              ['checkins', 'Check-ins'],
-              ['messages', `Messages${m.unread ? ' · ' + m.unread : ''}`],
-              ['membership', 'Membership'],
+              ['overview', t('mycoach.overview')],
+              ['program', t('mycoach.program')],
+              ['checkins', t('mycoach.checkins')],
+              [
+                'messages',
+                `${t('chat.messages')}${m.unread ? ' · ' + m.unread : ''}`,
+              ],
+              ['membership', t('coachWeb.membership')],
             ].map(([v, l]) => (
               <button
                 key={v}
@@ -1154,28 +1172,30 @@ function ClientDetail({
             <>
               <div className="co-metrics">
                 <div>
-                  <span>Workouts · last 7 days</span>
+                  <span>{t('mycoach.workouts7')}</span>
                   <strong>{m.stats?.workouts ?? 0}</strong>
                   <small>
                     {m.stats?.lastWorkout
-                      ? 'Last session ' + dateLabel(m.stats.lastWorkout)
-                      : 'No completed workouts yet'}
+                      ? t('coachWeb.lastSession', {
+                          date: dateLabel(m.stats.lastWorkout),
+                        })
+                      : t('mycoach.noWorkouts')}
                   </small>
                 </div>
                 <div className="co-metric-accent">
-                  <span>Scheduled sessions</span>
+                  <span>{t('mycoach.scheduled')}</span>
                   <strong>
                     {m.stats?.completed ?? 0}
                     <em>/{m.stats?.due ?? 0}</em>
                   </strong>
-                  <small>Completed · last 7 calendar days (UTC)</small>
+                  <small>{t('mycoach.scheduledNote')}</small>
                 </div>
                 <button
                   type="button"
                   className="co-weight-metric"
                   onClick={() => setWeightHistory(true)}
                 >
-                  <span>Weekly average weight</span>
+                  <span>{t('mycoach.weeklyAverage')}</span>
                   <div className="co-metric-pair">
                     <div>
                       <strong>
@@ -1183,16 +1203,19 @@ function ClientDetail({
                         <em> kg</em>
                       </strong>
                       <span>
-                        {m.stats?.weightCount ?? 0} weigh-ins this week
+                        {t('coachWeb.weighInsWeek', {
+                          count: m.stats?.weightCount ?? 0,
+                        })}
                       </span>
                     </div>
                     <div>
                       <WeeklyChange value={m.stats?.averageChangeKg} />
-                      <span>vs last week’s average</span>
+                      <span>{t('mycoach.vsLast')}</span>
                     </div>
                   </div>
                   <small className="co-weight-action">
-                    View all entries <ChevronRight size={14} />
+                    {t('coachWeb.viewEntries')}
+                    <ChevronRight size={14} />
                   </small>
                 </button>
               </div>
@@ -1227,49 +1250,53 @@ function ClientDetail({
               <div className="co-detail-grid">
                 <section className="co-card">
                   <div className="co-section-line">
-                    <h2>Weekly check-in</h2>
+                    <h2>{t('mycoach.weeklyCheckin')}</h2>
                     <ClipboardList size={21} strokeWidth={1.5} />
                   </div>
                   <p>
                     {detail.checkins.some((c) => c.week === weekOf())
-                      ? 'This week’s check-in has been submitted.'
+                      ? t('mycoach.submitted')
                       : isCoach
-                        ? 'Waiting for this week’s update.'
-                        : 'Share how training has felt this week.'}
+                        ? t('coachWeb.waitingCheckin')
+                        : t('mycoach.shareWeek')}
                   </p>
                   <Button
                     className="secondary"
                     onClick={() => setTab('checkins')}
                   >
-                    {isCoach ? 'Review check-ins' : 'Open check-in'}
+                    {isCoach
+                      ? t('coachWeb.reviewCheckins')
+                      : t('mycoach.openCheckin')}
                     <ChevronRight size={17} />
                   </Button>
                   <div className="co-divider" />
-                  <h3>Current program</h3>
-                  <p>{m.program?.title ?? 'No program assigned yet.'}</p>
+                  <h3>{t('mycoach.currentProgram')}</h3>
+                  <p>{m.program?.title ?? t('mycoach.noProgram')}</p>
                   <Button
                     className="text-button"
                     onClick={() => setTab('program')}
                   >
-                    View program
+                    {t('mycoach.viewProgram')}
                     <ChevronRight size={16} />
                   </Button>
                 </section>
                 <section className="co-card">
-                  <h2>Intake</h2>
+                  <h2>{t('coachWeb.intake')}</h2>
                   <dl className="co-intake">
-                    <dt>Goals</dt>
+                    <dt>{t('mycoach.goals')}</dt>
                     <dd>{m.intake.goals}</dd>
-                    <dt>Training experience</dt>
+                    <dt>{t('mycoach.experience')}</dt>
                     <dd>{m.intake.experience}</dd>
-                    <dt>Equipment</dt>
+                    <dt>{t('mycoach.equipment')}</dt>
                     <dd>{m.intake.equipment}</dd>
-                    <dt>Considerations</dt>
-                    <dd>{m.intake.limitations || 'None shared'}</dd>
-                    <dt>Availability</dt>
+                    <dt>{t('coachWeb.considerations')}</dt>
+                    <dd>{m.intake.limitations || t('mycoach.noneShared')}</dd>
+                    <dt>{t('mycoach.availability')}</dt>
                     <dd>
-                      {m.intake.days} days/week ·{' '}
-                      {m.intake.country === 'QA' ? 'Qatar' : 'Saudi Arabia'}
+                      {t('coachWeb.daysWeek', { count: m.intake.days })} ·{' '}
+                      {m.intake.country === 'QA'
+                        ? t('mycoach.qatar')
+                        : t('mycoach.saudi')}
                     </dd>
                   </dl>
                 </section>
@@ -1305,30 +1332,30 @@ function ClientDetail({
           )}{' '}
           {tab === 'membership' && (
             <section className="co-card co-membership-detail">
-              <p className="co-overline">COACHING MEMBERSHIP</p>
+              <p className="co-overline">{t('coachWeb.coachingMembership')}</p>
               <h2>{m.offer.name}</h2>
               <p className="co-price">
                 {money(m.offer.price, m.offer.currency)}
-                <small> / month · planned price</small>
+                <small> {t('coachWeb.plannedPrice')}</small>
               </p>
-              <p className="co-preserve">{m.offer.description}</p>
-              <p>
-                Expected coach response: within {m.offer.responseHours} hours.
+              <p className="co-preserve" dir="auto">
+                {m.offer.description}
               </p>
               <p>
-                Joined {m.accepted_at ? dateLabel(m.accepted_at, true) : '—'}
+                {t('coachWeb.replyHours', { hours: m.offer.responseHours })}
+              </p>
+              <p>
+                {t('coachWeb.joined', {
+                  date: m.accepted_at ? dateLabel(m.accepted_at, true) : '—',
+                })}
               </p>
               <BillingNote />
-              <p className="co-muted">
-                Ending coaching immediately stops progress sharing and access to
-                coaching conversations. Your personal training log remains
-                yours.
-              </p>
+              <p className="co-muted">{t('coachWeb.endCoachingHint')}</p>
               <Button
                 className="secondary co-danger"
                 onClick={() => setEnding(true)}
               >
-                End coaching
+                {t('coachWeb.endCoaching')}
               </Button>
             </section>
           )}
@@ -1360,10 +1387,11 @@ function ClientDetail({
         onOpenChange={setWeightHistory}
       >
         <DialogContent className="form-dialog co-dialog">
-          <DialogTitle>{m.name} · Weight history</DialogTitle>
+          <DialogTitle>
+            {t('coachWeb.memberWeights', { name: m.name })}
+          </DialogTitle>
           <DialogDescription>
-            All shared daily weigh-ins, newest first. The overview averages
-            entries from this Monday through today (UTC).
+            {t('coachWeb.weightHistoryHint')}
           </DialogDescription>
           <WeightComparison weights={detail.fitness?.weights ?? []} />
           <div className="co-history co-weight-history">
@@ -1377,7 +1405,7 @@ function ClientDetail({
                 </div>
               ))}
             {!detail.fitness?.weights.length && (
-              <p className="co-muted">No weigh-ins shared yet.</p>
+              <p className="co-muted">{t('coachWeb.noWeights')}</p>
             )}
           </div>
         </DialogContent>
@@ -1386,13 +1414,13 @@ function ClientDetail({
         <DialogContent className="form-dialog co-dialog">
           <DialogTitle>
             {m.status === 'invited'
-              ? 'Revoke invitation?'
-              : 'End this coaching relationship?'}
+              ? t('coachWeb.revoke')
+              : t('coachWeb.endRelationship')}
           </DialogTitle>
           <DialogDescription>
             {m.status === 'invited'
-              ? 'The invitation link will stop working.'
-              : 'The coach will lose access to shared progress immediately. The trainee keeps their personal workout and weight records. No payment cancellation is needed for this unpaid pilot.'}
+              ? t('coachWeb.revokeHint')
+              : t('coachWeb.endRelationshipHint')}
           </DialogDescription>
           <Button
             className="primary full"
@@ -1404,7 +1432,7 @@ function ClientDetail({
               }
             }}
           >
-            {busy ? 'Ending…' : 'Confirm'}
+            {busy ? t('coachWeb.ending') : t('coachWeb.confirm')}
           </Button>
           <ErrorNote text={error} />
         </DialogContent>
@@ -1413,6 +1441,7 @@ function ClientDetail({
   );
 }
 function SharedProgress({ fitness }: { fitness: FitnessData }) {
+  const { t } = useI18n();
   const readings = [...fitness.weights].sort((a, b) =>
     a.date.localeCompare(b.date),
   );
@@ -1426,19 +1455,19 @@ function SharedProgress({ fitness }: { fitness: FitnessData }) {
   const y = (v: number) => 160 - ((v - low) / (high - low || 1)) * 125;
   return (
     <section className="co-card co-shared">
-      <h2>Shared progress</h2>
+      <h2>{t('coachWeb.sharedProgress')}</h2>
       {points.length > 0 && (
         <div className="co-weight-chart">
           <div className="co-section-line">
-            <h3>Weight trend</h3>
+            <h3>{t('coachWeb.weightTrend')}</h3>
             <span className="co-muted">
-              Last {points.length} weigh-ins · kg
+              {t('coachWeb.recentWeighIns', { count: points.length })}
             </span>
           </div>
           <svg
             viewBox="0 0 600 200"
             role="img"
-            aria-label="Smoothed weight trend with individual weigh-ins"
+            aria-label={t('coachWeb.weightChart')}
           >
             <line x1="30" x2="570" y1="165" y2="165" stroke="var(--line)" />
             {points.map((p, i) => (
@@ -1473,15 +1502,18 @@ function SharedProgress({ fitness }: { fitness: FitnessData }) {
             </text>
           </svg>
           <p className="co-muted">
-            Trend {points.at(-1)!.trend.toFixed(1)} kg · dots show individual
-            readings
+            {t('coachWeb.trendCaption', {
+              weight: points.at(-1)?.trend.toFixed(1) ?? '—',
+            })}
           </p>
         </div>
       )}
       <WeightComparison weights={fitness.weights} />
       <ProgressPanel data={fitness} />
       <details>
-        <summary>Weight history · {readings.length} entries</summary>
+        <summary>
+          {t('coachWeb.weightEntries', { count: readings.length })}
+        </summary>
         <div className="co-history">
           {[...readings].reverse().map((w) => (
             <div key={w.date}>
@@ -1492,15 +1524,16 @@ function SharedProgress({ fitness }: { fitness: FitnessData }) {
           ))}
         </div>
       </details>
-      <h3>Recent workouts</h3>
+      <h3>{t('coachWeb.recentWorkouts')}</h3>
       {[...fitness.workouts]
         .sort((a, b) => b.startedAt.localeCompare(a.startedAt))
         .slice(0, 20)
         .map((w) => (
           <details key={w.id}>
             <summary>
-              {w.name} · {dateLabel(w.startedAt)} · {completedSets(w)} sets
-              {w.endedEarly ? ' · Finished early' : ''}
+              {w.name} · {dateLabel(w.startedAt)} · {completedSets(w)}{' '}
+              {t('you.sets')}
+              {w.endedEarly ? t('coachWeb.finishedEarly') : ''}
             </summary>
             {w.exercises.map((e) => (
               <div key={e.id} className="co-workout-read">
@@ -1510,11 +1543,13 @@ function SharedProgress({ fitness }: { fitness: FitnessData }) {
                     .filter((s) => s.done)
                     .map(
                       (s) =>
-                        `${displayWeight(Number(s.kg), e.unit ?? 'kg').toFixed(1)} ${e.unit ?? 'kg'} × ${s.reps}${s.kind === 'warmup' ? ' (warm-up)' : ''}`,
+                        `${displayWeight(Number(s.kg), e.unit ?? 'kg').toFixed(1)} ${e.unit ?? 'kg'} × ${s.reps}${s.kind === 'warmup' ? t('coachWeb.warmup') : ''}`,
                     )
                     .join(' · ')}
                   {e.sets.some((set) => !set.done) &&
-                    ` · ${e.sets.filter((set) => !set.done).length} skipped sets`}
+                    t('coachWeb.skippedSets', {
+                      count: e.sets.filter((set) => !set.done).length,
+                    })}
                 </span>
               </div>
             ))}
@@ -1522,7 +1557,7 @@ function SharedProgress({ fitness }: { fitness: FitnessData }) {
           </details>
         ))}
       {!fitness.workouts.length && (
-        <p className="co-muted">Completed workouts will appear here.</p>
+        <p className="co-muted">{t('coachWeb.completedHint')}</p>
       )}
     </section>
   );
@@ -1534,12 +1569,10 @@ function ProgramView({
   program: Program | null;
   onStart?: (r: Routine) => void;
 }) {
+  const { t } = useI18n();
   return !program ? (
-    <Empty icon={Dumbbell} title="No program assigned yet">
-      <p>
-        Your coach can build a program with scheduled sessions and exercise
-        instructions.
-      </p>
+    <Empty icon={Dumbbell} title={t('coachWeb.noProgram')}>
+      <p>{t('coachWeb.programHint')}</p>
     </Empty>
   ) : (
     <div className="co-program">
@@ -1548,7 +1581,9 @@ function ProgramView({
         <div>
           <h2>{program.title}</h2>
           <p className="co-muted">
-            Weekly schedule · starts {dateLabel(program.startDate, true)}
+            {t('coachWeb.scheduleStarts', {
+              date: dateLabel(program.startDate, true),
+            })}
           </p>
         </div>
         <CalendarDays size={25} strokeWidth={1.5} />
@@ -1559,13 +1594,14 @@ function ProgramView({
           <div className="co-section-line">
             <div>
               <p className="co-overline">
-                {DAYS[s.day]} / SESSION {i + 1}
+                {weekdayLabel(s.day, t)} ·{' '}
+                {t('coachWeb.sessionNumber', { number: i + 1 })}
               </p>
               <h2>{s.name}</h2>
             </div>
             {onStart && (
               <Button className="primary" onClick={() => onStart(s)}>
-                Start
+                {t('coachWeb.start')}
                 <ArrowUpRight size={17} />
               </Button>
             )}
@@ -1576,7 +1612,11 @@ function ProgramView({
               <div>
                 <strong>{e.name}</strong>
                 <span>
-                  {e.sets} sets × {e.reps} reps · {e.unit ?? 'kg'}
+                  {t('coachWeb.setsReps', {
+                    sets: e.sets ?? 3,
+                    reps: e.reps ?? 10,
+                  })}{' '}
+                  · {e.unit ?? 'kg'}
                 </span>
                 {e.instructions && <p>{e.instructions}</p>}
                 {e.videoUrl && <ExerciseVideo url={e.videoUrl} name={e.name} />}
@@ -1589,6 +1629,7 @@ function ProgramView({
   );
 }
 function TemplateLibrary() {
+  const { t } = useI18n();
   const api = useCoachingTransport();
   const [templates, setTemplates] = useState<WorkoutTemplate[]>([]);
   const [editing, setEditing] = useState<WorkoutTemplate | 'new' | null>(null);
@@ -1618,9 +1659,9 @@ function TemplateLibrary() {
     <>
       <div className="co-heading">
         <div>
-          <p className="co-overline">YOUR TRAINING LIBRARY</p>
-          <h1>Workout templates</h1>
-          <p>Build a day once. Make it personal for every client.</p>
+          <p className="co-overline">{t('coachWeb.library')}</p>
+          <h1>{t('coachWeb.workoutTemplates')}</h1>
+          <p>{t('coachWeb.libraryIntro')}</p>
         </div>
         <Button
           className="primary"
@@ -1630,36 +1671,39 @@ function TemplateLibrary() {
           }}
         >
           <Plus size={18} />
-          Create template
+          {t('coachWeb.createTemplate')}
         </Button>
       </div>
-      <p className="co-muted">
-        Templates are private to you. Adding one to a program creates an
-        editable copy; later template changes leave assigned programs as they
-        are.
-      </p>
+      <p className="co-muted">{t('coachWeb.copiesHint')}</p>
       <ErrorNote text={error} />
       <Button
         className="secondary"
         disabled={loading}
         onClick={() => void reload()}
       >
-        {loading ? 'Loading templates…' : 'Refresh templates'}
+        {loading
+          ? t('coachWeb.loadingTemplates')
+          : t('coachWeb.refreshTemplates')}
       </Button>
       {!loading && !error && !templates.length && (
-        <Empty icon={ClipboardList} title="Your best sessions, ready to reuse">
-          <p>
-            Create a template with any name and exercises, or save a day while
-            editing a client’s program.
-          </p>
+        <Empty icon={ClipboardList} title={t('coachWeb.emptyTemplates')}>
+          <p>{t('coachWeb.emptyTemplatesHint')}</p>
         </Empty>
       )}
       <div className="co-template-grid">
         {templates.map((template) => (
           <article key={template.id} className="co-template-card">
             <p className="co-overline">
-              {template.routine.exercises.length} EXERCISES ·{' '}
-              {template.routine.exercises.reduce((n, e) => n + e.sets, 0)} SETS
+              {t('coachWeb.exerciseCount', {
+                count: template.routine.exercises.length,
+              })}{' '}
+              ·{' '}
+              {t('coachWeb.setCount', {
+                count: template.routine.exercises.reduce(
+                  (n, e) => n + e.sets,
+                  0,
+                ),
+              })}
             </p>
             <h2>{template.routine.name}</h2>
             <p>{template.routine.exercises.map((e) => e.name).join(' · ')}</p>
@@ -1669,9 +1713,11 @@ function TemplateLibrary() {
                 setSaveError('');
                 setEditing(template);
               }}
-              aria-label={`Edit template ${template.routine.name}`}
+              aria-label={t('coachWeb.editNamedTemplate', {
+                name: template.routine.name,
+              })}
             >
-              Edit template
+              {t('coachWeb.editTemplate')}
               <ArrowUpRight size={16} />
             </Button>
           </article>
@@ -1744,6 +1790,7 @@ function ProgramEditor({
   onSave: (p: Program) => Promise<void>;
   memberId: string;
 }) {
+  const { t } = useI18n();
   const api = useCoachingTransport();
   const [templates, setTemplates] = useState<WorkoutTemplate[]>([]);
   const [templateId, setTemplateId] = useState('');
@@ -1784,13 +1831,13 @@ function ProgramEditor({
   });
   const [p, setP] = useState<Program>(
     program ?? {
-      title: 'Training program',
+      title: '',
       notes: '',
       startDate: today(),
       sessions: [
         {
           id: id(),
-          name: templateMode ? '' : 'Session 1',
+          name: '',
           day: 1,
           exercises: [],
         },
@@ -1823,16 +1870,16 @@ function ProgramEditor({
         <DialogTitle>
           {templateMode
             ? program
-              ? 'Edit workout template'
-              : 'Create workout template'
+              ? t('coachWeb.editWorkoutTemplate')
+              : t('coachWeb.createWorkoutTemplate')
             : program
-              ? 'Edit program'
-              : 'Build a program'}
+              ? t('coachWeb.editProgram')
+              : t('coachWeb.buildProgram')}
         </DialogTitle>
         <DialogDescription>
           {templateMode
-            ? 'Name your workout day and choose its exercises. Saving a template does not change any assigned program.'
-            : 'Assign a weekly schedule. Saving updates the client’s program without changing completed workouts.'}
+            ? t('coachWeb.templateInstructions')
+            : t('coachWeb.programInstructions')}
         </DialogDescription>
         <form
           onSubmit={(e) => {
@@ -1848,16 +1895,17 @@ function ProgramEditor({
               <>
                 <div className="co-form-grid">
                   <label>
-                    Program title
+                    {t('coachWeb.programTitle')}
                     <Input
                       required
                       maxLength={100}
+                      placeholder={t('coachWeb.defaultProgram')}
                       value={p.title}
                       onChange={(e) => setP({ ...p, title: e.target.value })}
                     />
                   </label>
                   <label>
-                    Start date
+                    {t('coachWeb.startDate')}
                     <Input
                       type="date"
                       required
@@ -1869,8 +1917,9 @@ function ProgramEditor({
                   </label>
                 </div>
                 <label>
-                  Program notes
+                  {t('coachWeb.programNotes')}
                   <Textarea
+                    dir="auto"
                     maxLength={2000}
                     value={p.notes}
                     onChange={(e) => setP({ ...p, notes: e.target.value })}
@@ -1878,16 +1927,16 @@ function ProgramEditor({
                 </label>
                 <section
                   className="co-template-picker"
-                  aria-label="Add a saved template"
+                  aria-label={t('coachWeb.addSavedTemplate')}
                 >
                   <div className="co-section-line" style={{ width: '100%' }}>
-                    <strong>Add a saved workout day</strong>
+                    <strong>{t('coachWeb.addSavedDay')}</strong>
                     <Button
                       type="button"
                       variant="ghost"
                       onClick={() => void loadTemplates()}
                     >
-                      Refresh
+                      {t('coachWeb.refresh')}
                     </Button>
                   </div>
                   {templates.length ? (
@@ -1903,7 +1952,9 @@ function ProgramEditor({
                             key={template.id}
                             className="co-template-choice"
                             disabled={p.sessions.length >= 14}
-                            aria-label={`Add template ${template.routine.name}`}
+                            aria-label={t('coachWeb.addNamedTemplate', {
+                              name: template.routine.name,
+                            })}
                             onClick={() => {
                               const copy = sessionFromTemplate(
                                 template.routine,
@@ -1921,27 +1972,29 @@ function ProgramEditor({
                               setTemplateId(copy.id);
                               setOpenSession(copy.id);
                               setTemplateNotice(
-                                `${template.routine.name} added as session ${replacing ? 1 : p.sessions.length + 1}. Edit this copy for your client; the template stays as it is.`,
+                                t('coachWeb.templateAdded', {
+                                  name: template.routine.name,
+                                  number: replacing ? 1 : p.sessions.length + 1,
+                                }),
                               );
                             }}
                           >
                             <strong>{template.routine.name}</strong>
                             <small>
-                              {template.routine.exercises.length} exercises ·{' '}
-                              {sets} sets
+                              {t('coachWeb.exerciseCount', {
+                                count: template.routine.exercises.length,
+                              })}{' '}
+                              · {sets} {t('you.sets')}
                             </small>
                             <em>
-                              <Plus size={13} /> Add to program
+                              <Plus size={13} /> {t('coachWeb.addToProgram')}
                             </em>
                           </button>
                         );
                       })}
                     </div>
                   ) : (
-                    <p className="co-muted">
-                      No saved templates yet. Save any session below as a
-                      template to reuse it.
-                    </p>
+                    <p className="co-muted">{t('coachWeb.noSavedTemplates')}</p>
                   )}
                 </section>
                 <ErrorNote text={templateError} />
@@ -1981,13 +2034,16 @@ function ProgramEditor({
                   <span className="co-session-summary-text">
                     <strong>
                       {templateMode
-                        ? 'Workout day'
-                        : s.name.trim() || `Session ${i + 1}`}
+                        ? t('coachWeb.workoutDay')
+                        : s.name.trim() ||
+                          t('coachWeb.sessionNumber', { number: i + 1 })}
                     </strong>
                     {!templateMode && (
                       <small>
-                        {DAYS[s.day]} · {s.exercises.length}{' '}
-                        {s.exercises.length === 1 ? 'exercise' : 'exercises'}
+                        {weekdayLabel(s.day, t)} ·{' '}
+                        {t('coachWeb.exerciseCount', {
+                          count: s.exercises.length,
+                        })}
                       </small>
                     )}
                   </span>
@@ -1996,7 +2052,9 @@ function ProgramEditor({
                       type="button"
                       variant="ghost"
                       className="co-session-remove"
-                      aria-label={`Remove session ${i + 1}`}
+                      aria-label={t('coachWeb.removeSession', {
+                        number: i + 1,
+                      })}
                       onClick={(e) => {
                         e.preventDefault();
                         setP({
@@ -2014,7 +2072,9 @@ function ProgramEditor({
                 </summary>
                 <div className="co-form-grid">
                   <label>
-                    {templateMode ? 'Template name' : 'Name'}
+                    {templateMode
+                      ? t('coachWeb.templateName')
+                      : t('coachWeb.name')}
                     <Input
                       required
                       maxLength={100}
@@ -2024,7 +2084,7 @@ function ProgramEditor({
                   </label>
                   {!templateMode && (
                     <label>
-                      Training day
+                      {t('coachWeb.trainingDay')}
                       <select
                         value={s.day}
                         onChange={(e) =>
@@ -2033,7 +2093,7 @@ function ProgramEditor({
                       >
                         {DAYS.map((d, k) => (
                           <option key={d} value={k}>
-                            {d}
+                            {weekdayLabel(k, t)}
                           </option>
                         ))}
                       </select>
@@ -2043,11 +2103,15 @@ function ProgramEditor({
                 {s.exercises.map((e, j) => (
                   <div className="co-exercise-editor" key={j}>
                     <div className="co-section-line">
-                      <strong>Exercise {j + 1}</strong>
+                      <strong>
+                        {t('coachWeb.exerciseNumber', { number: j + 1 })}
+                      </strong>
                       <Button
                         type="button"
                         variant="ghost"
-                        aria-label={`Remove exercise ${j + 1}`}
+                        aria-label={t('coachWeb.removeExercise', {
+                          number: j + 1,
+                        })}
                         onClick={() =>
                           session(i, {
                             exercises: s.exercises.filter((_, k) => k !== j),
@@ -2064,16 +2128,21 @@ function ProgramEditor({
                     >
                       <ExerciseThumbnail name={e.name} />
                       <span>
-                        <strong>{e.name || 'Choose exercise'}</strong>
+                        <strong>
+                          {e.name || t('coachWeb.chooseExercise')}
+                        </strong>
                         <small>
-                          {e.muscle || 'Exercise library'} · Change exercise
+                          {e.muscle
+                            ? muscleLabel(e.muscle, t)
+                            : t('coachWeb.exerciseLibrary')}{' '}
+                          {t('coachWeb.changeExercise')}
                         </small>
                       </span>
                       <ChevronRight size={18} />
                     </button>
                     <div className="co-exercise-numbers">
                       <label>
-                        Sets
+                        {t('coachWeb.sets')}
                         <Input
                           required
                           type="number"
@@ -2086,7 +2155,7 @@ function ProgramEditor({
                         />
                       </label>
                       <label>
-                        Reps
+                        {t('coachWeb.reps')}
                         <Input
                           required
                           type="number"
@@ -2099,7 +2168,7 @@ function ProgramEditor({
                         />
                       </label>
                       <label>
-                        Unit
+                        {t('coachWeb.unit')}
                         <select
                           value={e.unit ?? 'kg'}
                           onChange={(v) =>
@@ -2113,9 +2182,9 @@ function ProgramEditor({
                         </select>
                       </label>
                       <label>
-                        Rest (s)
+                        {t('coachWeb.rest')}
                         <Input
-                          aria-label="Rest between sets (seconds)"
+                          aria-label={t('coachWeb.restBetween')}
                           required
                           type="number"
                           min={0}
@@ -2133,16 +2202,16 @@ function ProgramEditor({
                     <details className="co-exercise-video" open={!!e.videoUrl}>
                       <summary>
                         {e.videoUrl
-                          ? 'Demonstration attached'
-                          : 'Add a demonstration video'}
+                          ? t('coachWeb.demoAttached')
+                          : t('coachWeb.addDemo')}
                       </summary>
                       {templateMode ? (
                         <label>
-                          Demonstration URL
+                          {t('coachWeb.demoUrl')}
                           <Input
                             maxLength={1000}
                             value={e.videoUrl ?? ''}
-                            placeholder="YouTube, Vimeo or direct video URL"
+                            placeholder={t('coachWeb.videoPlaceholder')}
                             onChange={(v) =>
                               exercise(i, j, { videoUrl: v.target.value })
                             }
@@ -2161,9 +2230,7 @@ function ProgramEditor({
                   </div>
                 ))}
                 {!s.exercises.length && (
-                  <p className="co-muted">
-                    Choose exercises from the library to build this session.
-                  </p>
+                  <p className="co-muted">{t('coachWeb.chooseExercises')}</p>
                 )}
                 <Button
                   type="button"
@@ -2172,7 +2239,7 @@ function ProgramEditor({
                   onClick={() => setPicker({ sessionId: s.id })}
                 >
                   <Plus size={17} />
-                  Add exercise
+                  {t('coachWeb.addExercise')}
                 </Button>
                 {!templateMode && (
                   <Button
@@ -2190,7 +2257,7 @@ function ProgramEditor({
                         .then(async () => {
                           await loadTemplates();
                           setTemplateNotice(
-                            `Saved ${s.name} to your template library.`,
+                            t('coachWeb.templateSaved', { name: s.name }),
                           );
                         })
                         .catch((e: Error) => setTemplateError(e.message))
@@ -2198,7 +2265,7 @@ function ProgramEditor({
                     }}
                   >
                     <ClipboardList size={16} />
-                    Save as template
+                    {t('coachWeb.saveAsTemplate')}
                   </Button>
                 )}
               </details>
@@ -2211,7 +2278,9 @@ function ProgramEditor({
                 onClick={() => {
                   const next = {
                     id: id(),
-                    name: `Session ${p.sessions.length + 1}`,
+                    name: t('coachWeb.sessionNumber', {
+                      number: p.sessions.length + 1,
+                    }),
                     day: 3,
                     exercises: [],
                   };
@@ -2220,13 +2289,12 @@ function ProgramEditor({
                 }}
               >
                 <Plus size={17} />
-                Add session
+                {t('coachWeb.addSession')}
               </Button>
             )}
             {!templateMode && (
               <p className="co-muted co-template-video-note">
-                Uploaded videos stay with this client’s program; templates keep
-                external demonstration links only.
+                {t('coachWeb.videoTemplateHint')}
               </p>
             )}
             <div className="co-dialog-footer">
@@ -2249,10 +2317,10 @@ function ProgramEditor({
                 }
               >
                 {busy
-                  ? 'Saving…'
+                  ? t('shell.saving')
                   : templateMode
-                    ? 'Save template'
-                    : 'Assign program'}
+                    ? t('coachWeb.saveTemplate')
+                    : t('coachWeb.assignProgram')}
                 <Check size={18} />
               </Button>
             </div>
@@ -2305,6 +2373,7 @@ function Checkins({
   busy: boolean;
   act: (b: Record<string, unknown>) => Promise<boolean>;
 }) {
+  const { t } = useI18n();
   const [energy, setEnergy] = useState(3),
     [sleep, setSleep] = useState('7'),
     [wins, setWins] = useState(''),
@@ -2323,17 +2392,23 @@ function Checkins({
           }}
         >
           <p className="co-overline">
-            WEEK OF {dateLabel(weekOf()).toUpperCase()}
+            {t('mycoach.weekOf', { date: dateLabel(weekOf()) })}
           </p>
-          <h2>Your weekly check-in</h2>
+          <h2>{t('mycoach.yourCheckin')}</h2>
           <div className="co-form-grid">
             <label>
-              Energy this week
+              {t('mycoach.energyWeek')}
               <select
                 value={energy}
                 onChange={(e) => setEnergy(Number(e.target.value))}
               >
-                {['Very low', 'Low', 'Okay', 'Good', 'Great'].map((s, i) => (
+                {[
+                  t('mycoach.energy1'),
+                  t('mycoach.energy2'),
+                  t('mycoach.energy3'),
+                  t('mycoach.energy4'),
+                  t('mycoach.energy5'),
+                ].map((s, i) => (
                   <option key={s} value={i + 1}>
                     {i + 1} · {s}
                   </option>
@@ -2341,7 +2416,7 @@ function Checkins({
               </select>
             </label>
             <label>
-              Average sleep (hours)
+              {t('mycoach.sleepHours')}
               <Input
                 required
                 type="number"
@@ -2354,30 +2429,32 @@ function Checkins({
             </label>
           </div>
           <label>
-            What went well?
+            {t('mycoach.wentWell')}
             <Textarea
+              dir="auto"
               maxLength={2000}
               value={wins}
               onChange={(e) => setWins(e.target.value)}
             />
           </label>
           <label>
-            Challenges or questions for your coach
+            {t('mycoach.askCoach')}
             <Textarea
+              dir="auto"
               maxLength={2000}
               value={challenges}
               onChange={(e) => setChallenges(e.target.value)}
             />
           </label>
           <Button className="primary" disabled={busy} type="submit">
-            {busy ? 'Sending…' : 'Submit check-in'}
+            {busy ? t('mycoach.sending') : t('mycoach.submit')}
             <Check size={18} />
           </Button>
         </form>
       )}
       {!items.length && isCoach && (
-        <Empty icon={ClipboardList} title="No check-ins yet">
-          <p>The client can submit one check-in each week.</p>
+        <Empty icon={ClipboardList} title={t('coachWeb.noCheckins')}>
+          <p>{t('coachWeb.noCheckinsHint')}</p>
         </Empty>
       )}
       {items.map((c) => (
@@ -2403,31 +2480,40 @@ function CheckinCard({
   busy: boolean;
   act: (b: Record<string, unknown>) => Promise<boolean>;
 }) {
+  const { t } = useI18n();
   const [feedback, setFeedback] = useState(c.feedback);
   return (
     <section className="co-card">
       <div className="co-section-line">
-        <h2>Week of {dateLabel(c.week)}</h2>
+        <h2>{t('coachWeb.weekOf', { date: dateLabel(c.week) })}</h2>
         <span className={'co-badge ' + (c.reviewed_at ? '' : 'amber')}>
-          {c.reviewed_at ? 'Reviewed' : 'Awaiting review'}
+          {c.reviewed_at ? t('mycoach.reviewed') : t('mycoach.awaiting')}
         </span>
       </div>
       <div className="co-checkin-numbers">
         <span>
-          Energy <strong>{c.answers.energy}/5</strong>
+          {t('mycoach.energy')}
+          <strong>{c.answers.energy}/5</strong>
         </span>
         <span>
-          Sleep <strong>{c.answers.sleep} hours</strong>
+          {t('mycoach.sleep')}
+          <strong>{t('coachWeb.hours', { count: c.answers.sleep })}</strong>
         </span>
       </div>
-      <h3>Wins</h3>
-      <p className="co-preserve">{c.answers.wins || 'No notes'}</p>
-      <h3>Challenges & questions</h3>
-      <p className="co-preserve">{c.answers.challenges || 'No notes'}</p>
+      <h3>{t('mycoach.wins')}</h3>
+      <p className="co-preserve" dir="auto">
+        {c.answers.wins || t('mycoach.noNotes')}
+      </p>
+      <h3>{t('mycoach.challenges')}</h3>
+      <p className="co-preserve" dir="auto">
+        {c.answers.challenges || t('mycoach.noNotes')}
+      </p>
       {c.reviewed_at ? (
         <div className="co-feedback">
-          <strong>Coach feedback</strong>
-          <p className="co-preserve">{c.feedback}</p>
+          <strong>{t('mycoach.coachReply')}</strong>
+          <p className="co-preserve" dir="auto">
+            {c.feedback}
+          </p>
         </div>
       ) : isCoach ? (
         <form
@@ -2437,8 +2523,9 @@ function CheckinCard({
           }}
         >
           <label>
-            Your feedback
+            {t('coachWeb.yourFeedback')}
             <Textarea
+              dir="auto"
               required
               maxLength={4000}
               value={feedback}
@@ -2446,12 +2533,12 @@ function CheckinCard({
             />
           </label>
           <Button className="primary" type="submit" disabled={busy}>
-            Send feedback & mark reviewed
+            {t('coachWeb.sendFeedback')}
             <Check size={17} />
           </Button>
         </form>
       ) : (
-        <p className="co-muted">Your coach will review this update.</p>
+        <p className="co-muted">{t('mycoach.willReview')}</p>
       )}
     </section>
   );
@@ -2467,53 +2554,57 @@ function RequestStatus({
   busy: boolean;
   act: (b: Record<string, unknown>) => Promise<boolean>;
 }) {
+  const { t } = useI18n();
   const [note, setNote] = useState(''),
     [decision, setDecision] = useState<'accept' | 'reject' | null>(null),
     [withdraw, setWithdraw] = useState(false);
   const open = m.status === 'requested' || m.status === 'awaiting_payment';
   return (
     <section className="co-card">
-      <span className="co-badge">{memberStatus(m.status)}</span>
+      <span className="co-badge">{memberStatusLabel(m.status, t)}</span>
       <h2 style={{ marginTop: 20 }}>{m.offer.name}</h2>
       <p className="co-price">
         {money(m.offer.price, m.offer.currency)}
-        <small> / month</small>
+        <small> {t('coachWeb.monthly')}</small>
       </p>
-      <p className="co-preserve">{m.offer.description}</p>
+      <p className="co-preserve" dir="auto">
+        {m.offer.description}
+      </p>
       <div className="co-request-steps">
-        <span className="done">1 · Request sent</span>
+        <span className="done">{t('coachWeb.requestStep')}</span>
         <span className={m.status === 'awaiting_payment' ? 'done' : ''}>
-          2 · Coach review
+          {t('coachWeb.reviewStep')}
         </span>
-        <span>3 · Payment</span>
-        <span>4 · Membership starts</span>
+        <span>{t('coachWeb.paymentStep')}</span>
+        <span>{t('coachWeb.membershipStep')}</span>
       </div>
       {open && (
         <>
-          <h3>Training goals</h3>
-          <p className="co-preserve">{m.intake.goals}</p>
+          <h3>{t('coachWeb.trainingGoals')}</h3>
+          <p className="co-preserve" dir="auto">
+            {m.intake.goals}
+          </p>
           <dl className="co-intake">
-            <dt>Experience & equipment</dt>
+            <dt>{t('coachWeb.experienceEquipment')}</dt>
             <dd>
               {m.intake.experience} · {m.intake.equipment}
             </dd>
-            <dt>Availability</dt>
+            <dt>{t('mycoach.availability')}</dt>
             <dd>
-              {m.intake.days} days/week ·{' '}
-              {m.intake.country === 'QA' ? 'Qatar' : 'Saudi Arabia'}
+              {t('coachWeb.daysWeek', { count: m.intake.days })} ·{' '}
+              {m.intake.country === 'QA'
+                ? t('mycoach.qatar')
+                : t('mycoach.saudi')}
             </dd>
-            <dt>Considerations</dt>
-            <dd>{m.intake.limitations || 'None shared'}</dd>
+            <dt>{t('coachWeb.considerations')}</dt>
+            <dd>{m.intake.limitations || t('mycoach.noneShared')}</dd>
           </dl>
-          <p className="co-muted">
-            Workout and weight history are not shared until membership starts
-            after payment.
-          </p>
+          <p className="co-muted">{t('coachWeb.sharingPaymentHint')}</p>
         </>
       )}
       {m.decision_note && (
         <div className="co-feedback">
-          <strong>Coach’s response</strong>
+          <strong>{t('coachWeb.coachResponse')}</strong>
           <p>{m.decision_note}</p>
         </div>
       )}
@@ -2521,8 +2612,9 @@ function RequestStatus({
         (isCoach ? (
           <>
             <label>
-              Response to trainee (optional)
+              {t('coachWeb.responseOptional')}
               <Textarea
+                dir="auto"
                 value={note}
                 maxLength={1000}
                 onChange={(e) => setNote(e.target.value)}
@@ -2534,7 +2626,7 @@ function RequestStatus({
                 disabled={busy}
                 onClick={() => setDecision('accept')}
               >
-                Accept request
+                {t('coachWeb.acceptRequest')}
                 <Check size={17} />
               </Button>
               <Button
@@ -2542,38 +2634,32 @@ function RequestStatus({
                 disabled={busy}
                 onClick={() => setDecision('reject')}
               >
-                Decline
+                {t('coachWeb.decline')}
               </Button>
             </div>
           </>
         ) : (
-          <p>
-            Your coach is reviewing your request. Their decision will appear
-            here.
-          </p>
+          <p>{t('coachWeb.requestReviewHint')}</p>
         ))}
       {m.status === 'awaiting_payment' && (
         <div className="co-payment-gate">
           <Wallet size={24} />
           <h3>
             {isCoach
-              ? 'Accepted · waiting for trainee payment'
-              : 'Your coach accepted your request'}
+              ? t('coachWeb.awaitingTraineePayment')
+              : t('coachWeb.requestAccepted')}
           </h3>
           <p>
             {isCoach
-              ? 'The client must pay before coaching begins.'
-              : 'Pay ' +
-                money(m.offer.price, m.offer.currency) +
-                ' to start your membership once checkout is available.'}
+              ? t('coachWeb.paymentRequired')
+              : t('coachWeb.payWhenAvailable', {
+                  price: money(m.offer.price, m.offer.currency),
+                })}
           </p>
           <Button className="primary" disabled>
-            Payment setup pending
+            {t('coachWeb.paymentPending')}
           </Button>
-          <p className="co-muted">
-            Checkout is not connected yet. No charge has been made and
-            membership has not started.
-          </p>
+          <p className="co-muted">{t('coachWeb.checkoutHint')}</p>
         </div>
       )}
       {!isCoach && open && (
@@ -2582,27 +2668,13 @@ function RequestStatus({
           disabled={busy}
           onClick={() => setWithdraw(true)}
         >
-          Withdraw request
+          {t('coachWeb.withdrawRequest')}
         </Button>
       )}
-      {m.status === 'rejected' && (
-        <p>
-          The coach declined this request. You can choose another coach or
-          package in the Marketplace.
-        </p>
-      )}
-      {m.status === 'withdrawn' && (
-        <p>This request was withdrawn. No membership started.</p>
-      )}
-      {m.status === 'invited' && (
-        <p>
-          Invitations have been retired. Trainees now choose a package through
-          the Marketplace.
-        </p>
-      )}
-      {m.status === 'ended' && (
-        <p>Coaching has ended. Shared progress is no longer accessible.</p>
-      )}
+      {m.status === 'rejected' && <p>{t('coachWeb.declinedHint')}</p>}
+      {m.status === 'withdrawn' && <p>{t('coachWeb.withdrawnHint')}</p>}
+      {m.status === 'invited' && <p>{t('coachWeb.retiredHint')}</p>}
+      {m.status === 'ended' && <p>{t('coachWeb.endedHint')}</p>}
       <Dialog
         open={!!decision || withdraw}
         onOpenChange={(v) => {
@@ -2615,17 +2687,17 @@ function RequestStatus({
         <DialogContent className="form-dialog co-dialog">
           <DialogTitle>
             {withdraw
-              ? 'Withdraw this request?'
+              ? t('coachWeb.withdrawTitle')
               : decision === 'accept'
-                ? 'Accept this coaching request?'
-                : 'Decline this coaching request?'}
+                ? t('coachWeb.acceptTitle')
+                : t('coachWeb.declineTitle')}
           </DialogTitle>
           <DialogDescription>
             {withdraw
-              ? 'This cancels the request without starting a membership.'
+              ? t('coachWeb.withdrawHint')
               : decision === 'accept'
-                ? 'The trainee will see your acceptance in the app. Membership stays pending until payment is verified.'
-                : 'The trainee will see your decision and optional response in the app.'}
+                ? t('coachWeb.acceptHint')
+                : t('coachWeb.declineHint')}
           </DialogDescription>
           <Button
             className="primary full"
@@ -2643,7 +2715,7 @@ function RequestStatus({
               }
             }}
           >
-            {busy ? 'Saving…' : 'Confirm'}
+            {busy ? t('shell.saving') : t('coachWeb.confirm')}
           </Button>
         </DialogContent>
       </Dialog>
@@ -2787,7 +2859,9 @@ export function Marketplace({ onRequests }: { onRequests: () => void }) {
                         <small> / month</small>
                       </strong>
                     </div>
-                    <p className="co-preserve">{o.description}</p>
+                    <p className="co-preserve" dir="auto">
+                      {o.description}
+                    </p>
                     <p className="co-muted">
                       Coach responds within {o.responseHours} hours.
                       {o.spotsLeft !== null && (
@@ -2910,6 +2984,7 @@ function PackageRequest({
           <label>
             Training goals
             <Textarea
+              dir="auto"
               required
               maxLength={2000}
               value={intake.goals}
@@ -2971,6 +3046,7 @@ function PackageRequest({
           <label>
             Considerations (optional)
             <Textarea
+              dir="auto"
               maxLength={2000}
               value={intake.limitations}
               onChange={(e) =>

@@ -11,7 +11,8 @@
 .co-sidebar {
   width: 238px;
   position: fixed;
-  inset: 20px auto 20px 20px;
+  inset-block: 20px;
+  inset-inline-start: 20px;
   border-radius: 28px;
   background: var(--surface, #fff);
   padding: 32px 22px;
@@ -50,7 +51,7 @@
   padding: 15px;
   border-radius: 14px;
   font-size: 14px;
-  text-align: left;
+  text-align: start;
   text-decoration: none;
   color: var(--muted);
   border: 0;
@@ -132,7 +133,7 @@
   color: var(--muted);
 }
 .co-main {
-  margin-left: 278px;
+  margin-inline-start: 278px;
   padding: 0 48px 64px;
   max-width: 1520px;
 }
@@ -324,7 +325,7 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  text-align: left;
+  text-align: start;
   gap: 12px;
   min-width: 0;
   color: var(--foreground);
@@ -436,7 +437,7 @@
   display: flex;
   align-items: center;
   gap: 14px;
-  text-align: left;
+  text-align: start;
   border: 0;
   background: transparent;
   padding: 13px 0;
@@ -490,7 +491,7 @@
   display: grid;
   gap: 1px;
   min-width: 58px;
-  text-align: right;
+  text-align: end;
 }
 .co-client-stats strong {
   font-size: 15px;
@@ -757,7 +758,7 @@
 .co-messages form .primary {
   display: flex;
   margin-top: 14px;
-  margin-left: auto;
+  margin-inline-start: auto;
 }
 .co-membership-detail {
   max-width: 750px;
@@ -782,7 +783,7 @@
   gap: 24px;
 }
 .co-membership-card {
-  text-align: left;
+  text-align: start;
   border: 0;
   color: var(--foreground);
   cursor: pointer;
@@ -873,9 +874,9 @@ html[data-theme='dark'] .co-card {
     padding: 28px 16px;
   }
   .co-main {
-    margin-left: 240px;
-    padding-left: 24px;
-    padding-right: 24px;
+    margin-inline-start: 240px;
+    padding-inline-start: 24px;
+    padding-inline-end: 24px;
   }
   .co-profile-layout {
     grid-template-columns: 1fr;
@@ -919,7 +920,8 @@ html[data-theme='dark'] .co-card {
   }
   .co-sidebar-bottom {
     display: block;
-    margin: 0 0 0 6px;
+    margin: 0;
+    margin-inline-start: 6px;
   }
   .co-prefs-button {
     width: 44px;
@@ -1284,7 +1286,7 @@ html[data-theme='dark'] .co-card {
 
 .co-weight-metric {
   cursor: pointer;
-  text-align: left;
+  text-align: start;
   color: inherit;
 }
 .co-weight-metric:hover {
@@ -1317,7 +1319,7 @@ html[data-theme='dark'] .co-card {
   border-radius: 12px;
   color: var(--foreground);
   background: var(--surface);
-  text-align: left;
+  text-align: start;
   width: 100%;
   cursor: pointer;
   margin-bottom: 16px;
@@ -1417,7 +1419,7 @@ html[data-theme='dark'] .co-card {
 .weight-comparison td {
   padding: 12px;
   border-bottom: 1px solid var(--line);
-  text-align: left;
+  text-align: start;
 }
 .weight-comparison th {
   font-weight: 500;
@@ -1508,7 +1510,7 @@ html[data-theme='dark'] .co-card {
   padding: 12px 0;
 }
 .co-save-template {
-  margin-left: 10px;
+  margin-inline-start: 10px;
 }
 .co-template-video-note {
   font-size: 13px;
@@ -1683,20 +1685,20 @@ html[data-theme='dark'] .co-card {
 }
 .co-bubble.theirs {
   align-self: flex-start;
-  border-bottom-left-radius: 8px;
+  border-end-start-radius: 8px;
 }
 .co-bubble.theirs.tail {
-  border-bottom-left-radius: 4px;
+  border-end-start-radius: 4px;
   margin-bottom: 10px;
 }
 .co-bubble.mine {
   align-self: flex-end;
   background: var(--green);
   color: var(--background, #fff);
-  border-bottom-right-radius: 8px;
+  border-end-end-radius: 8px;
 }
 .co-bubble.mine.tail {
-  border-bottom-right-radius: 4px;
+  border-end-end-radius: 4px;
   margin-bottom: 10px;
 }
 .co-bubble p {
@@ -1752,7 +1754,7 @@ html[data-theme='dark'] .co-card {
   padding: 2px 9px 0;
 }
 .co-bubble:has(.co-bubble-media) time {
-  padding-right: 9px;
+  padding-inline-end: 9px;
   padding-bottom: 4px;
 }
 @keyframes co-bubble-in {
@@ -1994,7 +1996,7 @@ html[data-theme='dark'] .co-card {
   font-size: 13px !important;
 }
 .co-photo-remove {
-  margin-left: auto;
+  margin-inline-start: auto;
   width: 34px;
   height: 34px;
   border: 0;
@@ -2084,7 +2086,7 @@ html[data-theme='dark'] .co-card {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
-  padding-left: 64px;
+  padding-inline-start: 64px;
 }
 .co-photo-compare-heads label {
   margin: 0;
@@ -2167,7 +2169,7 @@ html[data-theme='dark'] .co-card {
   width: 100%;
 }
 .co-metric-pair > div:last-child {
-  text-align: right;
+  text-align: end;
 }
 .co-metric-pair > div:last-child .co-metric-change {
   justify-content: flex-end;
@@ -2218,7 +2220,7 @@ html[data-theme='dark'] .co-card {
   flex: 0 0 auto;
   min-width: 180px;
   max-width: 240px;
-  text-align: left;
+  text-align: start;
   border: 1px solid var(--line);
   border-radius: 14px;
   background: var(--surface);
@@ -2314,7 +2316,7 @@ html[data-theme='dark'] .co-attach-progress {
     bottom: 6px;
   }
   .co-photo-compare-heads {
-    padding-left: 0;
+    padding-inline-start: 0;
   }
   .co-photo-compare-row {
     grid-template-columns: 1fr 1fr;
@@ -2388,8 +2390,8 @@ html[data-theme='dark'] .co-attach-progress {
   border-bottom: 1px solid var(--line);
 }
 .co-session-editor > :not(summary) {
-  margin-left: 20px;
-  margin-right: 20px;
+  margin-inline-start: 20px;
+  margin-inline-end: 20px;
 }
 .co-session-editor > .co-form-grid {
   margin-top: 16px;
@@ -2416,8 +2418,8 @@ html[data-theme='dark'] .co-attach-progress {
 }
 .co-exercise-numbers input,
 .co-exercise-numbers select {
-  padding-left: 10px;
-  padding-right: 8px;
+  padding-inline-start: 10px;
+  padding-inline-end: 8px;
 }
 .co-exercise-video {
   border-top: 1px solid var(--line);
@@ -2447,7 +2449,7 @@ html[data-theme='dark'] .co-attach-progress {
   border-right: 1.5px solid currentColor;
   border-bottom: 1.5px solid currentColor;
   transform: rotate(-45deg);
-  margin-right: 4px;
+  margin-inline-end: 4px;
   transition: transform 200ms cubic-bezier(0.23, 1, 0.32, 1);
 }
 .co-exercise-video[open] > summary::before {
@@ -2461,8 +2463,8 @@ html[data-theme='dark'] .co-attach-progress {
     padding: 14px 16px;
   }
   .co-session-editor > :not(summary) {
-    margin-left: 14px;
-    margin-right: 14px;
+    margin-inline-start: 14px;
+    margin-inline-end: 14px;
   }
   .co-exercise-editor {
     padding: 12px;
@@ -2488,4 +2490,52 @@ html[data-theme='dark'] .co-attach-progress {
 .co-full {
   color: #8d620f;
   font-weight: 500;
+}
+
+/* Arabic follows reading order; charts and physical lightbox controls retain theirs. */
+:root[dir='rtl'] .co-client-chevron,
+:root[dir='rtl'] .co-back > svg,
+:root[dir='rtl'] .co-shared .progress-row > svg:last-child {
+  transform: scaleX(-1);
+}
+:root[dir='rtl']
+  :is(
+    .co-overline,
+    .co-sidebar,
+    .co-metrics,
+    .co-template-card,
+    .co-session-summary,
+    .co-photo-tile
+  ) {
+  letter-spacing: 0;
+}
+:root[dir='rtl'] .co-exercise-video:not([open]) > summary::before {
+  transform: rotate(135deg);
+}
+.co-weight-chart svg,
+.progress-dialog svg {
+  direction: ltr;
+}
+.co-numeric-table td,
+.co-history strong,
+.nutrition-values strong {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+.co-preserve,
+.co-program-note,
+.co-message-body {
+  overflow-wrap: anywhere;
+}
+
+.co-metric-change,
+.co-metric-pair strong,
+.co-client-stats > span:last-child strong {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+:root[dir='rtl'] .co-heading h1,
+:root[dir='rtl'] .form-dialog [data-slot='dialog-title'] {
+  letter-spacing: 0;
+  line-height: 1.35;
 }
