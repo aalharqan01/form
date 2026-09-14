@@ -8,19 +8,29 @@ import {
 import {
   Animated,
   Easing,
+  PanResponder,
   Platform,
   Pressable,
   ScrollView,
   TextInput,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import {
   Bookmark,
   Check,
+  ChevronDown,
+  Copy,
   Dumbbell,
+  GripVertical,
+  Link2,
+  MoreHorizontal,
   Pause,
   Play,
   Plus,
+  Repeat,
+  Trash2,
+  Unlink,
   X,
 } from 'lucide-react-native';
 import { randomUUID } from 'expo-crypto';
@@ -68,13 +78,21 @@ import {
   T,
   TextButton,
   Thumbnail,
+  easeOut,
 } from '../ui';
 import { DemoVideo } from '../components/demo-video';
 import { ExercisePicker } from './exercise-picker';
+import {
+  ArrangeSheet,
+  PairSheet,
+  pairInto,
+  supersetLetters,
+  unpairFrom,
+} from './exercise-tools';
 import { RoutineEditor } from './routine-editor';
 import { duration, loadValue, restLabel, type Act } from './shared';
 
-const REST_PRESETS = [0, 30, 45, 60, 90, 120, 180, 240, 300];
+const REST_PRESETS = [30, 60, 90, 120, 180];
 const native = Platform.OS !== 'web';
 
 function CheckButton({
@@ -132,7 +150,7 @@ function CheckButton({
       onPress={onPress}
       style={{
         width: 43,
-        height: 52,
+        height: 48,
         alignItems: 'center',
         justifyContent: 'center',
       }}
@@ -142,7 +160,7 @@ function CheckButton({
           pointerEvents: 'none',
           position: 'absolute',
           width: 43,
-          height: 52,
+          height: 48,
           borderRadius: 15,
           borderWidth: 2,
           borderColor: theme.checkDone,
@@ -163,8 +181,8 @@ function CheckButton({
       <Animated.View
         style={{
           width: 43,
-          height: 52,
-          borderRadius: 15,
+          height: 48,
+          borderRadius: 14,
           alignItems: 'center',
           justifyContent: 'center',
           backgroundColor: done ? theme.checkDone : theme.checkIdle,
@@ -181,106 +199,346 @@ function CheckButton({
   );
 }
 
-function Stepper({
+function SetField({
   value,
   label,
-  step,
   done,
   onChange,
   keyboard,
 }: {
   value: string;
   label: string;
-  step: string;
   done: boolean;
   onChange: (value: string) => void;
   keyboard: 'decimal-pad' | 'number-pad';
 }) {
   const { theme } = useTheme();
-  const { t } = useI18n();
-  const bump = (delta: number) => {
-    const next = Math.max(0, Number(value || 0) + delta);
-    onChange(String(Number(next.toFixed(2))));
-  };
   return (
-    <View
+    <TextInput
+      accessibilityLabel={label}
+      keyboardType={keyboard}
+      inputMode={keyboard === 'decimal-pad' ? 'decimal' : 'numeric'}
+      value={value}
+      placeholder="0"
+      placeholderTextColor={theme.placeholder}
+      maxLength={keyboard === 'decimal-pad' ? 8 : 4}
+      selectTextOnFocus
+      onChangeText={onChange}
+      style={[
+        font(500),
+        {
+          flex: 1,
+          minWidth: 0,
+          height: 48,
+          borderRadius: 12,
+          fontSize: 22,
+          textAlign: 'center',
+          color: done ? theme.setDoneText : theme.ink,
+          backgroundColor: done ? theme.setDone : theme.soft,
+          borderWidth: 1.5,
+          borderColor: done ? '#759764' : 'transparent',
+          paddingHorizontal: 4,
+        },
+      ]}
+    />
+  );
+}
+
+/** One set: number toggle, typed weight and reps, done check. Swipe it away to remove it. */
+function SetRow({
+  exercise,
+  set,
+  index,
+  number,
+  unit,
+  busy,
+  onToggleKind,
+  onEditLoad,
+  onEditReps,
+  onComplete,
+  onRemove,
+}: {
+  exercise: Exercise;
+  set: LiftSet;
+  index: number;
+  number: number;
+  unit: 'kg' | 'lb';
+  busy: boolean;
+  onToggleKind: () => void;
+  onEditLoad: (load: string) => void;
+  onEditReps: (reps: string) => void;
+  onComplete: () => void;
+  /** Called once the row has slid away; returns false to snap it back instead. */
+  onRemove: () => boolean;
+}) {
+  const { theme } = useTheme();
+  const { t, rtl } = useI18n();
+  const { width } = useWindowDimensions();
+  const warmup = set.kind === 'warmup';
+  const drag = useRef(new Animated.Value(0)).current;
+  const offset = useRef(0);
+  // Swiping toward the trailing edge reveals the remove area.
+  const away = rtl ? 1 : -1;
+  const REVEAL = 88;
+  const settle = (to: number) =>
+    Animated.spring(drag, {
+      toValue: to,
+      damping: 18,
+      stiffness: 220,
+      mass: 0.6,
+      useNativeDriver: native,
+    }).start(() => {
+      offset.current = to;
+    });
+  const fade = useRef(new Animated.Value(1)).current;
+  const collapse = useRef(new Animated.Value(1)).current;
+  const reset = () => {
+    drag.setValue(0);
+    fade.setValue(1);
+    collapse.setValue(1);
+    offset.current = 0;
+  };
+  // The row fades while it folds, in one beat, so the ones below settle up.
+  const fold = () =>
+    Animated.timing(collapse, {
+      toValue: 0,
+      duration: 200,
+      easing: easeOut,
+      useNativeDriver: false,
+    });
+  const dismiss = () =>
+    Animated.parallel([
+      Animated.timing(drag, {
+        toValue: away * width,
+        duration: 160,
+        easing: easeOut,
+        useNativeDriver: native,
+      }),
+      fold(),
+    ]).start(() => {
+      if (!onRemove()) reset();
+    });
+  const remove = () =>
+    Animated.parallel([
+      Animated.timing(fade, {
+        toValue: 0,
+        duration: 140,
+        easing: easeOut,
+        useNativeDriver: native,
+      }),
+      fold(),
+    ]).start(() => {
+      if (!onRemove()) reset();
+    });
+  const responder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, g) =>
+        Math.abs(g.dx) > 8 && Math.abs(g.dx) > Math.abs(g.dy) * 1.4,
+      onPanResponderMove: (_, g) => {
+        const raw = offset.current + g.dx;
+        const along = raw * away; // positive when moving toward the remove area
+        const value =
+          along < 0
+            ? raw * 0.18 // friction when pushed the wrong way
+            : along > REVEAL
+              ? away * (REVEAL + (along - REVEAL) * 0.35) // damping past the reveal
+              : raw;
+        drag.setValue(value);
+      },
+      onPanResponderRelease: (_, g) => {
+        const along = (offset.current + g.dx) * away;
+        const flick = g.vx * away > 0.6;
+        if (along > REVEAL * 1.4 || flick) dismiss();
+        else if (along > REVEAL * 0.5) settle(away * REVEAL);
+        else settle(0);
+      },
+      onPanResponderTerminate: () => settle(0),
+    }),
+  ).current;
+  return (
+    <Animated.View
       style={{
-        flex: 1,
-        borderRadius: 12,
         overflow: 'hidden',
-        backgroundColor: done ? theme.setDone : theme.soft,
-        borderWidth: 1,
-        borderColor: done ? '#759764' : 'transparent',
+        height: collapse.interpolate({
+          inputRange: [0, 1],
+          outputRange: [0, 58],
+        }),
+        opacity: fade,
+        transform: [
+          {
+            scale: fade.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0.97, 1],
+            }),
+          },
+        ],
+        paddingVertical: 5,
       }}
     >
-      <TextInput
-        accessibilityLabel={label}
-        keyboardType={keyboard}
-        inputMode={keyboard === 'decimal-pad' ? 'decimal' : 'numeric'}
-        value={value}
-        placeholder="0"
-        placeholderTextColor={theme.placeholder}
-        maxLength={keyboard === 'decimal-pad' ? 8 : 4}
-        selectTextOnFocus
-        onChangeText={onChange}
-        style={[
-          font(500),
-          {
-            height: 54,
-            fontSize: 27,
-            textAlign: 'center',
-            color: done ? theme.setDoneText : theme.ink,
-            paddingHorizontal: 4,
-          },
-        ]}
-      />
       <View
+        pointerEvents="none"
+        style={{
+          position: 'absolute',
+          top: 5,
+          bottom: 5,
+          end: 0,
+          width: REVEAL + 40,
+          borderRadius: 12,
+          backgroundColor: theme.danger,
+          alignItems: rtl ? 'flex-start' : 'flex-end',
+          justifyContent: 'center',
+          paddingHorizontal: 18,
+          opacity: drag.interpolate({
+            inputRange: away < 0 ? [-REVEAL, 0] : [0, REVEAL],
+            outputRange: away < 0 ? [1, 0] : [0, 1],
+            extrapolate: 'clamp',
+          }),
+        }}
+      >
+        <T weight={500} size={13} line={16} color="#fff">
+          {t('workout.swipeRemove')}
+        </T>
+      </View>
+      <Animated.View
+        {...responder.panHandlers}
         style={{
           flexDirection: 'row',
           alignItems: 'center',
-          backgroundColor: theme.stepperBar,
+          gap: 8,
+          backgroundColor: theme.surface,
+          transform: [{ translateX: drag }],
         }}
       >
-        <Pressable
+        <Press
           accessibilityRole="button"
-          accessibilityLabel={t('workout.decrease', { label })}
-          onPress={() => bump(-Number(step))}
+          accessibilityLabel={t('workout.setType', {
+            index: index + 1,
+            kind: warmup ? t('workout.warmUp') : t('workout.working'),
+          })}
+          accessibilityHint={t('workout.holdToRemove')}
+          scale={0.88}
+          onPress={onToggleKind}
+          onLongPress={remove}
+          delayLongPress={450}
           style={{
-            flex: 1,
-            height: 37,
+            width: 36,
+            height: 48,
+            borderRadius: 12,
+            backgroundColor: warmup ? theme.warmup : theme.soft,
             alignItems: 'center',
             justifyContent: 'center',
           }}
         >
-          <T size={20} line={24}>
-            −
+          <T
+            weight={500}
+            size={14}
+            line={18}
+            color={warmup ? theme.warmupText : theme.ink}
+          >
+            {warmup ? 'W' : number}
           </T>
-        </Pressable>
-        <T
-          size={11}
-          line={14}
-          color={theme.muted}
-          style={{ flex: 1, textAlign: 'center' }}
-        >
-          {step}
-        </T>
-        <Pressable
+        </Press>
+        <SetField
+          label={`${exercise.name} set ${index + 1} weight`}
+          value={loadValue(set, unit)}
+          done={set.done}
+          keyboard="decimal-pad"
+          onChange={onEditLoad}
+        />
+        <SetField
+          label={`${exercise.name} set ${index + 1} reps`}
+          value={set.reps}
+          done={set.done}
+          keyboard="number-pad"
+          onChange={onEditReps}
+        />
+        <CheckButton
+          done={set.done}
+          busy={busy}
+          label={t('workout.completeSet', {
+            name: exercise.name,
+            index: index + 1,
+          })}
+          onPress={onComplete}
+        />
+        <Press
           accessibilityRole="button"
-          accessibilityLabel={t('workout.increase', { label })}
-          onPress={() => bump(Number(step))}
+          accessibilityLabel={t('workout.removeSet', { index: index + 1 })}
+          onPress={remove}
+          scale={0.8}
+          hitSlop={8}
           style={{
-            flex: 1,
-            height: 37,
+            width: 26,
+            height: 26,
+            borderRadius: 13,
+            backgroundColor: theme.soft,
             alignItems: 'center',
             justifyContent: 'center',
           }}
         >
-          <T size={20} line={24}>
-            +
-          </T>
-        </Pressable>
-      </View>
-    </View>
+          <X size={14} strokeWidth={2.4} color={theme.muted} />
+        </Press>
+      </Animated.View>
+    </Animated.View>
+  );
+}
+
+/** Copies the previous session's sets in; confirms with a short "Copied" beat. */
+function CopyLastButton({
+  disabled,
+  onPress,
+}: {
+  disabled: boolean;
+  onPress: () => void;
+}) {
+  const { theme } = useTheme();
+  const { t } = useI18n();
+  const [copied, setCopied] = useState(false);
+  const pop = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    if (!copied) return;
+    Animated.sequence([
+      Animated.timing(pop, {
+        toValue: 0.94,
+        duration: 80,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: native,
+      }),
+      Animated.spring(pop, {
+        toValue: 1,
+        friction: 5,
+        tension: 200,
+        useNativeDriver: native,
+      }),
+    ]).start();
+    const clear = setTimeout(() => setCopied(false), 1400);
+    return () => clearTimeout(clear);
+  }, [copied, pop]);
+  return (
+    <Animated.View
+      style={{ alignSelf: 'flex-start', transform: [{ scale: pop }] }}
+    >
+      <SecondaryButton
+        height={38}
+        size={13}
+        label={copied ? t('workout.copied') : t('workout.copyLastAction')}
+        accessibilityLabel={t('workout.copyLastAction')}
+        background={copied ? theme.setDone : undefined}
+        color={copied ? theme.setDoneText : undefined}
+        icon={
+          copied ? (
+            <Check size={15} color={theme.setDoneText} />
+          ) : (
+            <Copy size={15} color={theme.secondaryText} />
+          )
+        }
+        disabled={disabled || copied}
+        onPress={() => {
+          onPress();
+          setCopied(true);
+        }}
+      />
+    </Animated.View>
   );
 }
 
@@ -292,7 +550,8 @@ function ExerciseCard({
   act,
   change,
   editSet,
-  remove,
+  onMenu,
+  supersetLabel,
   onError,
 }: {
   exercise: Exercise;
@@ -305,7 +564,8 @@ function ExerciseCard({
     setId: string,
     patch: { load?: string; reps?: string; done?: boolean },
   ) => Promise<unknown>;
-  remove: () => void;
+  onMenu: () => void;
+  supersetLabel?: string;
   onError: (message: string) => void;
 }) {
   const { theme } = useTheme();
@@ -320,7 +580,10 @@ function ExerciseCard({
   const anyDone = exercise.sets.some((s) => s.done);
   const complete = (set: LiftSet) => {
     if (set.done) {
-      act(() => editSet(set.id, { done: false }));
+      act(async () => {
+        await editSet(set.id, { done: false });
+        if (rest.exerciseId === exercise.id) rest.skip();
+      });
       return;
     }
     const kg = Number(set.kg);
@@ -344,21 +607,23 @@ function ExerciseCard({
   };
   const addSet = (kind: 'working' | 'warmup') => {
     const last = exercise.sets.filter((s) => s.kind !== 'warmup').at(-1);
+    const set: LiftSet = {
+      id: randomUUID(),
+      kg: kind === 'warmup' ? '' : (last?.kg ?? ''),
+      load: kind === 'warmup' ? '' : last ? loadValue(last, unit) : '',
+      reps: last?.reps ?? '10',
+      kind,
+      done: false,
+    };
     act(() =>
-      change((e) => ({
-        ...e,
-        sets: [
-          ...e.sets,
-          {
-            id: randomUUID(),
-            kg: kind === 'warmup' ? '' : (last?.kg ?? ''),
-            load: kind === 'warmup' ? '' : last ? loadValue(last, unit) : '',
-            reps: last?.reps ?? '10',
-            kind,
-            done: false,
-          },
-        ],
-      })),
+      change((e) => {
+        // Warm-ups belong before the first working set; working sets go last.
+        const at =
+          kind === 'warmup' ? e.sets.findIndex((v) => v.kind !== 'warmup') : -1;
+        const sets = [...e.sets];
+        sets.splice(at === -1 ? sets.length : at, 0, set);
+        return { ...e, sets };
+      }),
     );
   };
   return (
@@ -369,37 +634,70 @@ function ExerciseCard({
             flexDirection: 'row',
             alignItems: 'center',
             gap: 10,
-            flexWrap: 'wrap',
+            flexWrap: 'nowrap',
           }}
         >
           <Thumbnail name={exercise.name} />
-          <View style={{ flex: 1, minWidth: 120 }}>
+          <View style={{ flex: 1, minWidth: 0 }}>
             <T weight={500} size={23} line={27} tracking={-0.8}>
               {exercise.name}
             </T>
-            <Body size={11} style={{ marginTop: 3 }}>
-              {exercise.muscle}
-            </Body>
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 8,
+                marginTop: 3,
+              }}
+            >
+              <Body size={11}>{exercise.muscle}</Body>
+              {supersetLabel ? (
+                <View
+                  style={{
+                    paddingHorizontal: 7,
+                    paddingVertical: 2,
+                    borderRadius: 8,
+                    backgroundColor: theme.setDone,
+                  }}
+                >
+                  <T size={10} line={14} weight={500} color={theme.setDoneText}>
+                    {supersetLabel}
+                  </T>
+                </View>
+              ) : null}
+            </View>
           </View>
-          <Segmented
-            compact
-            accessibilityLabel={t('workout.unitFor', { name: exercise.name })}
-            options={[
-              { value: 'kg', label: 'kg' },
-              { value: 'lb', label: 'lb' },
-            ]}
-            labelFor={(o) => `${exercise.name} ${o.label}`}
-            value={unit}
-            onChange={(next) =>
-              act(() => change((e) => changeExerciseUnit(e, next)))
-            }
-          />
-          <IconButton
-            icon={<X size={18} color={theme.muted} />}
-            accessibilityLabel={t('workout.remove', { name: exercise.name })}
-            size={36}
-            onPress={remove}
-          />
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Segmented
+              compact
+              accessibilityLabel={t('workout.unitFor', { name: exercise.name })}
+              options={[
+                { value: 'kg', label: 'kg' },
+                { value: 'lb', label: 'lb' },
+              ]}
+              labelFor={(o) => `${exercise.name} ${o.label}`}
+              value={unit}
+              onChange={(next) =>
+                act(() => change((e) => changeExerciseUnit(e, next)))
+              }
+            />
+            <Press
+              accessibilityRole="button"
+              accessibilityLabel={t('workout.options', { name: exercise.name })}
+              onPress={onMenu}
+              scale={0.88}
+              style={{
+                width: 30,
+                height: 30,
+                borderRadius: 15,
+                backgroundColor: theme.secondaryButton,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <MoreHorizontal size={17} color={theme.secondaryText} />
+            </Press>
+          </View>
         </View>
         <View
           style={{
@@ -467,27 +765,26 @@ function ExerciseCard({
                 .join(' · ')}{' '}
               {unit}
             </Body>
-            <TextButton
-              label={t('workout.copyLast')}
-              size={12}
-              disabled={anyDone}
-              style={{ minHeight: 34, marginTop: 2 }}
-              onPress={() =>
-                act(() =>
-                  change((e) => ({
-                    ...e,
-                    sets: previous.map((s) => ({
-                      id: randomUUID(),
-                      kg: s.kg,
-                      load: loadValue({ ...s, load: undefined }, unit),
-                      reps: s.reps,
-                      kind: 'working' as const,
-                      done: false,
+            <View style={{ marginTop: 8 }}>
+              <CopyLastButton
+                disabled={anyDone}
+                onPress={() =>
+                  act(() =>
+                    change((e) => ({
+                      ...e,
+                      sets: previous.map((s) => ({
+                        id: randomUUID(),
+                        kg: s.kg,
+                        load: loadValue({ ...s, load: undefined }, unit),
+                        reps: s.reps,
+                        kind: 'working' as const,
+                        done: false,
+                      })),
                     })),
-                  })),
-                )
-              }
-            />
+                  )
+                }
+              />
+            </View>
           </View>
         ) : null}
         <View
@@ -511,7 +808,7 @@ function ExerciseCard({
               line={14}
               color={theme.muted}
               style={{
-                width: i === 0 ? 35 : i === 3 ? 43 : undefined,
+                width: i === 0 ? 36 : i === 3 ? 43 : undefined,
                 flex: i === 1 || i === 2 ? 1 : undefined,
                 textAlign: 'center',
               }}
@@ -519,146 +816,116 @@ function ExerciseCard({
               {label}
             </T>
           ))}
+          <View style={{ width: 26 }} />
         </View>
         {exercise.sets.map((set, i) => {
-          const warmup = set.kind === 'warmup';
+          const number = exercise.sets
+            .slice(0, i + 1)
+            .filter((v) => v.kind !== 'warmup').length;
           return (
-            <View
+            <Reveal
               key={set.id}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 10,
-                marginVertical: 8,
-              }}
+              y={6}
+              duration={220}
+              delay={Math.min(i, 6) * 30}
             >
-              <View style={{ width: 35, alignItems: 'center', gap: 4 }}>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={t('workout.setType', {
-                    index: i + 1,
-                    kind: warmup ? t('workout.warmUp') : t('workout.working'),
-                  })}
-                  accessibilityHint="Toggles between working and warm-up"
-                  onPress={() =>
-                    act(() =>
-                      change((e) => ({
-                        ...e,
-                        sets: e.sets.map((v) =>
-                          v.id === set.id
-                            ? { ...v, kind: warmup ? 'working' : 'warmup' }
-                            : v,
-                        ),
-                      })),
-                    )
-                  }
-                  style={{
-                    width: 35,
-                    height: 40,
-                    borderRadius: 10,
-                    backgroundColor: warmup ? theme.warmup : theme.soft,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <T
-                    size={13}
-                    line={16}
-                    color={warmup ? theme.warmupText : theme.ink}
-                  >
-                    {warmup ? 'W' : i + 1}
-                  </T>
-                </Pressable>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={t('workout.removeSet', { index: i + 1 })}
-                  onPress={() => {
-                    if (set.done) setConfirmRemove(set);
-                    else
-                      act(() =>
-                        change((e) => ({
-                          ...e,
-                          sets: e.sets.filter((v) => v.id !== set.id),
-                        })),
-                      );
-                  }}
-                  style={{
-                    height: 30,
-                    width: 35,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <T size={19} line={22} color={theme.muted}>
-                    ×
-                  </T>
-                </Pressable>
-              </View>
-              <Stepper
-                label={`${exercise.name} set ${i + 1} weight`}
-                value={loadValue(set, unit)}
-                step={unit === 'kg' ? '2.5' : '5'}
-                done={set.done}
-                keyboard="decimal-pad"
-                onChange={(load) =>
+              <SetRow
+                exercise={exercise}
+                set={set}
+                index={i}
+                number={number}
+                unit={unit}
+                busy={busy}
+                onToggleKind={() =>
+                  act(() =>
+                    change((e) => ({
+                      ...e,
+                      sets: e.sets.map((v) =>
+                        v.id === set.id
+                          ? {
+                              ...v,
+                              kind: v.kind === 'warmup' ? 'working' : 'warmup',
+                            }
+                          : v,
+                      ),
+                    })),
+                  )
+                }
+                onEditLoad={(load) =>
                   act(() => editSet(set.id, { load, done: false }))
                 }
-              />
-              <Stepper
-                label={`${exercise.name} set ${i + 1} reps`}
-                value={set.reps}
-                step="1"
-                done={set.done}
-                keyboard="number-pad"
-                onChange={(reps) =>
+                onEditReps={(reps) =>
                   act(() => editSet(set.id, { reps, done: false }))
                 }
+                onComplete={() => complete(set)}
+                onRemove={() => {
+                  if (set.done) {
+                    setConfirmRemove(set);
+                    return false;
+                  }
+                  act(() =>
+                    change((e) => ({
+                      ...e,
+                      sets: e.sets.filter((v) => v.id !== set.id),
+                    })),
+                  );
+                  return true;
+                }}
               />
-              <CheckButton
-                done={set.done}
-                busy={busy}
-                label={t('workout.completeSet', {
-                  name: exercise.name,
-                  index: i + 1,
-                })}
-                onPress={() => complete(set)}
-              />
-            </View>
+            </Reveal>
           );
         })}
-        <View style={{ flexDirection: 'row', gap: 10, marginTop: 9 }}>
-          {(['working', 'warmup'] as const).map((kind) => (
+        <View style={{ flexDirection: 'row', gap: 8, marginTop: 10 }}>
+          <View style={{ flex: 1.5 }}>
             <Press
-              key={kind}
               accessibilityRole="button"
-              accessibilityLabel={
-                kind === 'working'
-                  ? t('workout.addSet', { name: exercise.name })
-                  : t('workout.addWarmUp', { name: exercise.name })
-              }
+              accessibilityLabel={t('workout.addSet', { name: exercise.name })}
               disabled={busy || exercise.sets.length >= 50}
-              onPress={() => addSet(kind)}
-              scale={0.98}
+              onPress={() => addSet('working')}
+              scale={0.97}
               style={{
-                flex: 1,
-                height: 46,
-                borderRadius: 10,
-                backgroundColor:
-                  theme.scheme === 'dark' ? theme.soft : '#f5f7f0',
+                height: 44,
+                borderRadius: 12,
+                backgroundColor: theme.soft,
                 flexDirection: 'row',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: 5,
+                gap: 6,
               }}
             >
-              <Plus size={16} color={theme.textButton} />
-              <T size={13} line={16} color={theme.textButton}>
-                {kind === 'working'
-                  ? t('workout.workingSet')
-                  : t('workout.warmUpSet')}
+              <Plus size={16} strokeWidth={2.2} color={theme.ink} />
+              <T weight={500} size={13} line={16}>
+                {t('workout.addSetShort')}
               </T>
             </Press>
-          ))}
+          </View>
+          <View style={{ flex: 1 }}>
+            <Press
+              accessibilityRole="button"
+              accessibilityLabel={t('workout.addWarmUp', {
+                name: exercise.name,
+              })}
+              disabled={busy || exercise.sets.length >= 50}
+              onPress={() => addSet('warmup')}
+              scale={0.97}
+              style={{
+                height: 44,
+                borderRadius: 12,
+                borderWidth: 1.5,
+                borderStyle: 'dashed',
+                borderColor: theme.warmupText + '66',
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6,
+              }}
+            >
+              <Plus size={15} strokeWidth={2.2} color={theme.warmupText} />
+              <T weight={500} size={13} line={16} color={theme.warmupText}>
+                {t('workout.addWarmUpShort')}
+              </T>
+            </Press>
+          </View>
         </View>
       </Card>
       <Sheet
@@ -667,10 +934,14 @@ function ExerciseCard({
         title={t('workout.restTitle', { name: exercise.name })}
         description={t('workout.restBody')}
       >
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ gap: 6, marginTop: 16 }}
+        <View
+          style={{
+            flexDirection: 'row',
+            flexWrap: 'wrap',
+            gap: 6,
+            marginTop: 16,
+            marginBottom: 6,
+          }}
         >
           {REST_PRESETS.map((seconds) => (
             <Chip
@@ -680,7 +951,7 @@ function ExerciseCard({
               onPress={() => setRestDraft(String(seconds))}
             />
           ))}
-        </ScrollView>
+        </View>
         <Field label={t('workout.seconds')}>
           <Input
             accessibilityLabel={`${exercise.name} rest seconds`}
@@ -694,6 +965,7 @@ function ExerciseCard({
         <View style={{ marginTop: 22, gap: 6 }}>
           <PrimaryButton
             full
+            center
             label={t('workout.saveRest')}
             accessibilityLabel={t('workout.saveRestFor', {
               name: exercise.name,
@@ -760,6 +1032,7 @@ export function WorkoutScreen({
   act,
   busy,
   onFinished,
+  onMinimize,
   finishRef,
 }: {
   training: Training;
@@ -767,6 +1040,7 @@ export function WorkoutScreen({
   act: Act;
   busy: boolean;
   onFinished: () => void;
+  onMinimize: () => void;
   finishRef: MutableRefObject<(() => void) | null>;
 }) {
   const { theme } = useTheme();
@@ -778,6 +1052,10 @@ export function WorkoutScreen({
     [discard, setDiscard] = useState(false),
     [saveRoutine, setSaveRoutine] = useState(false),
     [removing, setRemoving] = useState<Exercise | null>(null),
+    [menu, setMenu] = useState<Exercise | null>(null),
+    [pairing, setPairing] = useState<Exercise | null>(null),
+    [arranging, setArranging] = useState(false),
+    [replacing, setReplacing] = useState<Exercise | null>(null),
     [error, setError] = useState(''),
     [focus, setFocus] = useState(false),
     [focusIndex, setFocusIndex] = useState(0);
@@ -788,6 +1066,25 @@ export function WorkoutScreen({
       ...w,
       exercises: w.exercises.map((e) => (e.id === id ? fn(e) : e)),
     }));
+  const letters = useMemo(
+    () => supersetLetters(workout.exercises),
+    [workout.exercises],
+  );
+  const keyOf = (e: Exercise) => e.id;
+  const pair = (a: Exercise, b: Exercise) =>
+    act(() =>
+      change((w) => ({
+        ...w,
+        exercises: pairInto(w.exercises, keyOf, a, b, randomUUID),
+      })),
+    );
+  const unpair = (target: Exercise) =>
+    act(() =>
+      change((w) => ({
+        ...w,
+        exercises: unpairFrom(w.exercises, keyOf, target),
+      })),
+    );
   const done = completedSets(workout),
     total = workout.exercises.reduce((n, e) => n + e.sets.length, 0),
     unfinished = total - done,
@@ -852,14 +1149,23 @@ export function WorkoutScreen({
             ]}
           />
         </View>
-        <PrimaryButton
-          small
-          label={t('workout.finish')}
-          accessibilityLabel={t('workout.finishWorkout')}
-          icon={<Check size={19} color={theme.primaryText} />}
-          disabled={busy}
-          onPress={requestFinish}
-        />
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <IconButton
+            size={40}
+            background={theme.soft}
+            accessibilityLabel={t('workout.minimize')}
+            icon={<ChevronDown size={19} color={theme.ink} />}
+            onPress={onMinimize}
+          />
+          <PrimaryButton
+            small
+            label={t('workout.finish')}
+            accessibilityLabel={t('workout.finishWorkout')}
+            icon={<Check size={19} color={theme.primaryText} />}
+            disabled={busy}
+            onPress={requestFinish}
+          />
+        </View>
       </View>
       <View
         style={{
@@ -877,7 +1183,7 @@ export function WorkoutScreen({
           ]}
           value={focus ? 'focus' : 'all'}
           onChange={(v) => setFocus(v === 'focus')}
-          style={{ alignSelf: 'flex-start', minWidth: 190 }}
+          scroll
         />
         <View
           style={{
@@ -957,18 +1263,14 @@ export function WorkoutScreen({
                 editSet={(setId, patch) =>
                   change((w) => editWorkoutSet(w, exercise.id, setId, patch))
                 }
-                remove={() => {
-                  if (exercise.sets.some((s) => s.done)) setRemoving(exercise);
-                  else
-                    act(() =>
-                      change((w) => ({
-                        ...w,
-                        exercises: w.exercises.filter(
-                          (v) => v.id !== exercise.id,
-                        ),
-                      })),
-                    );
-                }}
+                onMenu={() => setMenu(exercise)}
+                supersetLabel={
+                  exercise.supersetId
+                    ? t('workout.supersetTag', {
+                        letter: letters.get(exercise.supersetId) ?? '',
+                      })
+                    : undefined
+                }
                 onError={setError}
               />
             </Reveal>
@@ -1041,9 +1343,27 @@ export function WorkoutScreen({
         </View>
       </Disclosure>
       <ExercisePicker
-        open={pick}
-        onClose={() => setPick(false)}
+        open={pick || !!replacing}
+        onClose={() => {
+          setPick(false);
+          setReplacing(null);
+        }}
         onPick={(name, muscle) => {
+          if (replacing) {
+            const target = replacing;
+            setReplacing(null);
+            act(() =>
+              changeExercise(target.id, (e) => ({
+                ...e,
+                name,
+                muscle,
+                instructions: undefined,
+                videoUrl: undefined,
+                sets: e.sets.map((v) => ({ ...v, done: false })),
+              })),
+            );
+            return;
+          }
           const previous = lastPerformance(data.workouts, name);
           act(() =>
             change((w) => ({
@@ -1117,6 +1437,7 @@ export function WorkoutScreen({
           {done > 0 && (
             <PrimaryButton
               full
+              center
               label={
                 unfinished > 0
                   ? t('workout.saveFinishEarly')
@@ -1127,17 +1448,19 @@ export function WorkoutScreen({
               onPress={finishNow}
             />
           )}
+          <SecondaryButton
+            full
+            label={t('workout.keepTraining')}
+            onPress={() => setFinish(false)}
+          />
           <TextButton
             label={t('workout.endWithoutSaving')}
             danger
+            style={{ alignSelf: 'center', marginTop: 4 }}
             onPress={() => {
               setFinish(false);
               setDiscard(true);
             }}
-          />
-          <TextButton
-            label={t('workout.keepTraining')}
-            onPress={() => setFinish(false)}
           />
         </View>
       </Sheet>
@@ -1161,6 +1484,154 @@ export function WorkoutScreen({
           />
         </View>
       </Sheet>
+      <Sheet
+        open={!!menu}
+        onClose={() => setMenu(null)}
+        title={menu?.name ?? t('workout.optionsTitle')}
+        description={menu?.muscle}
+      >
+        {menu && (
+          <View style={{ gap: 8, marginTop: 16 }}>
+            {(
+              [
+                {
+                  key: 'replace',
+                  icon: <Repeat size={19} color={theme.secondaryText} />,
+                  label: t('workout.replace'),
+                  hint: t('workout.replaceHint'),
+                  onPress: () => setReplacing(menu),
+                },
+                {
+                  key: 'arrange',
+                  icon: <GripVertical size={19} color={theme.secondaryText} />,
+                  label: t('workout.arrange'),
+                  hint: t('workout.arrangeHint'),
+                  disabled: workout.exercises.length < 2,
+                  onPress: () => setArranging(true),
+                },
+                menu.supersetId
+                  ? {
+                      key: 'unpair',
+                      icon: <Unlink size={19} color={theme.secondaryText} />,
+                      label: t('workout.leaveSuperset'),
+                      onPress: () => unpair(menu),
+                    }
+                  : {
+                      key: 'pair',
+                      icon: <Link2 size={19} color={theme.secondaryText} />,
+                      label: t('workout.superset'),
+                      hint: t('workout.supersetHint'),
+                      disabled: workout.exercises.length < 2,
+                      onPress: () => setPairing(menu),
+                    },
+                {
+                  key: 'remove',
+                  icon: <Trash2 size={19} color={theme.danger} />,
+                  label: t('workout.removeExercise'),
+                  danger: true,
+                  onPress: () => {
+                    if (menu.sets.some((s) => s.done)) setRemoving(menu);
+                    else
+                      act(() =>
+                        change((w) => ({
+                          ...w,
+                          exercises: w.exercises.filter(
+                            (v) => v.id !== menu.id,
+                          ),
+                        })),
+                      );
+                  },
+                },
+              ] as {
+                key: string;
+                icon: React.ReactNode;
+                label: string;
+                hint?: string;
+                disabled?: boolean;
+                danger?: boolean;
+                onPress: () => void;
+              }[]
+            ).map((item, i) => (
+              <Reveal key={item.key} y={8} duration={220} delay={i * 30}>
+                <Press
+                  accessibilityRole="button"
+                  accessibilityLabel={item.label}
+                  disabled={item.disabled}
+                  scale={0.985}
+                  onPress={() => {
+                    setMenu(null);
+                    item.onPress();
+                  }}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 14,
+                    borderRadius: 14,
+                    paddingVertical: 14,
+                    paddingHorizontal: 14,
+                    minHeight: 56,
+                    backgroundColor: theme.soft,
+                  }}
+                >
+                  {item.icon}
+                  <View style={{ flex: 1 }}>
+                    <T
+                      weight={500}
+                      size={14}
+                      line={18}
+                      color={item.danger ? theme.danger : theme.secondaryText}
+                    >
+                      {item.label}
+                    </T>
+                    {item.hint ? (
+                      <Body size={12} style={{ marginTop: 2 }}>
+                        {item.hint}
+                      </Body>
+                    ) : null}
+                  </View>
+                </Press>
+              </Reveal>
+            ))}
+          </View>
+        )}
+      </Sheet>
+      <ArrangeSheet
+        open={arranging}
+        exercises={workout.exercises.map((e) => ({
+          key: e.id,
+          name: e.name,
+          muscle: e.muscle,
+        }))}
+        onClose={() => setArranging(false)}
+        onCommit={(ids) =>
+          act(() =>
+            change((w) => ({
+              ...w,
+              exercises: ids.map((id) => w.exercises.find((e) => e.id === id)!),
+            })),
+          )
+        }
+      />
+      <PairSheet
+        open={!!pairing}
+        subject={
+          pairing
+            ? { key: pairing.id, name: pairing.name, muscle: pairing.muscle }
+            : null
+        }
+        items={workout.exercises.map((e) => ({
+          key: e.id,
+          name: e.name,
+          muscle: e.muscle,
+        }))}
+        onClose={() => setPairing(null)}
+        onPick={(key) => {
+          const partner = workout.exercises.find((e) => e.id === key);
+          const subject = pairing;
+          setPairing(null);
+          if (subject && partner) pair(subject, partner);
+        }}
+      />
       <Sheet
         open={!!removing}
         onClose={() => setRemoving(null)}

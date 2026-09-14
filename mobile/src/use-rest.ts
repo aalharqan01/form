@@ -45,7 +45,8 @@ export function useRest(workoutId: string | undefined) {
       .catch(() => {});
     const tick = () => setClock(Date.now());
     tick();
-    const interval = setInterval(tick, 500);
+    // One tick a second is enough for a clock and halves the re-renders.
+    const interval = setInterval(tick, 1000);
     const subscription = AppState.addEventListener('change', tick);
     return () => {
       alive = false;

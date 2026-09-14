@@ -325,9 +325,8 @@ export function isProgram(v: unknown): v is Program {
             Number.isInteger(e.sets) &&
             e.sets >= 1 &&
             e.sets <= 20 &&
-            Number.isInteger(e.reps) &&
-            e.reps >= 1 &&
-            e.reps <= 100 &&
+            (e.reps === undefined ||
+              (Number.isInteger(e.reps) && e.reps >= 1 && e.reps <= 100)) &&
             ['kg', 'lb'].includes(e.unit ?? 'kg') &&
             (e.restSeconds === undefined ||
               (Number.isInteger(e.restSeconds) &&

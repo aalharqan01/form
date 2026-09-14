@@ -263,12 +263,13 @@ export function RoutineEditor({
                     !Number.isInteger(x.sets) ||
                     x.sets < 1 ||
                     x.sets > 50 ||
-                    !Number.isInteger(x.reps) ||
-                    x.reps < 1 ||
-                    x.reps > 1000,
+                    (x.reps !== undefined &&
+                      (!Number.isInteger(x.reps) ||
+                        x.reps < 1 ||
+                        x.reps > 1000)),
                 )
               ) {
-                setError('Use 1–50 sets and 1–1000 whole reps.');
+                setError('Use 1-50 sets and, when given, 1-1000 whole reps.');
                 return;
               }
               onSave({ id: routine?.id ?? id(), name: name.trim(), exercises });

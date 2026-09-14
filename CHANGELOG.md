@@ -2,6 +2,32 @@
 
 Newest first. Each entry says what changed, how to run it, and what is still open, so a fresh `git pull` is enough to get going.
 
+## 14 September 2026 — active workout card, saved workouts and sharing
+
+### What changed
+
+- **Set rows are typed, not stepped.** The +/− bars under weight and reps are gone; each set is one 48 px row with two fields you type into, the done check, and a quiet remove button at the end.
+- **Warm-up sets go first.** "+ Warm-up" inserts ahead of the first working set, and working sets are numbered by their own order, so a warm-up no longer shifts set 1 to 2. Tapping the set number (which toggles working ↔ warm-up) presses in like every other button.
+- **Undoing a completed set stops its rest timer.** Before, the countdown kept running after the check was cleared.
+- **Focus / All exercises** control is sized to its labels instead of leaving empty space.
+- The top bar refresh chip and the rest island's −15s / +15s / pause / skip controls now have press feedback.
+- **Remove a set** with the quiet × at the end of its row, by swiping the row toward the trailing edge (a red Remove area reveals as you drag; a flick finishes it), or by holding the set number. The bordered button is gone.
+- **Add set / Warm-up** are two proper buttons under the rows: a solid Add set and a dashed Warm-up in the warm-up tint.
+- **Use last time** replaces the small "Copy last" link: a clear button that fills in the previous session's sets and confirms with a short "Copied" beat.
+- **Exercise options** (the ⋯ next to the unit toggle): replace the exercise (keeps your sets), arrange exercises by dragging handles in a sheet (the others slide out of the way), superset with another exercise (both cards get a "Superset A" tag and sit together), or remove it.
+- **Rest sheet** shows five presets in one row (30 s to 3 min) and the seconds field for anything else.
+- **Minimize the workout** with the chevron next to Finish (also in the floating header while scrolled) and look around the app; a green island above the tab bar shows the name, clock and sets, and taps back into the workout. It rises above the rest timer when both are showing.
+- **Removing a set** fades it and folds the row away so the rows below settle up; the × is a small soft circle at the end of the row.
+- **Sheets close with a short exit** instead of vanishing; they also rise slightly as they open. The exit plays outside the modal so a closing sheet never holds onto focus. The plan editor keeps that exit too, and switching between the plan and the exercise picker inside it slides in.
+- Full-width sheet buttons (Save workout, Save rest, Save) centre their label with the icon kept at the end.
+- **"Plans" are now "saved workouts"** everywhere in the app (English and Arabic): "Saved workouts" on the Train tab, "Create workout", "Save to my workouts". The You tab's feed of completed sessions is labelled "History" so the two never read alike.
+- **Share a saved workout** from its card: a message with one line per exercise (sets × reps, rest) and a FORM tagline goes to the phone's share sheet (WhatsApp, email and the rest); browsers without a share sheet copy it to the clipboard.
+- **Finish sheet** buttons line up: Save, then Keep training full width, End without saving centred beneath.
+- **Plans:** sets are the only required number; reps and rest are optional (reps left blank means the trainee decides each set, rest falls back to the exercise default). The plan editor gets the same ⋯ options per exercise (superset, remove), an Arrange button with drag handles, and superset tags.
+- Set rows fade in as they are added; menu items stagger in; every control presses in.
+- Tab bar order for coached trainees is Weight, My coach, Train, You; trainees without a coach keep Weight, Train, You.
+- **Smoother animations:** quick edits no longer mark the whole app busy (only actions that take longer than 150 ms do) and the clock ticks once a second instead of twice. The development build is still unminified; the deployed build is noticeably smoother.
+
 ## 13 September 2026 — instant language switch, Arabic text metrics, tactile controls
 
 ### What changed

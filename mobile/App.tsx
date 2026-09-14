@@ -7,7 +7,7 @@ import {
   ScrollView,
   View,
 } from 'react-native';
-import { Check } from 'lucide-react-native';
+import { Check, ChevronDown } from 'lucide-react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
@@ -25,7 +25,12 @@ import {
 } from '@expo-google-fonts/ibm-plex-sans-arabic';
 import { LocaleProvider, useI18n } from './src/i18n';
 import { randomUUID } from 'expo-crypto';
-import type { Routine, Workout } from '../lib/fitness';
+import {
+  completedSets,
+  workoutSeconds,
+  type Routine,
+  type Workout,
+} from '../lib/fitness';
 import { routineFromWorkout } from '../lib/training';
 import { useTraining } from './src/use-training';
 import { useRest } from './src/use-rest';
@@ -35,6 +40,7 @@ import {
   Card,
   ErrorBanner,
   H2,
+  IconButton,
   Notice,
   PrimaryButton,
   Reveal,
@@ -42,7 +48,7 @@ import {
   T,
   TextButton,
 } from './src/ui';
-import { BottomNav, RestIsland, Topbar } from './src/shell';
+import { BottomNav, RestIsland, Topbar, WorkoutIsland } from './src/shell';
 import { LocaleCrossfade } from './src/ui';
 import { TrainScreen } from './src/screens/train';
 import { WorkoutScreen } from './src/screens/workout';
@@ -64,6 +70,8 @@ function AppContent() {
   const { data } = training;
   const rest = useRest(data.active?.id);
   const [tab, setTab] = useState<Tab>('train');
+  // A minimized workout keeps running while the trainee looks around.
+  const [minimized, setMinimized] = useState(false);
   const [pending, setPending] = useState(0),
     [error, setError] = useState(''),
     [notice, setNotice] = useState(''),
@@ -83,7 +91,13 @@ function AppContent() {
     setError('');
   };
   const act: Act = (action, message) => {
-    setPending((n) => n + 1);
+    // Only actions that take a moment mark the app busy; quick edits should
+    // not re-render every screen twice.
+    let slow = false;
+    const timer = setTimeout(() => {
+      slow = true;
+      setPending((n) => n + 1);
+    }, 150);
     setError('');
     void action()
       .then(() => {
@@ -92,7 +106,10 @@ function AppContent() {
       .catch((e: unknown) =>
         setError(e instanceof Error ? e.message : t('app.saveFailed')),
       )
-      .finally(() => setPending((n) => n - 1));
+      .finally(() => {
+        clearTimeout(timer);
+        if (slow) setPending((n) => n - 1);
+      });
   };
   const busy = pending > 0 || training.conflict;
   // The coaching tab exists only while a website-purchased membership is active.
@@ -101,6 +118,7 @@ function AppContent() {
     if (tab === 'coach' && training.loaded && !coached) setTab('train');
   }, [tab, coached, training.loaded]);
   const start = (routine: Routine | null, membershipId?: string) => {
+    setMinimized(false);
     if (data.active) {
       navigate('train');
       return;
@@ -209,14 +227,20 @@ function AppContent() {
                 )}
               </View>
             ) : (
-              <Reveal key={`${tab}-${data.active ? 'active' : 'idle'}`}>
-                {tab === 'train' && data.active ? (
+              <Reveal
+                key={`${tab}-${data.active && !minimized ? 'active' : 'idle'}`}
+              >
+                {tab === 'train' && data.active && !minimized ? (
                   <WorkoutScreen
                     training={training}
                     rest={rest}
                     act={act}
                     busy={busy}
                     onFinished={() => navigate('train')}
+                    onMinimize={() => {
+                      setMinimized(true);
+                      scroll.current?.scrollTo({ y: 0, animated: false });
+                    }}
                     finishRef={finishRef}
                   />
                 ) : tab === 'train' ? (
@@ -252,7 +276,19 @@ function AppContent() {
               </Reveal>
             )}
           </ScrollView>
-          {tab === 'train' && !!data.active && scrolled && (
+          {!!data.active && (tab !== 'train' || minimized) && (
+            <WorkoutIsland
+              name={data.active.name || t('workout.defaultName')}
+              elapsed={duration(workoutSeconds(data.active, rest.clock))}
+              progress={`${completedSets(data.active)}/${data.active.exercises.reduce((n, e) => n + e.sets.length, 0)}`}
+              lifted={!!rest.end}
+              onPress={() => {
+                setMinimized(false);
+                navigate('train');
+              }}
+            />
+          )}
+          {tab === 'train' && !!data.active && !minimized && scrolled && (
             <Reveal
               y={-14}
               duration={220}
@@ -287,6 +323,16 @@ function AppContent() {
                     {t('app.elapsed')}
                   </Body>
                 </View>
+                <IconButton
+                  size={38}
+                  background={theme.soft}
+                  accessibilityLabel={t('workout.minimize')}
+                  icon={<ChevronDown size={18} color={theme.ink} />}
+                  onPress={() => {
+                    setMinimized(true);
+                    scroll.current?.scrollTo({ y: 0, animated: false });
+                  }}
+                />
                 <PrimaryButton
                   small
                   label={t('app.finish')}

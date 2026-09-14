@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View } from 'react-native';
+import { Platform, Share, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import {
   ArrowUpRight,
@@ -10,6 +10,7 @@ import {
   Pencil,
   Play,
   Plus,
+  Share2,
   Trash2,
 } from 'lucide-react-native';
 import { randomUUID } from 'expo-crypto';
@@ -61,7 +62,7 @@ import { AssignedWorkouts } from './assigned';
 import { StepsCard } from './steps';
 import { RoutineEditor } from './routine-editor';
 import { WorkoutDetailSheet } from './history';
-import type { Act } from './shared';
+import { restLabel, type Act } from './shared';
 
 export function TrainScreen({
   training,
@@ -80,6 +81,33 @@ export function TrainScreen({
 }) {
   const { theme } = useTheme();
   const { t } = useI18n();
+  /** A template as a message: one line per exercise, then a FORM tagline. */
+  const templateText = (r: Routine) =>
+    [
+      r.name,
+      ...r.exercises.map(
+        (e) =>
+          `• ${e.name}: ${
+            e.reps === undefined
+              ? t('train.shareSets', { sets: e.sets })
+              : t('train.shareSetsReps', { sets: e.sets, reps: e.reps })
+          }${e.restSeconds ? ` · ${restLabel(e.restSeconds)}` : ''}`,
+      ),
+      '',
+      t('train.shareTagline'),
+    ].join('\n');
+  const shareTemplate = (r: Routine) => {
+    const text = templateText(r);
+    const web = Platform.OS === 'web' && typeof navigator !== 'undefined';
+    if (web && !navigator.share) {
+      act(() => navigator.clipboard.writeText(text), t('train.shareCopied'));
+      return;
+    }
+    act(async () => {
+      if (web) await navigator.share({ title: r.name, text });
+      else await Share.share({ message: text, title: r.name });
+    });
+  };
   const { data, update } = training;
   const [editor, setEditor] = useState<{ routine: Routine | null } | null>(
       null,
@@ -486,6 +514,12 @@ export function TrainScreen({
                 })}
               </Body>
             </View>
+            <IconButton
+              icon={<Share2 size={15} color={theme.muted} />}
+              accessibilityLabel={t('train.shareTemplate', { name: r.name })}
+              size={38}
+              onPress={() => shareTemplate(r)}
+            />
             <IconButton
               icon={<Pencil size={15} color={theme.muted} />}
               accessibilityLabel={t('train.editPlan', { name: r.name })}

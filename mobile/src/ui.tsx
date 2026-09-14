@@ -30,6 +30,7 @@ import imagePaths from '../../lib/exercise-images.json';
 import { exerciseFrames } from '../../lib/exercises';
 import { font, radius, useTheme, type Weight } from './theme';
 import { SWITCH_OUT_MS, useI18n } from './i18n';
+import { ExitLayer } from './sheet-exit';
 
 import { API_ORIGIN } from './account';
 export { API_ORIGIN };
@@ -410,6 +411,7 @@ export function PrimaryButton({
   disabled,
   full,
   small,
+  center,
   accessibilityLabel,
 }: {
   label: string;
@@ -418,10 +420,13 @@ export function PrimaryButton({
   disabled?: boolean;
   full?: boolean;
   small?: boolean;
+  /** Centre the label; the icon keeps its place at the end. */
+  center?: boolean;
   accessibilityLabel?: string;
 }) {
   const { theme } = useTheme();
   const height = small ? 44 : 54;
+  const orb = small ? 32 : 39;
   return (
     <Press
       accessibilityRole="button"
@@ -434,10 +439,13 @@ export function PrimaryButton({
         backgroundColor: theme.primaryButton,
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'space-between',
+        justifyContent: center ? 'center' : 'space-between',
         gap: small ? 8 : 24,
-        paddingStart: small ? 15 : 22,
-        paddingEnd: icon ? (small ? 5 : 7) : small ? 15 : 22,
+        // Centred labels get the same inset on both sides, so the label sits
+        // in the middle of the button while the icon overlays the end.
+        paddingStart: center && icon ? orb + 12 : small ? 15 : 22,
+        paddingEnd:
+          center && icon ? orb + 12 : icon ? (small ? 5 : 7) : small ? 15 : 22,
         alignSelf: full ? 'stretch' : 'flex-start',
       }}
     >
@@ -447,12 +455,15 @@ export function PrimaryButton({
       {icon ? (
         <View
           style={{
-            width: small ? 32 : 39,
-            height: small ? 32 : 39,
+            width: orb,
+            height: orb,
             borderRadius: 20,
             backgroundColor: theme.orb,
             alignItems: 'center',
             justifyContent: 'center',
+            ...(center
+              ? { position: 'absolute' as const, end: small ? 5 : 7 }
+              : {}),
           }}
         >
           {icon}
@@ -1171,9 +1182,11 @@ export function Sheet({
   const { theme } = useTheme();
   const { t } = useI18n();
   const [visible, setVisible] = useState(open);
+  const [closing, setClosing] = useState(false);
   const progress = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     if (open) {
+      setClosing(false);
       setVisible(true);
       progress.setValue(0);
       Animated.timing(progress, {
@@ -1183,17 +1196,126 @@ export function Sheet({
         useNativeDriver: native,
       }).start();
     } else if (visible) {
-      // Unmount at once: a closing modal keeps its focus trap, which would
-      // swallow taps and typing aimed at the page behind it.
-      progress.stopAnimation();
-      setVisible(false);
+      // The modal unmounts at once so its focus trap is gone; the exit then
+      // plays on a trap-free layer (see the effect below).
+      setClosing(true);
     }
   }, [open, progress, visible]);
+  useEffect(() => {
+    if (!closing) return;
+    const animation = Animated.timing(progress, {
+      toValue: 0,
+      duration: 150,
+      easing: Easing.out(Easing.quad),
+      useNativeDriver: native,
+    });
+    animation.start(({ finished }) => {
+      // Reopening mid-exit stops this animation; the sheet must then stay.
+      if (!finished) return;
+      setClosing(false);
+      setVisible(false);
+    });
+    return () => animation.stop();
+  }, [closing, progress]);
   if (!visible) return null;
   const scale = progress.interpolate({
     inputRange: [0, 1],
     outputRange: [0.96, 1],
   });
+  const body = (
+    <Animated.View
+      pointerEvents={closing ? 'none' : 'auto'}
+      style={{
+        flex: 1,
+        backgroundColor: theme.scrim,
+        opacity: progress,
+      }}
+    >
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={t('ui.closeDialog')}
+        onPress={onClose}
+        style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 }}
+      />
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{
+          flex: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: 12,
+          pointerEvents: 'box-none',
+        }}
+      >
+        <Animated.View
+          accessibilityViewIsModal
+          style={{
+            width: '100%',
+            maxWidth: wide ? 550 : 460,
+            maxHeight: '94%',
+            borderRadius: radius.sheet,
+            borderWidth: 4,
+            borderColor: theme.dialogBorder,
+            backgroundColor: theme.dialog,
+            transform: [
+              { scale },
+              {
+                translateY: progress.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [10, 0],
+                }),
+              },
+            ],
+            boxShadow: '0 24px 90px #20391b22',
+            overflow: 'hidden',
+          }}
+        >
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={{ padding: 23, paddingTop: 26, gap: 4 }}
+          >
+            <LocaleCrossfade style={{ gap: 4 }}>
+              <View style={{ paddingEnd: 36 }}>
+                <T weight={500} size={25} line={29} tracking={-1.25}>
+                  {title}
+                </T>
+                {description ? (
+                  typeof description === 'string' ? (
+                    <Body size={13} style={{ marginTop: 10 }}>
+                      {description}
+                    </Body>
+                  ) : (
+                    <View style={{ marginTop: 10 }}>{description}</View>
+                  )
+                ) : null}
+              </View>
+              {children}
+            </LocaleCrossfade>
+          </ScrollView>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t('ui.close')}
+            onPress={onClose}
+            hitSlop={6}
+            style={{
+              position: 'absolute',
+              top: 8,
+              end: 8,
+              width: 36,
+              height: 36,
+              borderRadius: 18,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <X size={18} color={theme.muted} />
+          </Pressable>
+        </Animated.View>
+      </KeyboardAvoidingView>
+    </Animated.View>
+  );
+  // The exit plays outside the modal so its focus trap is gone at once.
+  if (closing) return <ExitLayer>{body}</ExitLayer>;
   return (
     <Modal
       visible
@@ -1202,87 +1324,7 @@ export function Sheet({
       statusBarTranslucent
       onRequestClose={onClose}
     >
-      <Animated.View
-        style={{
-          flex: 1,
-          backgroundColor: theme.scrim,
-          opacity: progress,
-        }}
-      >
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={t('ui.closeDialog')}
-          onPress={onClose}
-          style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 }}
-        />
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={{
-            flex: 1,
-            justifyContent: 'center',
-            alignItems: 'center',
-            padding: 12,
-            pointerEvents: 'box-none',
-          }}
-        >
-          <Animated.View
-            accessibilityViewIsModal
-            style={{
-              width: '100%',
-              maxWidth: wide ? 550 : 460,
-              maxHeight: '94%',
-              borderRadius: radius.sheet,
-              borderWidth: 4,
-              borderColor: theme.dialogBorder,
-              backgroundColor: theme.dialog,
-              transform: [{ scale }],
-              boxShadow: '0 24px 90px #20391b22',
-              overflow: 'hidden',
-            }}
-          >
-            <ScrollView
-              keyboardShouldPersistTaps="handled"
-              contentContainerStyle={{ padding: 23, paddingTop: 26, gap: 4 }}
-            >
-              <LocaleCrossfade style={{ gap: 4 }}>
-                <View style={{ paddingEnd: 36 }}>
-                  <T weight={500} size={25} line={29} tracking={-1.25}>
-                    {title}
-                  </T>
-                  {description ? (
-                    typeof description === 'string' ? (
-                      <Body size={13} style={{ marginTop: 10 }}>
-                        {description}
-                      </Body>
-                    ) : (
-                      <View style={{ marginTop: 10 }}>{description}</View>
-                    )
-                  ) : null}
-                </View>
-                {children}
-              </LocaleCrossfade>
-            </ScrollView>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={t('ui.close')}
-              onPress={onClose}
-              hitSlop={6}
-              style={{
-                position: 'absolute',
-                top: 8,
-                end: 8,
-                width: 36,
-                height: 36,
-                borderRadius: 18,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <X size={18} color={theme.muted} />
-            </Pressable>
-          </Animated.View>
-        </KeyboardAvoidingView>
-      </Animated.View>
+      {body}
     </Modal>
   );
 }

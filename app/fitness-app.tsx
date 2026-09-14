@@ -92,7 +92,7 @@ function demoData(): FitnessData {
             sets: Array.from({ length: 3 }, () => ({
               id: id(),
               kg: '40',
-              reps: String(e.reps),
+              reps: String(e.reps ?? 10),
               done: true,
             })),
           })),
@@ -232,8 +232,8 @@ export default function FitnessApp() {
                 id: id(),
                 kg: previous?.[i]?.kg ?? '',
                 reps: membershipId
-                  ? String(e.reps)
-                  : (previous?.[i]?.reps ?? String(e.reps)),
+                  ? String(e.reps ?? '')
+                  : (previous?.[i]?.reps ?? String(e.reps ?? '')),
                 kind: 'working',
                 done: false,
               })),
