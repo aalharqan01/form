@@ -191,20 +191,23 @@ export function useTraining() {
       subscription.remove();
     };
   }, [publish, sync, refreshCoach]);
-  const update = async (change: (current: FitnessData) => FitnessData) => {
-    if (!envelope.current || halted.current)
-      throw new Error(
-        'Resolve the connection or sync conflict before editing.',
-      );
-    const next = change(envelope.current.data);
-    if (!validateData(next))
-      throw new Error(
-        'Check the entered values. Your previous log is unchanged.',
-      );
-    await publish({ ...envelope.current, data: next, dirty: true });
-    setStatus('Saved on device');
-    void sync();
-  };
+  const update = useCallback(
+    async (change: (current: FitnessData) => FitnessData) => {
+      if (!envelope.current || halted.current)
+        throw new Error(
+          'Resolve the connection or sync conflict before editing.',
+        );
+      const next = change(envelope.current.data);
+      if (!validateData(next))
+        throw new Error(
+          'Check the entered values. Your previous log is unchanged.',
+        );
+      await publish({ ...envelope.current, data: next, dirty: true });
+      setStatus('Saved on device');
+      void sync();
+    },
+    [publish, sync],
+  );
   const resolve = async (keepLocal: boolean) => {
     const remote = await request<FitnessResponse>('/api/data');
     if (
