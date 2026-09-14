@@ -1196,21 +1196,27 @@ export function Sheet({
         useNativeDriver: native,
       }).start();
     } else if (visible) {
-      // A short exit, then unmount: the modal's focus trap must not linger
-      // over the page behind it.
+      // The modal unmounts at once so its focus trap is gone; the exit then
+      // plays on a trap-free layer (see the effect below).
       setClosing(true);
-      Animated.timing(progress, {
-        toValue: 0,
-        duration: 150,
-        easing: Easing.out(Easing.quad),
-        useNativeDriver: native,
-      }).start(({ finished }) => {
-        if (!finished) return;
-        setClosing(false);
-        setVisible(false);
-      });
     }
   }, [open, progress, visible]);
+  useEffect(() => {
+    if (!closing) return;
+    const animation = Animated.timing(progress, {
+      toValue: 0,
+      duration: 150,
+      easing: Easing.out(Easing.quad),
+      useNativeDriver: native,
+    });
+    animation.start(({ finished }) => {
+      // Reopening mid-exit stops this animation; the sheet must then stay.
+      if (!finished) return;
+      setClosing(false);
+      setVisible(false);
+    });
+    return () => animation.stop();
+  }, [closing, progress]);
   if (!visible) return null;
   const scale = progress.interpolate({
     inputRange: [0, 1],
