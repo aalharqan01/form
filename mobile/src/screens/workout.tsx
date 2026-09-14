@@ -257,6 +257,8 @@ function SetRow({
   onEditReps,
   onComplete,
   onRemove,
+  ghost,
+  onGone,
 }: {
   exercise: Exercise;
   set: LiftSet;
@@ -268,8 +270,15 @@ function SetRow({
   onEditLoad: (load: string) => void;
   onEditReps: (reps: string) => void;
   onComplete: () => void;
-  /** Called once the row has slid away; returns false to snap it back instead. */
-  onRemove: () => boolean;
+  /**
+   * Asked to remove the set; returns false when the row should stay (a
+   * completed set asks for confirmation first). 'slid' means the row already
+   * left by a swipe, 'fade' that it is still in place.
+   */
+  onRemove: (how: 'fade' | 'slid') => boolean;
+  /** A ghost stands in for a set already removed from the log while it folds away. */
+  ghost?: 'fade' | 'slid';
+  onGone?: () => void;
 }) {
   const { theme } = useTheme();
   const { t, rtl } = useI18n();
@@ -294,42 +303,44 @@ function SetRow({
   const collapse = useRef(new Animated.Value(1)).current;
   const reset = () => {
     drag.setValue(0);
-    fade.setValue(1);
-    collapse.setValue(1);
     offset.current = 0;
   };
-  // The row fades while it folds, in one beat, so the ones below settle up.
-  const fold = () =>
-    Animated.timing(collapse, {
-      toValue: 0,
-      duration: 200,
-      easing: easeOut,
-      useNativeDriver: false,
-    });
-  const dismiss = () =>
-    Animated.parallel([
-      Animated.timing(drag, {
-        toValue: away * width,
-        duration: 160,
-        easing: easeOut,
-        useNativeDriver: native,
-      }),
-      fold(),
-    ]).start(() => {
-      if (!onRemove()) reset();
-    });
-  const remove = () =>
-    Animated.parallel([
+  // The set leaves the log the moment it is removed; a ghost row then fades
+  // while it folds so the rows below settle up instead of jumping.
+  useEffect(() => {
+    if (!ghost) return;
+    fade.setValue(ghost === 'slid' ? 0 : 1);
+    const animation = Animated.parallel([
       Animated.timing(fade, {
         toValue: 0,
-        duration: 140,
+        duration: 120,
         easing: easeOut,
         useNativeDriver: native,
       }),
-      fold(),
-    ]).start(() => {
-      if (!onRemove()) reset();
+      Animated.timing(collapse, {
+        toValue: 0,
+        duration: 160,
+        easing: easeOut,
+        useNativeDriver: false,
+      }),
+    ]);
+    animation.start(({ finished }) => {
+      if (finished) onGone?.();
     });
+    return () => animation.stop();
+  }, [ghost, fade, collapse, onGone]);
+  const dismiss = () =>
+    Animated.timing(drag, {
+      toValue: away * width,
+      duration: 160,
+      easing: easeOut,
+      useNativeDriver: native,
+    }).start(({ finished }) => {
+      if (finished && !onRemove('slid')) reset();
+    });
+  const remove = () => {
+    onRemove('fade');
+  };
   const responder = useRef(
     PanResponder.create({
       onMoveShouldSetPanResponder: (_, g) =>
@@ -357,6 +368,9 @@ function SetRow({
   ).current;
   return (
     <Animated.View
+      pointerEvents={ghost ? 'none' : 'auto'}
+      accessibilityElementsHidden={!!ghost}
+      importantForAccessibility={ghost ? 'no-hide-descendants' : 'auto'}
       style={{
         overflow: 'hidden',
         height: collapse.interpolate({
@@ -400,7 +414,7 @@ function SetRow({
         </T>
       </View>
       <Animated.View
-        {...responder.panHandlers}
+        {...(ghost ? {} : responder.panHandlers)}
         style={{
           flexDirection: 'row',
           alignItems: 'center',
@@ -576,8 +590,31 @@ function ExerciseCard({
     [restDraft, setRestDraft] = useState(''),
     [demo, setDemo] = useState(false),
     [guide, setGuide] = useState<string | null>(null),
-    [confirmRemove, setConfirmRemove] = useState<LiftSet | null>(null);
+    [confirmRemove, setConfirmRemove] = useState<LiftSet | null>(null),
+    [leaving, setLeaving] = useState<
+      { set: LiftSet; index: number; how: 'fade' | 'slid' }[]
+    >([]);
   const anyDone = exercise.sets.some((s) => s.done);
+  // Rows to draw: the live sets plus ghosts of sets still folding away.
+  const rows: { set: LiftSet; ghost?: 'fade' | 'slid' }[] = exercise.sets.map(
+    (set) => ({ set }),
+  );
+  for (const g of leaving)
+    rows.splice(Math.min(g.index, rows.length), 0, {
+      set: g.set,
+      ghost: g.how,
+    });
+  const removeSet = (set: LiftSet, index: number, how: 'fade' | 'slid') => {
+    if (set.done) {
+      setConfirmRemove(set);
+      return false;
+    }
+    setLeaving((l) => [...l, { set, index, how }]);
+    act(() =>
+      change((e) => ({ ...e, sets: e.sets.filter((v) => v.id !== set.id) })),
+    );
+    return true;
+  };
   const complete = (set: LiftSet) => {
     if (set.done) {
       act(async () => {
@@ -818,7 +855,29 @@ function ExerciseCard({
           ))}
           <View style={{ width: 26 }} />
         </View>
-        {exercise.sets.map((set, i) => {
+        {rows.map(({ set, ghost }, position) => {
+          if (ghost)
+            return (
+              <SetRow
+                key={`ghost-${set.id}`}
+                ghost={ghost}
+                onGone={() =>
+                  setLeaving((l) => l.filter((g) => g.set.id !== set.id))
+                }
+                exercise={exercise}
+                set={set}
+                index={position}
+                number={0}
+                unit={unit}
+                busy
+                onToggleKind={() => {}}
+                onEditLoad={() => {}}
+                onEditReps={() => {}}
+                onComplete={() => {}}
+                onRemove={() => false}
+              />
+            );
+          const i = exercise.sets.indexOf(set);
           const number = exercise.sets
             .slice(0, i + 1)
             .filter((v) => v.kind !== 'warmup').length;
@@ -858,19 +917,7 @@ function ExerciseCard({
                   act(() => editSet(set.id, { reps, done: false }))
                 }
                 onComplete={() => complete(set)}
-                onRemove={() => {
-                  if (set.done) {
-                    setConfirmRemove(set);
-                    return false;
-                  }
-                  act(() =>
-                    change((e) => ({
-                      ...e,
-                      sets: e.sets.filter((v) => v.id !== set.id),
-                    })),
-                  );
-                  return true;
-                }}
+                onRemove={(how) => removeSet(set, i, how)}
               />
             </Reveal>
           );
