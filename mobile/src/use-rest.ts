@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, Vibration } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { restRemaining } from '../../lib/training';
@@ -68,31 +68,29 @@ export function useRest(workoutId: string | undefined) {
       alerted.current = end;
     }
   }, [remaining, end, clock, paused]);
-  const save = (value: Countdown | null) => {
-    if (!workoutId) return;
-    version.current += 1;
-    setTimer(value);
-    setClock(Date.now());
-    writes.current = writes.current
-      .catch(() => {})
-      .then(() =>
-        value
-          ? AsyncStorage.setItem(
-              'form-rest:' + workoutId,
-              JSON.stringify(value),
-            )
-          : AsyncStorage.removeItem('form-rest:' + workoutId),
-      );
-    void writes.current.catch(() => {});
-  };
-  return {
-    clock,
-    remaining,
-    end,
-    paused: paused !== null,
-    name: current?.name ?? '',
-    exerciseId: current?.exerciseId ?? '',
-    start: (exercise: { id: string; name: string; restSeconds?: number }) => {
+  // Stable callbacks so memoised screens are not re-rendered by every tick.
+  const save = useCallback(
+    (value: Countdown | null) => {
+      if (!workoutId) return;
+      version.current += 1;
+      setTimer(value);
+      setClock(Date.now());
+      writes.current = writes.current
+        .catch(() => {})
+        .then(() =>
+          value
+            ? AsyncStorage.setItem(
+                'form-rest:' + workoutId,
+                JSON.stringify(value),
+              )
+            : AsyncStorage.removeItem('form-rest:' + workoutId),
+        );
+      void writes.current.catch(() => {});
+    },
+    [workoutId],
+  );
+  const start = useCallback(
+    (exercise: { id: string; name: string; restSeconds?: number }) => {
       if (workoutId) {
         const seconds = exercise.restSeconds ?? 90;
         save(
@@ -108,7 +106,18 @@ export function useRest(workoutId: string | undefined) {
         );
       }
     },
-    skip: () => save(null),
+    [workoutId, save],
+  );
+  const skip = useCallback(() => save(null), [save]);
+  return {
+    clock,
+    remaining,
+    end,
+    paused: paused !== null,
+    name: current?.name ?? '',
+    exerciseId: current?.exerciseId ?? '',
+    start,
+    skip,
     pause: () => {
       if (
         current &&

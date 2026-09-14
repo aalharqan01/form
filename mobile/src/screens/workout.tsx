@@ -1,4 +1,6 @@
 import {
+  memo,
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -15,6 +17,7 @@ import {
   TextInput,
   View,
   useWindowDimensions,
+  type ViewStyle,
 } from 'react-native';
 import {
   Bookmark,
@@ -94,6 +97,7 @@ import { duration, loadValue, restLabel, type Act } from './shared';
 
 const REST_PRESETS = [30, 60, 90, 120, 180];
 const native = Platform.OS !== 'web';
+const web = Platform.OS === 'web';
 
 function CheckButton({
   done,
@@ -307,8 +311,20 @@ function SetRow({
   };
   // The set leaves the log the moment it is removed; a ghost row then fades
   // while it folds so the rows below settle up instead of jumping.
+  // On the web the browser drives the fold with a CSS transition, so no
+  // JavaScript frame work competes with the re-render behind it.
+  const [folded, setFolded] = useState(false);
   useEffect(() => {
-    if (!ghost) return;
+    if (!ghost || !web) return;
+    const frame = requestAnimationFrame(() => setFolded(true));
+    const done = setTimeout(() => onGone?.(), 200);
+    return () => {
+      cancelAnimationFrame(frame);
+      clearTimeout(done);
+    };
+  }, [ghost, onGone]);
+  useEffect(() => {
+    if (!ghost || web) return;
     fade.setValue(ghost === 'slid' ? 0 : 1);
     const animation = Animated.parallel([
       Animated.timing(fade, {
@@ -366,28 +382,41 @@ function SetRow({
       onPanResponderTerminate: () => settle(0),
     }),
   ).current;
+  const Outer = ghost && web ? View : Animated.View;
+  const outerStyle =
+    ghost && web
+      ? ({
+          overflow: 'hidden',
+          height: folded ? 0 : 58,
+          opacity: folded || ghost === 'slid' ? 0 : 1,
+          paddingVertical: 5,
+          transitionProperty: 'height, opacity',
+          transitionDuration: '160ms',
+          transitionTimingFunction: 'cubic-bezier(0.23, 1, 0.32, 1)',
+        } as unknown as ViewStyle)
+      : {
+          overflow: 'hidden' as const,
+          height: collapse.interpolate({
+            inputRange: [0, 1],
+            outputRange: [0, 58],
+          }),
+          opacity: fade,
+          transform: [
+            {
+              scale: fade.interpolate({
+                inputRange: [0, 1],
+                outputRange: [0.97, 1],
+              }),
+            },
+          ],
+          paddingVertical: 5,
+        };
   return (
-    <Animated.View
+    <Outer
       pointerEvents={ghost ? 'none' : 'auto'}
       accessibilityElementsHidden={!!ghost}
       importantForAccessibility={ghost ? 'no-hide-descendants' : 'auto'}
-      style={{
-        overflow: 'hidden',
-        height: collapse.interpolate({
-          inputRange: [0, 1],
-          outputRange: [0, 58],
-        }),
-        opacity: fade,
-        transform: [
-          {
-            scale: fade.interpolate({
-              inputRange: [0, 1],
-              outputRange: [0.97, 1],
-            }),
-          },
-        ],
-        paddingVertical: 5,
-      }}
+      style={outerStyle}
     >
       <View
         pointerEvents="none"
@@ -493,7 +522,7 @@ function SetRow({
           <X size={14} strokeWidth={2.4} color={theme.muted} />
         </Press>
       </Animated.View>
-    </Animated.View>
+    </Outer>
   );
 }
 
@@ -556,14 +585,17 @@ function CopyLastButton({
   );
 }
 
-function ExerciseCard({
+/** Only the edited card re-renders: every prop here is stable between edits. */
+const ExerciseCard = memo(function ExerciseCard({
   exercise,
   workouts,
   busy,
-  rest,
+  restExerciseId,
+  startRest,
+  skipRest,
   act,
-  change,
-  editSet,
+  changeExercise,
+  editWorkoutSetById,
   onMenu,
   supersetLabel,
   onError,
@@ -571,20 +603,35 @@ function ExerciseCard({
   exercise: Exercise;
   workouts: Workout[];
   busy: boolean;
-  rest: Rest;
+  restExerciseId: string;
+  startRest: Rest['start'];
+  skipRest: Rest['skip'];
   act: Act;
-  change: (fn: (e: Exercise) => Exercise) => Promise<unknown>;
-  editSet: (
+  changeExercise: (
+    id: string,
+    fn: (e: Exercise) => Exercise,
+  ) => Promise<unknown>;
+  editWorkoutSetById: (
+    exerciseId: string,
     setId: string,
     patch: { load?: string; reps?: string; done?: boolean },
   ) => Promise<unknown>;
-  onMenu: () => void;
+  onMenu: (exercise: Exercise) => void;
   supersetLabel?: string;
   onError: (message: string) => void;
 }) {
   const { theme } = useTheme();
   const { t } = useI18n();
   const unit = exercise.unit ?? 'kg';
+  const change = useCallback(
+    (fn: (e: Exercise) => Exercise) => changeExercise(exercise.id, fn),
+    [changeExercise, exercise.id],
+  );
+  const editSet = useCallback(
+    (setId: string, patch: { load?: string; reps?: string; done?: boolean }) =>
+      editWorkoutSetById(exercise.id, setId, patch),
+    [editWorkoutSetById, exercise.id],
+  );
   const previous = lastPerformance(workouts, exercise.name);
   const [restSheet, setRestSheet] = useState(false),
     [restDraft, setRestDraft] = useState(''),
@@ -619,7 +666,7 @@ function ExerciseCard({
     if (set.done) {
       act(async () => {
         await editSet(set.id, { done: false });
-        if (rest.exerciseId === exercise.id) rest.skip();
+        if (restExerciseId === exercise.id) skipRest();
       });
       return;
     }
@@ -639,7 +686,7 @@ function ExerciseCard({
     onError('');
     act(async () => {
       await editSet(set.id, { done: true });
-      rest.start(exercise);
+      startRest(exercise);
     });
   };
   const addSet = (kind: 'working' | 'warmup') => {
@@ -721,7 +768,7 @@ function ExerciseCard({
             <Press
               accessibilityRole="button"
               accessibilityLabel={t('workout.options', { name: exercise.name })}
-              onPress={onMenu}
+              onPress={() => onMenu(exercise)}
               scale={0.88}
               style={{
                 width: 30,
@@ -1040,7 +1087,7 @@ function ExerciseCard({
             })}
             disabled={!Number(restDraft)}
             onPress={() => {
-              rest.start({ ...exercise, restSeconds: Number(restDraft) });
+              startRest({ ...exercise, restSeconds: Number(restDraft) });
               setRestSheet(false);
             }}
           />
@@ -1071,7 +1118,7 @@ function ExerciseCard({
       </Sheet>
     </Bezel>
   );
-}
+});
 
 export function WorkoutScreen({
   training,
@@ -1106,13 +1153,27 @@ export function WorkoutScreen({
     [error, setError] = useState(''),
     [focus, setFocus] = useState(false),
     [focusIndex, setFocusIndex] = useState(0);
-  const change = (fn: (w: Workout) => Workout) =>
-    update((d) => ({ ...d, active: d.active ? fn(d.active) : null }));
-  const changeExercise = (id: string, fn: (e: Exercise) => Exercise) =>
-    change((w) => ({
-      ...w,
-      exercises: w.exercises.map((e) => (e.id === id ? fn(e) : e)),
-    }));
+  const change = useCallback(
+    (fn: (w: Workout) => Workout) =>
+      update((d) => ({ ...d, active: d.active ? fn(d.active) : null })),
+    [update],
+  );
+  const changeExercise = useCallback(
+    (id: string, fn: (e: Exercise) => Exercise) =>
+      change((w) => ({
+        ...w,
+        exercises: w.exercises.map((e) => (e.id === id ? fn(e) : e)),
+      })),
+    [change],
+  );
+  const editWorkoutSetById = useCallback(
+    (
+      exerciseId: string,
+      setId: string,
+      patch: { load?: string; reps?: string; done?: boolean },
+    ) => change((w) => editWorkoutSet(w, exerciseId, setId, patch)),
+    [change],
+  );
   const letters = useMemo(
     () => supersetLetters(workout.exercises),
     [workout.exercises],
@@ -1304,13 +1365,13 @@ export function WorkoutScreen({
                 exercise={exercise}
                 workouts={data.workouts}
                 busy={busy}
-                rest={rest}
+                restExerciseId={rest.exerciseId}
+                startRest={rest.start}
+                skipRest={rest.skip}
                 act={act}
-                change={(fn) => changeExercise(exercise.id, fn)}
-                editSet={(setId, patch) =>
-                  change((w) => editWorkoutSet(w, exercise.id, setId, patch))
-                }
-                onMenu={() => setMenu(exercise)}
+                changeExercise={changeExercise}
+                editWorkoutSetById={editWorkoutSetById}
+                onMenu={setMenu}
                 supersetLabel={
                   exercise.supersetId
                     ? t('workout.supersetTag', {

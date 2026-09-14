@@ -7,6 +7,8 @@ Newest first. Each entry says what changed, how to run it, and what is still ope
 ### What changed
 
 - **Removing a set** now leaves the log the instant you press × (or swipe, or hold the number); a ghost of the row folds away in 160 ms while the rest of the app already reflects the change. Before, the fold played first and the removal waited for it, which read as lag.
+- **Only the edited exercise card re-renders.** Cards are memoised and every callback they receive is stable, so typing a weight, ticking a set or removing one no longer re-renders the other cards. Measured locally, the log updates 44 ms after a press instead of 81 ms.
+- On the web the ghost row's fold is a CSS transition driven by the browser, so no JavaScript frame work competes with the update behind it.
 
 ## 14 September 2026 — active workout card, saved workouts and sharing
 

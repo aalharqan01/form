@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
@@ -90,27 +90,30 @@ function AppContent() {
     setNotice('');
     setError('');
   };
-  const act: Act = (action, message) => {
-    // Only actions that take a moment mark the app busy; quick edits should
-    // not re-render every screen twice.
-    let slow = false;
-    const timer = setTimeout(() => {
-      slow = true;
-      setPending((n) => n + 1);
-    }, 150);
-    setError('');
-    void action()
-      .then(() => {
-        if (message) setNotice(message);
-      })
-      .catch((e: unknown) =>
-        setError(e instanceof Error ? e.message : t('app.saveFailed')),
-      )
-      .finally(() => {
-        clearTimeout(timer);
-        if (slow) setPending((n) => n - 1);
-      });
-  };
+  const act: Act = useCallback(
+    (action, message) => {
+      // Only actions that take a moment mark the app busy; quick edits should
+      // not re-render every screen twice.
+      let slow = false;
+      const timer = setTimeout(() => {
+        slow = true;
+        setPending((n) => n + 1);
+      }, 150);
+      setError('');
+      void action()
+        .then(() => {
+          if (message) setNotice(message);
+        })
+        .catch((e: unknown) =>
+          setError(e instanceof Error ? e.message : t('app.saveFailed')),
+        )
+        .finally(() => {
+          clearTimeout(timer);
+          if (slow) setPending((n) => n - 1);
+        });
+    },
+    [t],
+  );
   const busy = pending > 0 || training.conflict;
   // The coaching tab exists only while a website-purchased membership is active.
   const coached = !!training.detail;
