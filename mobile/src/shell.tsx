@@ -13,11 +13,12 @@ import {
   Pause,
   Play,
   BicepsFlexed,
+  ChevronUp,
   CircleUserRound,
 } from 'lucide-react-native';
 import type { Rest } from './use-rest';
 import { useTheme } from './theme';
-import { Press, T, easeOut } from './ui';
+import { Press, Reveal, T, easeOut } from './ui';
 const native = Platform.OS !== 'web';
 import { duration, type Tab } from './screens/shared';
 import { Wordmark } from './wordmark';
@@ -53,10 +54,11 @@ export function Topbar({
         <Wordmark height={20} color={isDark ? theme.ink : '#233b26'} />
       </View>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-        <Pressable
+        <Press
           accessibilityRole="button"
           accessibilityLabel={t('shell.refresh')}
           onPress={onRefresh}
+          scale={0.95}
           style={{
             flexDirection: 'row',
             alignItems: 'center',
@@ -72,7 +74,7 @@ export function Topbar({
           <T size={10} line={13} color={error ? theme.danger : theme.muted}>
             {STATUS_KEYS[status] ? t(STATUS_KEYS[status]) : status}
           </T>
-        </Pressable>
+        </Press>
         <Press
           accessibilityRole="button"
           accessibilityLabel={t('shell.openPreferences')}
@@ -236,6 +238,103 @@ export function BottomNav({
   );
 }
 
+/** The minimized workout: one tap back into it, with the clock still running. */
+export function WorkoutIsland({
+  name,
+  elapsed,
+  progress,
+  lifted,
+  onPress,
+}: {
+  name: string;
+  elapsed: string;
+  progress: string;
+  /** Whether the rest island sits below it. */
+  lifted: boolean;
+  onPress: () => void;
+}) {
+  const { theme } = useTheme();
+  const { t } = useI18n();
+  const insets = useSafeAreaInsets();
+  const lift = useRef(new Animated.Value(lifted ? 1 : 0)).current;
+  useEffect(() => {
+    Animated.timing(lift, {
+      toValue: lifted ? 1 : 0,
+      duration: 220,
+      easing: easeOut,
+      useNativeDriver: native,
+    }).start();
+  }, [lifted, lift]);
+  return (
+    <Animated.View
+      style={{
+        position: 'absolute',
+        left: 20,
+        right: 20,
+        bottom: navInset(insets.bottom) + 84,
+        transform: [
+          {
+            translateY: lift.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0, -74],
+            }),
+          },
+        ],
+      }}
+    >
+      <Reveal y={18} duration={260}>
+        <Press
+          accessibilityRole="button"
+          accessibilityLabel={t('workout.backToWorkout')}
+          onPress={onPress}
+          scale={0.98}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 12,
+            paddingVertical: 12,
+            paddingStart: 16,
+            paddingEnd: 12,
+            borderRadius: 20,
+            backgroundColor: theme.primaryButton,
+            boxShadow: '0 10px 40px #23382030',
+          }}
+        >
+          <View
+            style={{
+              width: 34,
+              height: 34,
+              borderRadius: 17,
+              backgroundColor: theme.orb,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <BicepsFlexed size={18} color={theme.primaryText} />
+          </View>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <T size={11} line={14} tracking={0.4} color="#ffffffb0">
+              {t('workout.inProgress').toUpperCase()}
+            </T>
+            <T weight={500} size={15} line={19} color="#fff" numberOfLines={1}>
+              {name}
+            </T>
+          </View>
+          <View style={{ alignItems: 'flex-end' }}>
+            <T weight={500} size={15} line={19} color="#fff">
+              {elapsed}
+            </T>
+            <T size={11} line={14} color="#ffffffb0">
+              {progress}
+            </T>
+          </View>
+          <ChevronUp size={18} color="#ffffffcc" />
+        </Press>
+      </Reveal>
+    </Animated.View>
+  );
+}
+
 export function RestIsland({ rest }: { rest: Rest }) {
   const { theme } = useTheme();
   const { t } = useI18n();
@@ -269,10 +368,11 @@ export function RestIsland({ rest }: { rest: Rest }) {
   }, [finished, rest.skip]);
   if (!shown) return null;
   const adjust = (label: string, seconds: number) => (
-    <Pressable
+    <Press
       accessibilityRole="button"
       accessibilityLabel={seconds < 0 ? t('rest.reduce') : t('rest.increase')}
       onPress={() => rest.adjust(seconds)}
+      scale={0.92}
       style={{
         minHeight: 40,
         paddingVertical: 8,
@@ -286,7 +386,7 @@ export function RestIsland({ rest }: { rest: Rest }) {
       <T size={14} line={18} color="#fff">
         {label}
       </T>
-    </Pressable>
+    </Press>
   );
   return (
     <Animated.View
@@ -354,11 +454,12 @@ export function RestIsland({ rest }: { rest: Rest }) {
         </View>
       )}
       {!finished && (
-        <Pressable
+        <Press
           accessibilityRole="button"
           accessibilityLabel={rest.paused ? t('rest.resume') : t('rest.pause')}
           onPress={rest.paused ? rest.resume : rest.pause}
           hitSlop={8}
+          scale={0.88}
           style={{
             width: 34,
             height: 34,
@@ -371,13 +472,14 @@ export function RestIsland({ rest }: { rest: Rest }) {
           ) : (
             <Pause size={18} color="#fff" />
           )}
-        </Pressable>
+        </Press>
       )}
-      <Pressable
+      <Press
         accessibilityRole="button"
         accessibilityLabel={t('rest.skip')}
         onPress={rest.skip}
         hitSlop={8}
+        scale={0.88}
         style={{
           width: 34,
           height: 34,
@@ -386,7 +488,7 @@ export function RestIsland({ rest }: { rest: Rest }) {
         }}
       >
         <X size={18} color="#bfd2b3" />
-      </Pressable>
+      </Press>
     </Animated.View>
   );
 }

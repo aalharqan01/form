@@ -57,7 +57,9 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className={`${sans.variable} ${arabic.variable} ${geistMono.variable} antialiased`}>
+      <body
+        className={`${sans.variable} ${arabic.variable} ${geistMono.variable} antialiased`}
+      >
         {children}
       </body>
     </html>

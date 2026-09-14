@@ -24,11 +24,12 @@ export function startTraining(
       restSeconds: e.restSeconds ?? 90,
       instructions: e.instructions,
       videoUrl: e.videoUrl,
+      ...(e.supersetId ? { supersetId: e.supersetId } : {}),
       sets: Array.from({ length: e.sets }, () => ({
         id: id(),
         kg: '',
         load: '',
-        reps: String(e.reps),
+        reps: e.reps === undefined ? '' : String(e.reps),
         done: false,
         kind: 'working' as const,
       })),
@@ -66,6 +67,7 @@ export function routineFromWorkout(
       restSeconds: e.restSeconds ?? 90,
       instructions: e.instructions,
       videoUrl: e.videoUrl,
+      ...(e.supersetId ? { supersetId: e.supersetId } : {}),
       sets: Math.max(1, e.sets.length),
       reps: Math.max(
         1,

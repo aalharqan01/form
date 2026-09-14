@@ -163,10 +163,12 @@ export function SessionCard({
                 {exercise.name}
               </T>
               <Body size={12}>
-                {t('assigned.setsReps', {
-                  sets: exercise.sets,
-                  reps: exercise.reps,
-                })}
+                {exercise.reps === undefined
+                  ? t('assigned.setsOnly', { sets: exercise.sets })
+                  : t('assigned.setsReps', {
+                      sets: exercise.sets,
+                      reps: exercise.reps,
+                    })}
                 {exercise.restSeconds !== undefined
                   ? ` · ${
                       exercise.restSeconds

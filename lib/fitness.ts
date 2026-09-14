@@ -10,6 +10,8 @@ export type Exercise = {
   restSeconds?: number;
   instructions?: string;
   videoUrl?: string;
+  /** Exercises sharing an id are trained back to back as one superset. */
+  supersetId?: string;
   id: string;
   name: string;
   muscle: string;
@@ -40,8 +42,11 @@ export type Routine = {
     muscle: string;
     instructions?: string;
     videoUrl?: string;
+    /** Exercises sharing an id are trained back to back as one superset. */
+    supersetId?: string;
     sets: number;
-    reps: number;
+    /** Target reps; absent means the trainee decides each set. */
+    reps?: number;
     unit?: 'kg' | 'lb';
   }[];
 };
@@ -447,6 +452,7 @@ export function validateData(d: unknown): d is FitnessData {
         str(e.muscle, 50) &&
         (e.instructions === undefined || str(e.instructions, 1000)) &&
         (e.videoUrl === undefined || str(e.videoUrl, 1000)) &&
+        (e.supersetId === undefined || str(e.supersetId, 100)) &&
         (e.unit === undefined || e.unit === 'kg' || e.unit === 'lb') &&
         (e.restSeconds === undefined ||
           (Number.isInteger(e.restSeconds) && number(e.restSeconds, 0, 600))) &&
@@ -526,10 +532,11 @@ export function validateData(d: unknown): d is FitnessData {
             (e.restSeconds === undefined ||
               (Number.isInteger(e.restSeconds) &&
                 number(e.restSeconds, 0, 600))) &&
+            (e.supersetId === undefined || str(e.supersetId, 100)) &&
             number(e.sets, 1, 50) &&
             Number.isInteger(e.sets) &&
-            number(e.reps, 1, 1000) &&
-            Number.isInteger(e.reps),
+            (e.reps === undefined ||
+              (number(e.reps, 1, 1000) && Number.isInteger(e.reps))),
         ),
     )
   );

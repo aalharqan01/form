@@ -410,6 +410,7 @@ export function PrimaryButton({
   disabled,
   full,
   small,
+  center,
   accessibilityLabel,
 }: {
   label: string;
@@ -418,10 +419,13 @@ export function PrimaryButton({
   disabled?: boolean;
   full?: boolean;
   small?: boolean;
+  /** Centre the label; the icon keeps its place at the end. */
+  center?: boolean;
   accessibilityLabel?: string;
 }) {
   const { theme } = useTheme();
   const height = small ? 44 : 54;
+  const orb = small ? 32 : 39;
   return (
     <Press
       accessibilityRole="button"
@@ -434,9 +438,9 @@ export function PrimaryButton({
         backgroundColor: theme.primaryButton,
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'space-between',
+        justifyContent: center ? 'center' : 'space-between',
         gap: small ? 8 : 24,
-        paddingStart: small ? 15 : 22,
+        paddingStart: center && icon ? orb + 7 : small ? 15 : 22,
         paddingEnd: icon ? (small ? 5 : 7) : small ? 15 : 22,
         alignSelf: full ? 'stretch' : 'flex-start',
       }}
@@ -447,12 +451,15 @@ export function PrimaryButton({
       {icon ? (
         <View
           style={{
-            width: small ? 32 : 39,
-            height: small ? 32 : 39,
+            width: orb,
+            height: orb,
             borderRadius: 20,
             backgroundColor: theme.orb,
             alignItems: 'center',
             justifyContent: 'center',
+            ...(center
+              ? { position: 'absolute' as const, end: small ? 5 : 7 }
+              : {}),
           }}
         >
           {icon}
@@ -1171,9 +1178,11 @@ export function Sheet({
   const { theme } = useTheme();
   const { t } = useI18n();
   const [visible, setVisible] = useState(open);
+  const [closing, setClosing] = useState(false);
   const progress = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     if (open) {
+      setClosing(false);
       setVisible(true);
       progress.setValue(0);
       Animated.timing(progress, {
@@ -1183,10 +1192,19 @@ export function Sheet({
         useNativeDriver: native,
       }).start();
     } else if (visible) {
-      // Unmount at once: a closing modal keeps its focus trap, which would
-      // swallow taps and typing aimed at the page behind it.
-      progress.stopAnimation();
-      setVisible(false);
+      // A short exit, then unmount: the modal's focus trap must not linger
+      // over the page behind it.
+      setClosing(true);
+      Animated.timing(progress, {
+        toValue: 0,
+        duration: 150,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: native,
+      }).start(({ finished }) => {
+        if (!finished) return;
+        setClosing(false);
+        setVisible(false);
+      });
     }
   }, [open, progress, visible]);
   if (!visible) return null;
@@ -1203,6 +1221,7 @@ export function Sheet({
       onRequestClose={onClose}
     >
       <Animated.View
+        pointerEvents={closing ? 'none' : 'auto'}
         style={{
           flex: 1,
           backgroundColor: theme.scrim,
@@ -1235,7 +1254,15 @@ export function Sheet({
               borderWidth: 4,
               borderColor: theme.dialogBorder,
               backgroundColor: theme.dialog,
-              transform: [{ scale }],
+              transform: [
+                { scale },
+                {
+                  translateY: progress.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [10, 0],
+                  }),
+                },
+              ],
               boxShadow: '0 24px 90px #20391b22',
               overflow: 'hidden',
             }}

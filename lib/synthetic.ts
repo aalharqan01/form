@@ -66,7 +66,8 @@ function workoutFor(
       const last = i === e.sets - 1;
       const skipped =
         options.endedEarly && index >= session.exercises.length - 1 && i > 0;
-      const reps = last && random() < 0.35 ? e.reps - 1 : e.reps;
+      const target = e.reps ?? 10;
+      const reps = last && random() < 0.35 ? target - 1 : target;
       return {
         id: id(),
         kg: skipped ? '' : String(kg),
