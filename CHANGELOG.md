@@ -2,6 +2,12 @@
 
 Newest first. Each entry says what changed, how to run it, and what is still open, so a fresh `git pull` is enough to get going.
 
+## 14 September 2026 — set removal is instant
+
+### What changed
+
+- **Removing a set is instant.** Press ×, or hold the set number, and the set is gone from the log and the screen in the same beat; no fold, no ghost row. The earlier folding exit still read as lag on real devices, so it is retired. Swiping a set away keeps its slide, since that motion is the gesture's own feedback.
+
 ## 14 September 2026 — removing a set feels immediate
 
 ### What changed

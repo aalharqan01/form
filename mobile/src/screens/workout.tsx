@@ -17,7 +17,6 @@ import {
   TextInput,
   View,
   useWindowDimensions,
-  type ViewStyle,
 } from 'react-native';
 import {
   Bookmark,
@@ -97,7 +96,6 @@ import { duration, loadValue, restLabel, type Act } from './shared';
 
 const REST_PRESETS = [30, 60, 90, 120, 180];
 const native = Platform.OS !== 'web';
-const web = Platform.OS === 'web';
 
 function CheckButton({
   done,
@@ -261,8 +259,6 @@ function SetRow({
   onEditReps,
   onComplete,
   onRemove,
-  ghost,
-  onGone,
 }: {
   exercise: Exercise;
   set: LiftSet;
@@ -274,15 +270,8 @@ function SetRow({
   onEditLoad: (load: string) => void;
   onEditReps: (reps: string) => void;
   onComplete: () => void;
-  /**
-   * Asked to remove the set; returns false when the row should stay (a
-   * completed set asks for confirmation first). 'slid' means the row already
-   * left by a swipe, 'fade' that it is still in place.
-   */
-  onRemove: (how: 'fade' | 'slid') => boolean;
-  /** A ghost stands in for a set already removed from the log while it folds away. */
-  ghost?: 'fade' | 'slid';
-  onGone?: () => void;
+  /** Removes the set at once; returns false when the row should stay. */
+  onRemove: () => boolean;
 }) {
   const { theme } = useTheme();
   const { t, rtl } = useI18n();
@@ -303,48 +292,12 @@ function SetRow({
     }).start(() => {
       offset.current = to;
     });
-  const fade = useRef(new Animated.Value(1)).current;
-  const collapse = useRef(new Animated.Value(1)).current;
   const reset = () => {
     drag.setValue(0);
     offset.current = 0;
   };
-  // The set leaves the log the moment it is removed; a ghost row then fades
-  // while it folds so the rows below settle up instead of jumping.
-  // On the web the browser drives the fold with a CSS transition, so no
-  // JavaScript frame work competes with the re-render behind it.
-  const [folded, setFolded] = useState(false);
-  useEffect(() => {
-    if (!ghost || !web) return;
-    const frame = requestAnimationFrame(() => setFolded(true));
-    const done = setTimeout(() => onGone?.(), 200);
-    return () => {
-      cancelAnimationFrame(frame);
-      clearTimeout(done);
-    };
-  }, [ghost, onGone]);
-  useEffect(() => {
-    if (!ghost || web) return;
-    fade.setValue(ghost === 'slid' ? 0 : 1);
-    const animation = Animated.parallel([
-      Animated.timing(fade, {
-        toValue: 0,
-        duration: 120,
-        easing: easeOut,
-        useNativeDriver: native,
-      }),
-      Animated.timing(collapse, {
-        toValue: 0,
-        duration: 160,
-        easing: easeOut,
-        useNativeDriver: false,
-      }),
-    ]);
-    animation.start(({ finished }) => {
-      if (finished) onGone?.();
-    });
-    return () => animation.stop();
-  }, [ghost, fade, collapse, onGone]);
+  // Removal is immediate: the set leaves the log and the screen on the press.
+  // A swipe keeps its slide because that motion is the gesture's feedback.
   const dismiss = () =>
     Animated.timing(drag, {
       toValue: away * width,
@@ -352,10 +305,10 @@ function SetRow({
       easing: easeOut,
       useNativeDriver: native,
     }).start(({ finished }) => {
-      if (finished && !onRemove('slid')) reset();
+      if (finished && !onRemove()) reset();
     });
   const remove = () => {
-    onRemove('fade');
+    onRemove();
   };
   const responder = useRef(
     PanResponder.create({
@@ -382,42 +335,8 @@ function SetRow({
       onPanResponderTerminate: () => settle(0),
     }),
   ).current;
-  const Outer = ghost && web ? View : Animated.View;
-  const outerStyle =
-    ghost && web
-      ? ({
-          overflow: 'hidden',
-          height: folded ? 0 : 58,
-          opacity: folded || ghost === 'slid' ? 0 : 1,
-          paddingVertical: 5,
-          transitionProperty: 'height, opacity',
-          transitionDuration: '160ms',
-          transitionTimingFunction: 'cubic-bezier(0.23, 1, 0.32, 1)',
-        } as unknown as ViewStyle)
-      : {
-          overflow: 'hidden' as const,
-          height: collapse.interpolate({
-            inputRange: [0, 1],
-            outputRange: [0, 58],
-          }),
-          opacity: fade,
-          transform: [
-            {
-              scale: fade.interpolate({
-                inputRange: [0, 1],
-                outputRange: [0.97, 1],
-              }),
-            },
-          ],
-          paddingVertical: 5,
-        };
   return (
-    <Outer
-      pointerEvents={ghost ? 'none' : 'auto'}
-      accessibilityElementsHidden={!!ghost}
-      importantForAccessibility={ghost ? 'no-hide-descendants' : 'auto'}
-      style={outerStyle}
-    >
+    <View style={{ paddingVertical: 5 }}>
       <View
         pointerEvents="none"
         style={{
@@ -443,7 +362,7 @@ function SetRow({
         </T>
       </View>
       <Animated.View
-        {...(ghost ? {} : responder.panHandlers)}
+        {...responder.panHandlers}
         style={{
           flexDirection: 'row',
           alignItems: 'center',
@@ -522,7 +441,7 @@ function SetRow({
           <X size={14} strokeWidth={2.4} color={theme.muted} />
         </Press>
       </Animated.View>
-    </Outer>
+    </View>
   );
 }
 
@@ -637,26 +556,13 @@ const ExerciseCard = memo(function ExerciseCard({
     [restDraft, setRestDraft] = useState(''),
     [demo, setDemo] = useState(false),
     [guide, setGuide] = useState<string | null>(null),
-    [confirmRemove, setConfirmRemove] = useState<LiftSet | null>(null),
-    [leaving, setLeaving] = useState<
-      { set: LiftSet; index: number; how: 'fade' | 'slid' }[]
-    >([]);
+    [confirmRemove, setConfirmRemove] = useState<LiftSet | null>(null);
   const anyDone = exercise.sets.some((s) => s.done);
-  // Rows to draw: the live sets plus ghosts of sets still folding away.
-  const rows: { set: LiftSet; ghost?: 'fade' | 'slid' }[] = exercise.sets.map(
-    (set) => ({ set }),
-  );
-  for (const g of leaving)
-    rows.splice(Math.min(g.index, rows.length), 0, {
-      set: g.set,
-      ghost: g.how,
-    });
-  const removeSet = (set: LiftSet, index: number, how: 'fade' | 'slid') => {
+  const removeSet = (set: LiftSet) => {
     if (set.done) {
       setConfirmRemove(set);
       return false;
     }
-    setLeaving((l) => [...l, { set, index, how }]);
     act(() =>
       change((e) => ({ ...e, sets: e.sets.filter((v) => v.id !== set.id) })),
     );
@@ -902,29 +808,7 @@ const ExerciseCard = memo(function ExerciseCard({
           ))}
           <View style={{ width: 26 }} />
         </View>
-        {rows.map(({ set, ghost }, position) => {
-          if (ghost)
-            return (
-              <SetRow
-                key={`ghost-${set.id}`}
-                ghost={ghost}
-                onGone={() =>
-                  setLeaving((l) => l.filter((g) => g.set.id !== set.id))
-                }
-                exercise={exercise}
-                set={set}
-                index={position}
-                number={0}
-                unit={unit}
-                busy
-                onToggleKind={() => {}}
-                onEditLoad={() => {}}
-                onEditReps={() => {}}
-                onComplete={() => {}}
-                onRemove={() => false}
-              />
-            );
-          const i = exercise.sets.indexOf(set);
+        {exercise.sets.map((set, i) => {
           const number = exercise.sets
             .slice(0, i + 1)
             .filter((v) => v.kind !== 'warmup').length;
@@ -964,7 +848,7 @@ const ExerciseCard = memo(function ExerciseCard({
                   act(() => editSet(set.id, { reps, done: false }))
                 }
                 onComplete={() => complete(set)}
-                onRemove={(how) => removeSet(set, i, how)}
+                onRemove={() => removeSet(set)}
               />
             </Reveal>
           );
