@@ -440,8 +440,11 @@ export function PrimaryButton({
         alignItems: 'center',
         justifyContent: center ? 'center' : 'space-between',
         gap: small ? 8 : 24,
-        paddingStart: center && icon ? orb + 7 : small ? 15 : 22,
-        paddingEnd: icon ? (small ? 5 : 7) : small ? 15 : 22,
+        // Centred labels get the same inset on both sides, so the label sits
+        // in the middle of the button while the icon overlays the end.
+        paddingStart: center && icon ? orb + 12 : small ? 15 : 22,
+        paddingEnd:
+          center && icon ? orb + 12 : icon ? (small ? 5 : 7) : small ? 15 : 22,
         alignSelf: full ? 'stretch' : 'flex-start',
       }}
     >

@@ -91,7 +91,13 @@ function AppContent() {
     setError('');
   };
   const act: Act = (action, message) => {
-    setPending((n) => n + 1);
+    // Only actions that take a moment mark the app busy; quick edits should
+    // not re-render every screen twice.
+    let slow = false;
+    const timer = setTimeout(() => {
+      slow = true;
+      setPending((n) => n + 1);
+    }, 150);
     setError('');
     void action()
       .then(() => {
@@ -100,7 +106,10 @@ function AppContent() {
       .catch((e: unknown) =>
         setError(e instanceof Error ? e.message : t('app.saveFailed')),
       )
-      .finally(() => setPending((n) => n - 1));
+      .finally(() => {
+        clearTimeout(timer);
+        if (slow) setPending((n) => n - 1);
+      });
   };
   const busy = pending > 0 || training.conflict;
   // The coaching tab exists only while a website-purchased membership is active.

@@ -2,7 +2,7 @@
 
 Newest first. Each entry says what changed, how to run it, and what is still open, so a fresh `git pull` is enough to get going.
 
-## 14 September 2026 — compact set rows in the active workout
+## 14 September 2026 — active workout card, saved workouts and sharing
 
 ### What changed
 
@@ -19,10 +19,13 @@ Newest first. Each entry says what changed, how to run it, and what is still ope
 - **Minimize the workout** with the chevron next to Finish (also in the floating header while scrolled) and look around the app; a green island above the tab bar shows the name, clock and sets, and taps back into the workout. It rises above the rest timer when both are showing.
 - **Removing a set** fades it and folds the row away so the rows below settle up; the × is a small soft circle at the end of the row.
 - **Sheets close with a short exit** instead of vanishing; they also rise slightly as they open. The plan editor keeps that exit too, and switching between the plan and the exercise picker inside it slides in.
-- Full-width sheet buttons (Save workout, Save rest, Save plan) centre their label with the icon kept at the end.
+- Full-width sheet buttons (Save workout, Save rest, Save) centre their label with the icon kept at the end.
+- **"Plans" are now "saved workouts"** everywhere in the app (English and Arabic): "Saved workouts" on the Train tab, "Create workout", "Save to my workouts". The You tab's feed of completed sessions is labelled "History" so the two never read alike.
+- **Share a saved workout** from its card: a message with one line per exercise (sets × reps, rest) and a FORM tagline goes to the phone's share sheet (WhatsApp, email and the rest); browsers without a share sheet copy it to the clipboard.
 - **Finish sheet** buttons line up: Save, then Keep training full width, End without saving centred beneath.
 - **Plans:** sets are the only required number; reps and rest are optional (reps left blank means the trainee decides each set, rest falls back to the exercise default). The plan editor gets the same ⋯ options per exercise (superset, remove), an Arrange button with drag handles, and superset tags.
 - Set rows fade in as they are added; menu items stagger in; every control presses in.
+- **Smoother animations:** quick edits no longer mark the whole app busy (only actions that take longer than 150 ms do), the clock ticks once a second instead of twice, and typed set values are kept locally so a re-render never snaps a field back mid-keystroke. The development build is still unminified; the deployed build is noticeably smoother.
 
 ## 13 September 2026 — instant language switch, Arabic text metrics, tactile controls
 

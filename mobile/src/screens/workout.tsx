@@ -214,17 +214,24 @@ function SetField({
 }) {
   const { theme } = useTheme();
   const [focused, setFocused] = useState(false);
+  // Typed text is kept locally so a re-render mid-keystroke never snaps the
+  // field back to the last saved value.
+  const [draft, setDraft] = useState(value);
+  useEffect(() => setDraft(value), [value]);
   return (
     <TextInput
       accessibilityLabel={label}
       keyboardType={keyboard}
       inputMode={keyboard === 'decimal-pad' ? 'decimal' : 'numeric'}
-      value={value}
+      value={draft}
       placeholder="0"
       placeholderTextColor={theme.placeholder}
       maxLength={keyboard === 'decimal-pad' ? 8 : 4}
       selectTextOnFocus
-      onChangeText={onChange}
+      onChangeText={(next) => {
+        setDraft(next);
+        onChange(next);
+      }}
       onFocus={() => setFocused(true)}
       onBlur={() => setFocused(false)}
       style={[
