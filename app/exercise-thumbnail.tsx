@@ -1,3 +1,5 @@
+'use client';
+import { useI18n } from '@/app/i18n';
 import { Dumbbell } from 'lucide-react';
 import imagePaths from '@/lib/exercise-images.json';
 import { exerciseFrames, EXERCISE_SOURCE } from '@/lib/exercises';
@@ -26,13 +28,14 @@ export default function ExerciseThumbnail({ name }: { name: string }) {
   );
 }
 export function ExerciseCredits() {
+  const { t } = useI18n();
   return (
     <small className="exercise-credits">
-      Exercise data and photos:{' '}
+      {t('coachWeb.credits')}{' '}
       <a href={EXERCISE_SOURCE.url} target="_blank" rel="noreferrer">
         {EXERCISE_SOURCE.name}
       </a>{' '}
-      (public domain) · Illustrations:{' '}
+      {t('coachWeb.illustrations')}{' '}
       <a
         href="https://github.com/everkinetic/data"
         target="_blank"

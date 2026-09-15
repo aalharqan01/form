@@ -1,4 +1,6 @@
 'use client';
+import { useI18n } from '@/app/i18n';
+
 import { useState } from 'react';
 import { Footprints } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -24,6 +26,7 @@ export default function Steps({
   onSave?: (goal: number | null) => Promise<boolean>;
   busy?: boolean;
 }) {
+  const { t } = useI18n();
   const [editing, setEditing] = useState(false),
     [error, setError] = useState('');
   const goal = member.stepGoal;
@@ -33,35 +36,35 @@ export default function Steps({
     <section className="co-card steps-card">
       <div className="co-section-line">
         <div>
-          <p className="co-overline">DAILY STEPS</p>
-          <h2>Step goal</h2>
+          <p className="co-overline">{t('steps.cardEyebrow')}</p>
+          <h2>{t('steps.cardTitle')}</h2>
         </div>
         {onSave && (
           <Button className="secondary" onClick={() => setEditing(true)}>
-            {goal ? 'Edit goal' : 'Set goal'}
+            {goal ? t('weight.editGoal') : t('weight.setGoalTitle')}
           </Button>
         )}
       </div>
       <div className="steps-values">
         <div>
-          <span>Goal per day</span>
+          <span>{t('steps.goalPerDay')}</span>
           <strong>
             {goal ? goal.toLocaleString() : '—'}
-            {goal ? <small> steps</small> : null}
+            {goal ? <small> {t('steps.steps')}</small> : null}
           </strong>
         </div>
         <div>
-          <span>Average · last 7 days</span>
+          <span>{t('coachWeb.stepsAverage')}</span>
           <strong>
             {average === null ? '—' : average.toLocaleString()}
-            {average !== null ? <small> steps</small> : null}
+            {average !== null ? <small> {t('steps.steps')}</small> : null}
           </strong>
         </div>
         <div>
-          <span>Days logged</span>
+          <span>{t('steps.daysLogged')}</span>
           <strong>
             {days}
-            <small> of 7</small>
+            <small> {t('steps.of7')}</small>
           </strong>
         </div>
       </div>
@@ -69,19 +72,16 @@ export default function Steps({
         <Footprints size={14} aria-hidden="true" />
         {goal
           ? onSave
-            ? 'Your client can adjust this goal in the app; you will see their change here.'
-            : 'You can change this goal in the app; your coach sees the change.'
+            ? t('coachWeb.clientStepHint')
+            : t('coachWeb.traineeStepHint')
           : onSave
-            ? 'Set a daily goal, or let your client set their own in the app.'
-            : 'No step goal yet. Set one in the app or ask your coach.'}
+            ? t('coachWeb.setClientStepHint')
+            : t('coachWeb.noStepHint')}
       </p>
       <Dialog open={editing} onOpenChange={setEditing}>
         <DialogContent className="form-dialog co-dialog">
-          <DialogTitle>Daily step goal</DialogTitle>
-          <DialogDescription>
-            Steps per day for this client. They see it in the app and can adjust
-            it.
-          </DialogDescription>
+          <DialogTitle>{t('steps.goalTitle')}</DialogTitle>
+          <DialogDescription>{t('coachWeb.stepDialogHint')}</DialogDescription>
           <form
             onSubmit={async (e) => {
               e.preventDefault();
@@ -90,14 +90,11 @@ export default function Steps({
               if (await onSave?.(value)) {
                 setEditing(false);
                 setError('');
-              } else
-                setError(
-                  'Couldn’t save the goal. Reload this client and try again.',
-                );
+              } else setError(t('coachWeb.stepError'));
             }}
           >
             <label>
-              Steps per day
+              {t('steps.perDay')}
               <Input
                 name="steps"
                 type="number"
@@ -114,7 +111,7 @@ export default function Steps({
               </p>
             )}
             <Button className="primary full" type="submit" disabled={busy}>
-              Save goal
+              {t('weight.saveGoal')}
             </Button>
             {goal ? (
               <Button
@@ -126,7 +123,7 @@ export default function Steps({
                   if (await onSave?.(null)) setEditing(false);
                 }}
               >
-                Remove goal
+                {t('weight.removeGoal')}
               </Button>
             ) : null}
           </form>

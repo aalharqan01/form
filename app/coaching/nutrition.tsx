@@ -1,4 +1,6 @@
 'use client';
+import { useI18n } from '@/app/i18n';
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,18 +21,19 @@ export default function Nutrition({
   onSave?: (v: NutritionTargets | null) => Promise<boolean>;
   busy?: boolean;
 }) {
+  const { t } = useI18n();
   const [editing, setEditing] = useState(false),
     [error, setError] = useState('');
   return (
     <section className="co-card nutrition-card">
       <div className="co-section-line">
         <div>
-          <p className="co-overline">DAILY NUTRITION</p>
-          <h2>Calorie & macro targets</h2>
+          <p className="co-overline">{t('assigned.nutritionEyebrow')}</p>
+          <h2>{t('assigned.nutritionTitle')}</h2>
         </div>
         {onSave && (
           <Button className="secondary" onClick={() => setEditing(true)}>
-            {targets ? 'Edit targets' : 'Set targets'}
+            {targets ? t('coachWeb.editTargets') : t('coachWeb.setTargets')}
           </Button>
         )}
       </div>
@@ -38,10 +41,10 @@ export default function Nutrition({
         <>
           <div className="nutrition-values">
             {[
-              [targets.calories, 'kcal', 'Calories'],
-              [targets.protein, 'g', 'Protein'],
-              [targets.carbs, 'g', 'Carbs'],
-              [targets.fat, 'g', 'Fat'],
+              [targets.calories, 'kcal', t('assigned.calories')],
+              [targets.protein, 'g', t('assigned.protein')],
+              [targets.carbs, 'g', t('assigned.carbs')],
+              [targets.fat, 'g', t('assigned.fat')],
             ].map(([v, u, l]) => (
               <div key={l}>
                 <span>{l}</span>
@@ -56,16 +59,14 @@ export default function Nutrition({
         </>
       ) : (
         <p className="co-muted">
-          {onSave
-            ? 'Set the daily targets this client will see with their workouts.'
-            : 'Your coach hasn’t set nutrition targets yet.'}
+          {onSave ? t('coachWeb.nutritionHint') : t('assigned.noNutrition')}
         </p>
       )}
       <Dialog open={editing} onOpenChange={setEditing}>
         <DialogContent className="form-dialog co-dialog">
-          <DialogTitle>Daily nutrition targets</DialogTitle>
+          <DialogTitle>{t('coachWeb.nutritionTitle')}</DialogTitle>
           <DialogDescription>
-            These are the targets your trainee will see each day.
+            {t('coachWeb.nutritionDialogHint')}
           </DialogDescription>
           <form
             onSubmit={async (e) => {
@@ -81,18 +82,15 @@ export default function Nutrition({
               if (await onSave?.(value)) {
                 setEditing(false);
                 setError('');
-              } else
-                setError(
-                  'Couldn’t save the targets. Reload this client and try again.',
-                );
+              } else setError(t('coachWeb.nutritionError'));
             }}
           >
             <div className="co-form-grid">
               {[
-                ['calories', 'Calories (kcal)'],
-                ['protein', 'Protein (g)'],
-                ['carbs', 'Carbs (g)'],
-                ['fat', 'Fat (g)'],
+                ['calories', t('coachWeb.caloriesUnit')],
+                ['protein', t('coachWeb.proteinUnit')],
+                ['carbs', t('coachWeb.carbsUnit')],
+                ['fat', t('coachWeb.fatUnit')],
               ].map(([key, label]) => (
                 <label key={key}>
                   {label}
@@ -109,12 +107,13 @@ export default function Nutrition({
               ))}
             </div>
             <label>
-              Coach notes
+              {t('coachWeb.coachNotes')}
               <Textarea
+                dir="auto"
                 name="notes"
                 maxLength={2000}
                 defaultValue={targets?.notes}
-                placeholder="Meal timing or other guidance"
+                placeholder={t('coachWeb.mealHint')}
               />
             </label>
             {error && (
@@ -123,7 +122,7 @@ export default function Nutrition({
               </p>
             )}
             <Button type="submit" className="primary full" disabled={busy}>
-              {busy ? 'Saving…' : 'Save targets'}
+              {busy ? t('shell.saving') : t('coachWeb.saveTargets')}
             </Button>
             {targets && (
               <Button
@@ -132,10 +131,10 @@ export default function Nutrition({
                 disabled={busy}
                 onClick={async () => {
                   if (await onSave?.(null)) setEditing(false);
-                  else setError('Couldn’t remove targets. Please retry.');
+                  else setError(t('coachWeb.removeTargetsError'));
                 }}
               >
-                Remove targets
+                {t('coachWeb.removeTargets')}
               </Button>
             )}
           </form>

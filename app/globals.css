@@ -900,7 +900,7 @@ svg {
   letter-spacing: -0.05em;
   line-height: 1.13;
   font-weight: 500;
-  padding-right: 14px;
+  padding-inline-end: 14px;
 }
 .form-dialog [data-slot='dialog-description'] {
   font-size: 14px;
@@ -912,7 +912,7 @@ svg {
   height: 36px;
   border-radius: 50%;
   top: 8px;
-  right: 8px;
+  inset-inline-end: 8px;
   background: transparent;
   color: #74806b;
 }

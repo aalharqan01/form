@@ -1,4 +1,6 @@
 'use client';
+import { useI18n } from '@/app/i18n';
+
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowUp,
@@ -26,7 +28,6 @@ import {
   PHOTO_VIEWS,
   mediaUrl,
   photoSets,
-  photoViewLabel,
   type MediaRef,
   type Message,
   type PhotoView,
@@ -46,6 +47,7 @@ function uploadMedia(
   memberId: string,
   file: File,
   onProgress: (fraction: number) => void,
+  t: ReturnType<typeof useI18n>['t'],
 ) {
   return new Promise<MediaRef>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
@@ -55,35 +57,38 @@ function uploadMedia(
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable) onProgress(e.loaded / e.total);
     };
-    xhr.onerror = () =>
-      reject(new Error('Upload failed. Check your connection and retry.'));
+    xhr.onerror = () => reject(new Error(t('coachWeb.uploadConnectionError')));
     xhr.onload = () => {
       try {
         const data = JSON.parse(xhr.responseText) as MediaRef & {
           error?: string;
         };
         if (xhr.status >= 200 && xhr.status < 300) resolve(data);
-        else reject(new Error(data.error || 'Upload failed. Please retry.'));
+        else reject(new Error(data.error || t('coachWeb.uploadError')));
       } catch {
-        reject(new Error('Upload failed. Please retry.'));
+        reject(new Error(t('coachWeb.uploadError')));
       }
     };
     xhr.send(file);
   });
 }
-function checkFile(file: File, imagesOnly = false) {
+function checkFile(
+  file: File,
+  t: ReturnType<typeof useI18n>['t'],
+  imagesOnly = false,
+) {
   const kind = file.type.startsWith('image/') ? 'image' : 'video';
   if (
     !(imagesOnly ? ACCEPT_IMAGE : ACCEPT_MEDIA).split(',').includes(file.type)
   )
     return imagesOnly
-      ? 'Choose a JPEG, PNG or WebP photo.'
-      : 'Choose a JPEG, PNG or WebP photo, or an MP4, WebM or MOV video.';
+      ? t('coachWeb.photoTypeError')
+      : t('coachWeb.mediaTypeError');
   if (file.size > MEDIA_LIMITS[kind])
     return kind === 'image'
-      ? 'Photos can be up to 12 MB.'
-      : 'Videos can be up to 25 MB.';
-  if (file.size < 12) return 'This file looks empty.';
+      ? t('coachWeb.photoSizeError')
+      : t('coachWeb.videoSizeError');
+  if (file.size < 12) return t('coachWeb.emptyFile');
   return '';
 }
 const formatSize = (bytes: number) =>
@@ -93,7 +98,7 @@ const formatSize = (bytes: number) =>
 function dayKey(iso: string) {
   return new Date(iso).toDateString();
 }
-function dayHeading(iso: string) {
+function dayHeading(iso: string, t: ReturnType<typeof useI18n>['t']) {
   const date = new Date(iso),
     now = new Date();
   const diff = Math.round(
@@ -101,8 +106,8 @@ function dayHeading(iso: string) {
       new Date(date.toDateString()).getTime()) /
       86400000,
   );
-  if (diff === 0) return 'Today';
-  if (diff === 1) return 'Yesterday';
+  if (diff === 0) return t('chat.today');
+  if (diff === 1) return t('chat.yesterday');
   return date.toLocaleDateString('en-GB', {
     weekday: diff < 7 ? 'long' : undefined,
     day: 'numeric',
@@ -127,6 +132,7 @@ function Lightbox({
   onClose: () => void;
   onIndex: (i: number) => void;
 }) {
+  const { t } = useI18n();
   const item = index === null ? null : items[index];
   useEffect(() => {
     if (index === null) return;
@@ -147,10 +153,10 @@ function Lightbox({
     >
       <DialogContent className="co-lightbox" showCloseButton={false}>
         <DialogTitle className="sr-only">
-          {item?.caption ?? 'Media'}
+          {item?.caption ?? t('coachWeb.media')}
         </DialogTitle>
         <DialogDescription className="sr-only">
-          Use the arrow keys to move between attachments.
+          {t('coachWeb.lightboxHint')}
         </DialogDescription>
         {item && (
           <figure>
@@ -170,7 +176,7 @@ function Lightbox({
         <button
           type="button"
           className="co-lightbox-close"
-          aria-label="Close"
+          aria-label={t('ui.close')}
           onClick={onClose}
         >
           <X size={20} />
@@ -179,7 +185,7 @@ function Lightbox({
           <button
             type="button"
             className="co-lightbox-nav prev"
-            aria-label="Previous"
+            aria-label={t('chat.previous')}
             onClick={() => onIndex(index - 1)}
           >
             <ChevronLeft size={22} />
@@ -189,7 +195,7 @@ function Lightbox({
           <button
             type="button"
             className="co-lightbox-nav next"
-            aria-label="Next"
+            aria-label={t('chat.next')}
             onClick={() => onIndex(index + 1)}
           >
             <ChevronRight size={22} />
@@ -249,6 +255,7 @@ export function Conversation({
   busy: boolean;
   act: Act;
 }) {
+  const { t } = useI18n();
   const network = useIsNetworkTransport();
   const [view, setView] = useState<'messages' | 'photos'>('messages');
   const [body, setBody] = useState('');
@@ -268,10 +275,10 @@ export function Conversation({
         .filter((m) => m.media)
         .map((m) => ({
           media: m.media!,
-          caption: `${m.sender_id === userId ? 'You' : partnerName} · ${dateLabel(m.created_at, true)}`,
+          caption: `${m.sender_id === userId ? t('tab.you') : partnerName} · ${dateLabel(m.created_at, true)}`,
           id: m.id,
         })),
-    [messages, userId, partnerName],
+    [messages, userId, partnerName, t],
   );
   const lastId = messages.at(-1)?.id;
   useLayoutEffect(() => {
@@ -287,7 +294,7 @@ export function Conversation({
   );
   const stage = (file?: File) => {
     if (!file) return;
-    const problem = checkFile(file);
+    const problem = checkFile(file, t);
     setError(problem);
     if (problem) return;
     if (staged) URL.revokeObjectURL(staged.preview);
@@ -303,7 +310,7 @@ export function Conversation({
     try {
       if (staged) {
         setProgress(0);
-        media = await uploadMedia(memberId, staged.file, setProgress);
+        media = await uploadMedia(memberId, staged.file, setProgress, t);
       }
     } catch (e) {
       setProgress(null);
@@ -336,16 +343,20 @@ export function Conversation({
     <section className="co-card co-chat">
       <header className="co-chat-head">
         <div>
-          <h2>{view === 'messages' ? 'Conversation' : 'Progress photos'}</h2>
+          <h2>
+            {view === 'messages'
+              ? t('coachWeb.conversation')
+              : t('chat.progressPhotos')}
+          </h2>
           <p className="co-muted">
             {view === 'messages'
-              ? `Replies within ${responseHours} hours. Photos and short videos are private to you both.`
-              : 'Front, side and back photos by date. Both of you can add and compare them.'}
+              ? t('coachWeb.conversationReply', { hours: responseHours })
+              : t('coachWeb.photosIntro')}
           </p>
         </div>
         <fieldset
           className="range-switch co-chat-switch"
-          aria-label="Conversation view"
+          aria-label={t('coachWeb.conversationView')}
         >
           <button
             type="button"
@@ -353,7 +364,7 @@ export function Conversation({
             onClick={() => setView('messages')}
           >
             <MessageCircle size={15} />
-            Messages
+            {t('chat.messages')}
           </button>
           <button
             type="button"
@@ -361,7 +372,7 @@ export function Conversation({
             onClick={() => setView('photos')}
           >
             <Images size={15} />
-            Progress photos
+            {t('chat.progressPhotos')}
             {photos.length > 0 && (
               <span className="co-chat-count">{photos.length}</span>
             )}
@@ -384,15 +395,12 @@ export function Conversation({
             {!messages.length && (
               <div className="co-chat-empty">
                 <MessageCircle size={28} strokeWidth={1.4} />
-                <p>
-                  Say hello. Ask about a set, share a form check, or send a
-                  progress photo.
-                </p>
+                <p>{t('chat.sayHello')}</p>
               </div>
             )}
             {groups.map((group) => (
               <div key={group.day} className="co-chat-day">
-                <span>{dayHeading(group.items[0].created_at)}</span>
+                <span>{dayHeading(group.items[0].created_at, t)}</span>
                 {group.items.map((m, i) => {
                   const mine = m.sender_id === userId;
                   const next = group.items[i + 1];
@@ -412,19 +420,27 @@ export function Conversation({
                       {photoLabel && (
                         <span className="co-bubble-tag">
                           <Camera size={12} />
-                          {photoLabel.replace('Progress photo · ', '')}
+                          {photoLabel
+                            .replace('Progress photo · ', '')
+                            .replace(
+                              /^(Front|Side|Back) view/,
+                              (label, view: string) =>
+                                t(`chat.${view.toLowerCase() as PhotoView}`),
+                            )}
                         </span>
                       )}
                       {m.media && (
                         <Attachment
                           media={m.media}
-                          alt={`${mine ? 'Your' : partnerName + '’s'} attachment`}
+                          alt={t('coachWeb.attachmentFrom', {
+                            name: mine ? t('tab.you') : partnerName,
+                          })}
                           onOpen={() =>
                             setOpen(gallery.findIndex((g) => g.id === m.id))
                           }
                         />
                       )}
-                      {m.body && !photoLabel && <p>{m.body}</p>}
+                      {m.body && !photoLabel && <p dir="auto">{m.body}</p>}
                       {tail && (
                         <time dateTime={m.created_at}>
                           {timeOf(m.created_at)}
@@ -455,13 +471,16 @@ export function Conversation({
                   <small>{formatSize(staged.file.size)}</small>
                 </span>
                 {sending ? (
-                  <span className="co-attach-progress" aria-label="Uploading">
+                  <span
+                    className="co-attach-progress"
+                    aria-label={t('coachWeb.uploading')}
+                  >
                     <i style={{ transform: `scaleX(${progress ?? 0})` }} />
                   </span>
                 ) : (
                   <button
                     type="button"
-                    aria-label="Remove attachment"
+                    aria-label={t('chat.removeAttachment')}
                     onClick={() => {
                       URL.revokeObjectURL(staged.preview);
                       setStaged(null);
@@ -491,12 +510,12 @@ export function Conversation({
               <button
                 type="button"
                 className="co-composer-icon"
-                aria-label="Attach a photo or video"
+                aria-label={t('chat.attach')}
                 disabled={!network || sending}
                 title={
                   network
-                    ? 'Photo or video up to 25 MB'
-                    : 'Attachments are unavailable right now'
+                    ? t('coachWeb.mediaSizeHint')
+                    : t('coachWeb.attachmentsUnavailable')
                 }
                 onClick={() => fileInput.current?.click()}
               >
@@ -504,8 +523,10 @@ export function Conversation({
               </button>
               <textarea
                 ref={textarea}
-                aria-label="Message"
-                placeholder={`Message ${partnerName}…`}
+                aria-label={t('coachWeb.message')}
+                placeholder={t('chat.messagePlaceholder', {
+                  name: partnerName,
+                })}
                 rows={1}
                 maxLength={4000}
                 value={body}
@@ -525,7 +546,7 @@ export function Conversation({
               <button
                 type="submit"
                 className="co-composer-send"
-                aria-label={sending ? 'Sending' : 'Send message'}
+                aria-label={sending ? t('coachWeb.sending') : t('chat.send')}
                 disabled={!canSend}
               >
                 <ArrowUp size={20} strokeWidth={2.2} />
@@ -557,6 +578,7 @@ function PhotoTile({
   onAdd: () => void;
   canAdd: boolean;
 }) {
+  const { t } = useI18n();
   if (!photo)
     return (
       <button
@@ -564,10 +586,10 @@ function PhotoTile({
         className="co-photo-tile empty"
         onClick={onAdd}
         disabled={!canAdd}
-        aria-label={`Add ${photoViewLabel(view).toLowerCase()} view`}
+        aria-label={t('chat.addView', { view: t(`chat.${view}`) })}
       >
         <ImagePlus size={20} strokeWidth={1.5} />
-        <span>{photoViewLabel(view)}</span>
+        <span>{t(`chat.${view}`)}</span>
       </button>
     );
   return (
@@ -575,7 +597,10 @@ function PhotoTile({
       type="button"
       className="co-photo-tile"
       onClick={onOpen}
-      aria-label={`${photoViewLabel(view)} view, ${dateLabel(photo.taken_on, true)}`}
+      aria-label={t('coachWeb.photoCaption', {
+        view: t(`chat.${view}`),
+        date: dateLabel(photo.taken_on, true),
+      })}
     >
       <img
         src={mediaUrl(photo.media.id)}
@@ -583,7 +608,7 @@ function PhotoTile({
         loading="lazy"
         decoding="async"
       />
-      <span>{photoViewLabel(view)}</span>
+      <span>{t(`chat.${view}`)}</span>
     </button>
   );
 }
@@ -605,6 +630,7 @@ export function ProgressPhotos({
   act: Act;
   canUpload: boolean;
 }) {
+  const { t } = useI18n();
   const sets = useMemo(() => photoSets(photos), [photos]);
   const [adding, setAdding] = useState<{
     view: PhotoView;
@@ -622,12 +648,12 @@ export function ProgressPhotos({
           const photo = set.views[v]!;
           return {
             media: photo.media,
-            caption: `${photoViewLabel(v)} view · ${dateLabel(set.date, true)}${photo.note ? ' · ' + photo.note : ''}`,
+            caption: `${t('coachWeb.photoCaption', { view: t(`chat.${v}`), date: dateLabel(set.date, true) })}${photo.note ? ' · ' + photo.note : ''}`,
             photo,
           };
         }),
       ),
-    [sets],
+    [sets, t],
   );
   const dates = sets.map((s) => s.date);
   const leftSet = sets.find((s) => s.date === (left || dates[1] || dates[0]));
@@ -642,7 +668,7 @@ export function ProgressPhotos({
           disabled={!canUpload || busy}
           onClick={() => setAdding({ view: 'front', date: today() })}
         >
-          Add photo
+          {t('chat.addPhoto')}
           <Camera size={17} />
         </Button>
         {sets.length > 1 && (
@@ -652,21 +678,18 @@ export function ProgressPhotos({
             onClick={() => setCompare(!compare)}
           >
             <Columns2 size={16} />
-            {compare ? 'Show all sets' : 'Compare two dates'}
+            {compare ? t('chat.showAll') : t('chat.compare')}
           </Button>
         )}
       </div>
       {!canUpload && (
-        <p className="co-muted">Photo uploads are unavailable right now.</p>
+        <p className="co-muted">{t('coachWeb.photosUnavailable')}</p>
       )}
       {!sets.length ? (
         <div className="co-photo-set">
           <div className="co-photo-set-head">
-            <strong>No progress photos yet</strong>
-            <span className="co-muted">
-              Take the three views in the same light and stance each time so
-              changes are easy to see.
-            </span>
+            <strong>{t('coachWeb.noPhotos')}</strong>
+            <span className="co-muted">{t('coachWeb.noPhotosHint')}</span>
           </div>
           <div className="co-photo-grid">
             {PHOTO_VIEWS.map((v) => (
@@ -684,7 +707,7 @@ export function ProgressPhotos({
         <div className="co-photo-compare">
           <div className="co-photo-compare-heads">
             <label>
-              Before
+              {t('chat.before')}
               <select
                 value={leftSet.date}
                 onChange={(e) => setLeft(e.target.value)}
@@ -697,7 +720,7 @@ export function ProgressPhotos({
               </select>
             </label>
             <label>
-              After
+              {t('chat.after')}
               <select
                 value={rightSet.date}
                 onChange={(e) => setRight(e.target.value)}
@@ -712,9 +735,7 @@ export function ProgressPhotos({
           </div>
           {PHOTO_VIEWS.map((v) => (
             <div key={v} className="co-photo-compare-row">
-              <span className="co-photo-compare-label">
-                {photoViewLabel(v)}
-              </span>
+              <span className="co-photo-compare-label">{t(`chat.${v}`)}</span>
               <PhotoTile
                 view={v}
                 photo={leftSet.views[v]}
@@ -743,17 +764,26 @@ export function ProgressPhotos({
                 <strong>{dateLabel(set.date, true)}</strong>
                 <span className="co-muted">
                   {i === 0
-                    ? 'Latest'
-                    : `${Math.round((Date.parse(sets[0].date) - Date.parse(set.date)) / 86400000)} days earlier`}
+                    ? t('chat.latest')
+                    : t('chat.daysEarlier', {
+                        count: Math.round(
+                          (Date.parse(sets[0].date) - Date.parse(set.date)) /
+                            86400000,
+                        ),
+                      })}
                   {owner
-                    ? ` · added by ${owner === userId ? 'you' : partnerName}`
+                    ? t('coachWeb.addedBy', {
+                        name: owner === userId ? t('tab.you') : partnerName,
+                      })
                     : ''}
                 </span>
                 {PHOTO_VIEWS.some((v) => set.views[v]?.owner_id === userId) && (
                   <button
                     type="button"
                     className="co-photo-remove"
-                    aria-label={`Remove photos from ${dateLabel(set.date, true)}`}
+                    aria-label={t('chat.removeSet', {
+                      date: dateLabel(set.date, true),
+                    })}
                     onClick={() =>
                       setConfirm(
                         PHOTO_VIEWS.map((v) => set.views[v]).find(
@@ -818,13 +848,11 @@ export function ProgressPhotos({
       <Dialog open={!!confirm} onOpenChange={(o) => !o && setConfirm(null)}>
         <DialogContent className="form-dialog co-dialog">
           <DialogTitle>
-            Remove this{' '}
-            {confirm ? photoViewLabel(confirm.view).toLowerCase() : ''} photo?
+            {t('chat.removeTitle', {
+              view: confirm ? t(`chat.${confirm.view}`) : '',
+            })}
           </DialogTitle>
-          <DialogDescription>
-            It disappears from the conversation and from progress photos for
-            both of you.
-          </DialogDescription>
+          <DialogDescription>{t('chat.removeBody')}</DialogDescription>
           <Button
             className="danger-button"
             disabled={busy}
@@ -836,7 +864,7 @@ export function ProgressPhotos({
                 setConfirm(null);
             }}
           >
-            Remove photo
+            {t('chat.removePhoto')}
           </Button>
         </DialogContent>
       </Dialog>
@@ -860,6 +888,7 @@ function PhotoUploader({
     note: string,
   ) => Promise<boolean>;
 }) {
+  const { t } = useI18n();
   const [view, setView] = useState<PhotoView>(initial.view);
   const [date, setDate] = useState(initial.date);
   const [note, setNote] = useState('');
@@ -884,27 +913,26 @@ function PhotoUploader({
       }}
     >
       <DialogContent className="form-dialog co-dialog co-photo-dialog">
-        <DialogTitle>Add progress photo</DialogTitle>
-        <DialogDescription>
-          Same light, same distance, same stance. That is what makes the
-          comparison honest.
-        </DialogDescription>
+        <DialogTitle>{t('chat.addProgress')}</DialogTitle>
+        <DialogDescription>{t('chat.addProgressBody')}</DialogDescription>
         <form
           onSubmit={async (e) => {
             e.preventDefault();
             if (!file) {
-              setError('Choose a photo first.');
+              setError(t('coachWeb.choosePhoto'));
               return;
             }
             setError('');
             try {
               setProgress(0);
-              const media = await uploadMedia(memberId, file.file, setProgress);
+              const media = await uploadMedia(
+                memberId,
+                file.file,
+                setProgress,
+                t,
+              );
               const ok = await onSave(media, view, date, note.trim());
-              if (!ok)
-                setError(
-                  'The photo uploaded but could not be saved. Please retry.',
-                );
+              if (!ok) setError(t('coachWeb.photoSaveError'));
             } catch (err) {
               setError((err as Error).message);
             } finally {
@@ -914,7 +942,7 @@ function PhotoUploader({
         >
           <fieldset
             className="range-switch co-photo-views"
-            aria-label="Photo view"
+            aria-label={t('chat.photoView')}
           >
             {PHOTO_VIEWS.map((v) => (
               <button
@@ -923,7 +951,7 @@ function PhotoUploader({
                 aria-pressed={view === v}
                 onClick={() => setView(v)}
               >
-                {photoViewLabel(v)}
+                {t(`chat.${v}`)}
               </button>
             ))}
           </fieldset>
@@ -937,7 +965,7 @@ function PhotoUploader({
               const next = e.target.files?.[0];
               e.target.value = '';
               if (!next) return;
-              const problem = checkFile(next, true);
+              const problem = checkFile(next, t, true);
               setError(problem);
               if (problem) return;
               if (file) URL.revokeObjectURL(file.preview);
@@ -951,16 +979,19 @@ function PhotoUploader({
             onClick={() => input.current?.click()}
           >
             {file ? (
-              <img src={file.preview} alt="Your selection" />
+              <img src={file.preview} alt={t('coachWeb.selection')} />
             ) : (
               <>
                 <Camera size={26} strokeWidth={1.4} />
-                <strong>Choose or take a photo</strong>
-                <small>JPEG, PNG or WebP · up to 12 MB</small>
+                <strong>{t('chat.chooseOrTake')}</strong>
+                <small>{t('coachWeb.photoFormats')}</small>
               </>
             )}
             {uploading && (
-              <span className="co-attach-progress large" aria-label="Uploading">
+              <span
+                className="co-attach-progress large"
+                aria-label={t('coachWeb.uploading')}
+              >
                 <i style={{ transform: `scaleX(${progress ?? 0})` }} />
               </span>
             )}
@@ -971,12 +1002,12 @@ function PhotoUploader({
               className="text-button co-photo-change"
               onClick={() => input.current?.click()}
             >
-              Choose a different photo
+              {t('chat.chooseDifferent')}
             </button>
           )}
           <div className="co-form-grid">
             <label>
-              Taken on
+              {t('chat.takenOn')}
               <Input
                 type="date"
                 required
@@ -986,12 +1017,13 @@ function PhotoUploader({
               />
             </label>
             <label>
-              Note <span className="co-muted">optional</span>
+              {t('chat.note')}
+              <span className="co-muted">{t('chat.optional')}</span>
               <Input
                 maxLength={500}
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
-                placeholder="Morning, fasted"
+                placeholder={t('chat.notePlaceholder')}
               />
             </label>
           </div>
@@ -1005,7 +1037,7 @@ function PhotoUploader({
             type="submit"
             disabled={uploading || !file}
           >
-            {uploading ? 'Uploading…' : 'Save photo'}
+            {uploading ? t('chat.uploading') : t('chat.savePhoto')}
           </Button>
         </form>
       </DialogContent>

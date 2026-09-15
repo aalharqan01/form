@@ -1,4 +1,6 @@
 'use client';
+import { useI18n } from '@/app/i18n';
+
 import { useState } from 'react';
 import { Upload, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -17,6 +19,7 @@ export default function VideoUpload({
   onChange: (url: string) => void;
   onBusy?: (busy: boolean) => void;
 }) {
+  const { t } = useI18n();
   const [busy, setBusy] = useState(false),
     [error, setError] = useState('');
   async function upload(file?: File) {
@@ -26,7 +29,7 @@ export default function VideoUpload({
       file.size > 25 * 1024 * 1024 ||
       file.size < 12
     ) {
-      setError('Choose an MP4 or WebM video up to 25 MB.');
+      setError(t('coachWeb.videoTypeError'));
       return;
     }
     setBusy(true);
@@ -47,7 +50,7 @@ export default function VideoUpload({
         );
         const data = (await response.json()) as { url: string; error?: string };
         if (!response.ok)
-          throw new Error(data.error || 'Upload failed. Please retry.');
+          throw new Error(data.error || t('coachWeb.uploadError'));
         onChange(data.url);
       }
     } catch (e) {
@@ -63,17 +66,17 @@ export default function VideoUpload({
         <Upload size={19} />
         <span>
           {busy
-            ? 'Uploading video…'
+            ? t('coachWeb.uploadingVideo')
             : value
-              ? 'Replace demonstration'
-              : 'Upload demonstration'}
-          <small>MP4 or WebM · up to 25 MB</small>
+              ? t('coachWeb.replaceDemo')
+              : t('coachWeb.uploadDemo')}
+          <small>{t('coachWeb.videoFormats')}</small>
         </span>
         <input
           type="file"
           accept="video/mp4,video/webm"
           disabled={busy}
-          aria-label={`Upload video for ${name}`}
+          aria-label={t('coachWeb.uploadFor', { name })}
           onChange={(e) => {
             void upload(e.target.files?.[0]);
             e.target.value = '';
@@ -87,13 +90,13 @@ export default function VideoUpload({
       )}
       {!value.startsWith('/api/videos?') && (
         <details>
-          <summary>Or use an existing video URL</summary>
+          <summary>{t('coachWeb.existingVideo')}</summary>
           <Input
-            aria-label={`Video URL for ${name}`}
+            aria-label={t('coachWeb.videoFor', { name })}
             value={value}
             maxLength={1000}
             onChange={(e) => onChange(e.target.value)}
-            placeholder="YouTube, Vimeo or direct video URL"
+            placeholder={t('coachWeb.videoPlaceholder')}
           />
         </details>
       )}
@@ -107,7 +110,7 @@ export default function VideoUpload({
             onClick={() => onChange('')}
           >
             <X size={14} />
-            Remove from exercise
+            {t('coachWeb.removeVideo')}
           </Button>
         </>
       )}
