@@ -19,6 +19,7 @@ import {
 import type { Rest } from './use-rest';
 import { useTheme } from './theme';
 import { Press, Reveal, T, easeOut } from './ui';
+import { springs, useReducedMotion, useReducedTransparency } from './motion';
 const native = Platform.OS !== 'web';
 import { duration, type Tab } from './screens/shared';
 import { Wordmark } from './wordmark';
@@ -133,6 +134,19 @@ export function BottomNav({
   const { theme } = useTheme();
   const { t } = useI18n();
   const insets = useSafeAreaInsets();
+  const solid = useReducedTransparency();
+  const isDark = theme.scheme === 'dark';
+  // On the web the bar is a material: content scrolls underneath and shows
+  // through a blur, which is what tells the eye the bar floats above the page.
+  // Native keeps its near-opaque token, and so does anyone who asked the
+  // system for less transparency.
+  const material =
+    Platform.OS === 'web' && !solid
+      ? ({
+          backgroundColor: isDark ? '#202c22c8' : '#ffffffb8',
+          backdropFilter: 'blur(22px) saturate(160%)',
+        } as object)
+      : null;
   // Train sits in the middle as a raised circle; the other tabs split around it.
   const others = TABS.filter(
     (item) => item.key !== 'train' && (coached || item.key !== 'coach'),
@@ -144,14 +158,15 @@ export function BottomNav({
   const renderTab = ({ key, label, Icon }: (typeof TABS)[number]) => {
     const selected = tab === key;
     return (
-      <Pressable
+      <Press
         key={key}
         accessibilityRole="tab"
         accessibilityLabel={t(label)}
         accessibilityState={{ selected }}
         onPress={() => onChange(key)}
+        scale={0.93}
+        containerStyle={{ flex: 1 }}
         style={{
-          flex: 1,
           alignItems: 'center',
           gap: 5,
           paddingVertical: 10,
@@ -167,7 +182,7 @@ export function BottomNav({
         <T size={11} line={13} color={selected ? theme.green : theme.navText}>
           {t(label)}
         </T>
-      </Pressable>
+      </Press>
     );
   };
   return (
@@ -186,13 +201,14 @@ export function BottomNav({
         backgroundColor: theme.navBackground,
         borderWidth: 1,
         borderColor: theme.navBorder,
-        boxShadow: theme.scheme === 'dark' ? undefined : '0 8px 40px #23382016',
+        boxShadow: isDark ? undefined : '0 8px 40px #23382016',
+        ...material,
       }}
     >
       <View style={{ flex: 1, flexDirection: 'row' }}>
         {left.map(renderTab)}
       </View>
-      <Pressable
+      <Press
         accessibilityRole="tab"
         accessibilityLabel={t('tab.train')}
         accessibilityHint={
@@ -200,21 +216,19 @@ export function BottomNav({
         }
         accessibilityState={{ selected: trainSelected }}
         onPress={() => onChange('train')}
-        style={({ pressed }) => ({
+        scale={0.92}
+        containerStyle={{ marginTop: -22, marginHorizontal: 8 }}
+        style={{
           width: 62,
           height: 62,
-          marginTop: -22,
-          marginHorizontal: 8,
           borderRadius: 31,
           alignItems: 'center',
           justifyContent: 'center',
           backgroundColor: theme.green,
           borderWidth: 4,
           borderColor: trainSelected ? '#70c37b' : theme.navBackground,
-          transform: [{ scale: pressed ? 0.94 : 1 }],
-          boxShadow:
-            theme.scheme === 'dark' ? undefined : '0 10px 24px #24583d40',
-        })}
+          boxShadow: isDark ? undefined : '0 10px 24px #24583d40',
+        }}
       >
         <train.Icon size={26} strokeWidth={1.7} color={theme.primaryText} />
         {activeWorkout && (
@@ -232,7 +246,7 @@ export function BottomNav({
             }}
           />
         )}
-      </Pressable>
+      </Press>
       <View style={{ flex: 1, flexDirection: 'row' }}>
         {right.map(renderTab)}
       </View>
@@ -260,12 +274,15 @@ export function WorkoutIsland({
   const insets = useSafeAreaInsets();
   const lift = useRef(new Animated.Value(lifted ? 1 : 0)).current;
   useEffect(() => {
-    Animated.timing(lift, {
+    // A reposition: the island moves from wherever it is, and a rest timer
+    // that starts and stops quickly just retargets the same spring.
+    const animation = Animated.spring(lift, {
       toValue: lifted ? 1 : 0,
-      duration: 220,
-      easing: easeOut,
+      ...springs.move,
       useNativeDriver: native,
-    }).start();
+    });
+    animation.start();
+    return () => animation.stop();
   }, [lifted, lift]);
   return (
     <Animated.View
@@ -341,6 +358,7 @@ export function RestIsland({ rest }: { rest: Rest }) {
   const { theme } = useTheme();
   const { t } = useI18n();
   const insets = useSafeAreaInsets();
+  const reduced = useReducedMotion();
   const finished = !!rest.end && rest.remaining === 0;
   const active = !!rest.end;
   const [shown, setShown] = useState(active);
@@ -348,10 +366,11 @@ export function RestIsland({ rest }: { rest: Rest }) {
   useEffect(() => {
     if (active) {
       setShown(true);
-      Animated.timing(progress, {
+      // Arrives with a spring so a skip-then-restart carries straight on;
+      // leaves faster than it came, along the same path.
+      Animated.spring(progress, {
         toValue: 1,
-        duration: 260,
-        easing: easeOut,
+        ...springs.settle,
         useNativeDriver: native,
       }).start();
     } else if (shown) {
@@ -402,13 +421,13 @@ export function RestIsland({ rest }: { rest: Rest }) {
           {
             translateY: progress.interpolate({
               inputRange: [0, 1],
-              outputRange: [24, 0],
+              outputRange: [reduced ? 0 : 24, 0],
             }),
           },
           {
             scale: progress.interpolate({
               inputRange: [0, 1],
-              outputRange: [0.96, 1],
+              outputRange: [reduced ? 1 : 0.96, 1],
             }),
           },
         ],

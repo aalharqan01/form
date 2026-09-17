@@ -82,6 +82,7 @@ import {
   Thumbnail,
   easeOut,
 } from '../ui';
+import { project, springs } from '../motion';
 import { DemoVideo } from '../components/demo-video';
 import { ExercisePicker } from './exercise-picker';
 import {
@@ -282,12 +283,13 @@ function SetRow({
   // Swiping toward the trailing edge reveals the remove area.
   const away = rtl ? 1 : -1;
   const REVEAL = 88;
-  const settle = (to: number) =>
+  // The row keeps the finger's speed when it lets go: the spring starts at
+  // the release velocity (px/s), so there is no seam between drag and settle.
+  const settle = (to: number, velocity = 0) =>
     Animated.spring(drag, {
       toValue: to,
-      damping: 18,
-      stiffness: 220,
-      mass: 0.6,
+      ...(velocity ? springs.momentum : springs.settle),
+      velocity,
       useNativeDriver: native,
     }).start(() => {
       offset.current = to;
@@ -327,10 +329,13 @@ function SetRow({
       },
       onPanResponderRelease: (_, g) => {
         const along = (offset.current + g.dx) * away;
+        const velocity = g.vx * 1000; // px/s
+        // Land where the throw is heading, not where the finger left off.
+        const projected = along + project(velocity * away, 0.995);
         const flick = g.vx * away > 0.6;
-        if (along > REVEAL * 1.4 || flick) dismiss();
-        else if (along > REVEAL * 0.5) settle(away * REVEAL);
-        else settle(0);
+        if (projected > REVEAL * 1.4 || flick) dismiss();
+        else if (projected > REVEAL * 0.5) settle(away * REVEAL, velocity);
+        else settle(0, velocity);
       },
       onPanResponderTerminate: () => settle(0),
     }),
