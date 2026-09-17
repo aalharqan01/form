@@ -2,6 +2,26 @@
 
 Newest first. Each entry says what changed, how to run it, and what is still open, so a fresh `git pull` is enough to get going.
 
+## 17 September 2026 — fluid motion in the trainee app
+
+### What changed
+
+Motion in the app now follows the way Apple builds fluid interfaces: springs instead of fixed curves wherever something can be touched, interrupted or reversed, and translucent chrome on the web. Nothing changed in what the app does.
+
+- **Press feedback releases on a spring.** Buttons, chips and tabs give on touch-down and spring back from wherever the press got to, so a quick tap and a long hold both let go without a seam. The Weight, You and My coach tabs and the Train circle now press in like every other control.
+- **The tab bar is a material on the web.** Content scrolls underneath and shows through a blur, which is what tells the eye the bar floats above the page. Native keeps its solid fill until a blur module is added.
+- **Sheets animate from where they are.** Reopening a sheet mid-exit continues from its current position instead of jumping to zero; it enters on a spring, and on the web the scrim blurs the page behind it.
+- **Islands settle on springs.** The rest island arrives on a spring and leaves faster along the same path; the workout island retargets its lift in place when a rest timer starts or stops.
+- **Swipe-to-remove keeps the finger's speed.** The release velocity is handed into the spring, and the landing target is chosen from where the flick would have come to rest, not from where the finger left off.
+- **Reduced motion is honoured.** With the system setting on, reveals, sheets, the language crossfade and the rest island keep a short fade and drop travel, scale and blur; translucent surfaces go solid under reduced transparency.
+- **Tracking follows size.** Text at 13 px and under opens up a touch for legibility, display sizes tighten, body copy stays neutral.
+
+`mobile/src/motion.ts` holds the spring presets (Apple's response and damping-ratio parameters converted for `Animated.spring`), the momentum projection and the reduced-motion hooks.
+
+### Still open
+
+- Haptics and native blur behind the tab bar and sheets need `expo-haptics` and `expo-blur`, which are not dependencies yet.
+
 ## 14 September 2026 — set removal is instant
 
 ### What changed

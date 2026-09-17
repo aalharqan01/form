@@ -31,6 +31,7 @@ import { exerciseFrames } from '../../lib/exercises';
 import { font, radius, useTheme, type Weight } from './theme';
 import { SWITCH_OUT_MS, useI18n } from './i18n';
 import { ExitLayer } from './sheet-exit';
+import { springs, useReducedMotion, useReducedTransparency } from './motion';
 
 import { API_ORIGIN } from './account';
 export { API_ORIGIN };
@@ -71,7 +72,7 @@ export function T({
             ? Math.max(line ?? 0, Math.round(size * 1.5))
             : (line ?? Math.round(size * 1.35)),
           color: color ?? theme.ink,
-          letterSpacing: arabic ? 0 : (tracking ?? 0),
+          letterSpacing: arabic ? 0 : (tracking ?? defaultTracking(size)),
           // On the web each Text guesses its direction from its first letter; the interface decides instead.
           writingDirection: arabic ? 'rtl' : 'ltr',
           textAlign: center ? 'center' : undefined,
@@ -80,6 +81,16 @@ export function T({
       ]}
     />
   );
+}
+/**
+ * Tracking follows size: small text opens up a touch for legibility, body
+ * text stays neutral, display text tightens (the headings pass their own).
+ */
+export function defaultTracking(size: number) {
+  if (size <= 11) return 0.2;
+  if (size <= 13) return 0.1;
+  if (size >= 28) return -size * 0.04;
+  return 0;
 }
 export function Eyebrow({
   children,
@@ -223,17 +234,18 @@ export function Reveal({
   style?: StyleProp<ViewStyle>;
 }) {
   const value = useRef(new Animated.Value(0)).current;
+  const reduced = useReducedMotion();
   useEffect(() => {
     const animation = Animated.timing(value, {
       toValue: 1,
-      duration,
+      duration: reduced ? Math.min(duration, 200) : duration,
       delay,
       easing: easeOut,
       useNativeDriver: native,
     });
     animation.start();
     return () => animation.stop();
-  }, [value, delay, duration]);
+  }, [value, delay, duration, reduced]);
   return (
     <Animated.View
       style={[
@@ -244,7 +256,8 @@ export function Reveal({
             {
               translateY: value.interpolate({
                 inputRange: [0, 1],
-                outputRange: [y, 0],
+                // Less motion: the content fades in place instead of travelling.
+                outputRange: [reduced ? 0 : y, 0],
               }),
             },
           ],
@@ -270,6 +283,7 @@ export function LocaleCrossfade({
   style?: StyleProp<ViewStyle>;
 }) {
   const { locale, rtl, switching } = useI18n();
+  const reduced = useReducedMotion();
   const value = useRef(new Animated.Value(1)).current;
   const first = useRef(true);
   useEffect(() => {
@@ -300,7 +314,7 @@ export function LocaleCrossfade({
   }, [locale, value]);
   const direction = { dir: rtl ? 'rtl' : 'ltr' } as object;
   const blur =
-    Platform.OS === 'web'
+    Platform.OS === 'web' && !reduced
       ? ({
           filter: value.interpolate({
             inputRange: [0, 1],
@@ -322,13 +336,13 @@ export function LocaleCrossfade({
             {
               scale: value.interpolate({
                 inputRange: [0, 1],
-                outputRange: [0.97, 1],
+                outputRange: [reduced ? 1 : 0.97, 1],
               }),
             },
             {
               translateY: value.interpolate({
                 inputRange: [0, 1],
-                outputRange: [6, 0],
+                outputRange: [reduced ? 0 : 6, 0],
               }),
             },
           ],
@@ -345,36 +359,45 @@ export function LocaleCrossfade({
 export function Press({
   children,
   style,
+  containerStyle,
   scale = 0.97,
   disabled,
   ...props
 }: Omit<PressableProps, 'style'> & {
   style?: StyleProp<ViewStyle>;
+  /** Layout for the pressable box itself (flex, margins); `style` paints the pressed surface. */
+  containerStyle?: StyleProp<ViewStyle>;
   scale?: number;
   children?: ReactNode;
 }) {
   const value = useRef(new Animated.Value(1)).current;
-  const to = (target: number, duration: number) =>
-    Animated.timing(value, {
-      toValue: target,
-      duration,
-      easing: easeOut,
-      useNativeDriver: native,
-    }).start();
   return (
     <Pressable
       {...props}
+      style={containerStyle}
       disabled={disabled}
       accessibilityState={{
         ...(props.accessibilityState ?? {}),
         disabled: !!disabled,
       }}
       onPressIn={(e) => {
-        to(scale, 100);
+        // The surface gives on touch-down, not on release.
+        Animated.timing(value, {
+          toValue: scale,
+          duration: 90,
+          easing: easeOut,
+          useNativeDriver: native,
+        }).start();
         props.onPressIn?.(e);
       }}
       onPressOut={(e) => {
-        to(1, 160);
+        // A spring picks up from wherever the press-in got to, so a quick tap
+        // and a long hold both release without a seam.
+        Animated.spring(value, {
+          toValue: 1,
+          ...springs.press,
+          useNativeDriver: native,
+        }).start();
         props.onPressOut?.(e);
       }}
     >
@@ -1181,26 +1204,37 @@ export function Sheet({
 }) {
   const { theme } = useTheme();
   const { t } = useI18n();
+  const reduced = useReducedMotion();
+  const solid = useReducedTransparency();
   const [visible, setVisible] = useState(open);
   const [closing, setClosing] = useState(false);
   const progress = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     if (open) {
       setClosing(false);
+      // Reopening mid-exit continues from where the sheet is, never from zero.
+      if (!visible) progress.setValue(0);
       setVisible(true);
-      progress.setValue(0);
-      Animated.timing(progress, {
-        toValue: 1,
-        duration: 220,
-        easing: easeOut,
-        useNativeDriver: native,
-      }).start();
+      const animation = reduced
+        ? Animated.timing(progress, {
+            toValue: 1,
+            duration: 160,
+            easing: easeOut,
+            useNativeDriver: native,
+          })
+        : Animated.spring(progress, {
+            toValue: 1,
+            ...springs.settle,
+            useNativeDriver: native,
+          });
+      animation.start();
+      return () => animation.stop();
     } else if (visible) {
       // The modal unmounts at once so its focus trap is gone; the exit then
       // plays on a trap-free layer (see the effect below).
       setClosing(true);
     }
-  }, [open, progress, visible]);
+  }, [open, progress, visible, reduced]);
   useEffect(() => {
     if (!closing) return;
     const animation = Animated.timing(progress, {
@@ -1220,16 +1254,26 @@ export function Sheet({
   if (!visible) return null;
   const scale = progress.interpolate({
     inputRange: [0, 1],
-    outputRange: [0.96, 1],
+    outputRange: [reduced ? 1 : 0.96, 1],
   });
+  // The scrim is a material on the web: the page behind softens as the sheet
+  // arrives, so the dialog reads as a layer in front of it rather than a card
+  // on a grey wash. Solid when the person asked for less transparency.
+  const material =
+    Platform.OS === 'web' && !solid
+      ? ({ backdropFilter: 'blur(14px) saturate(120%)' } as object)
+      : null;
   const body = (
     <Animated.View
       pointerEvents={closing ? 'none' : 'auto'}
-      style={{
-        flex: 1,
-        backgroundColor: theme.scrim,
-        opacity: progress,
-      }}
+      style={[
+        {
+          flex: 1,
+          backgroundColor: theme.scrim,
+          opacity: progress,
+        },
+        material,
+      ]}
     >
       <Pressable
         accessibilityRole="button"
@@ -1262,7 +1306,7 @@ export function Sheet({
               {
                 translateY: progress.interpolate({
                   inputRange: [0, 1],
-                  outputRange: [10, 0],
+                  outputRange: [reduced ? 0 : 10, 0],
                 }),
               },
             ],
